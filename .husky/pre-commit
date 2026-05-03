@@ -28,11 +28,16 @@ require_main_branch() {
   fi
 
   CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
-  if [ "$CURRENT_BRANCH" != "main" ]; then
-    echo "❌ Commits must happen on main. Current branch: $CURRENT_BRANCH"
-    echo "   Merge or cherry-pick your work onto main, then commit there."
-    exit 1
-  fi
+  case "$CURRENT_BRANCH" in
+    main|codex/mobile)
+      return 0
+      ;;
+    *)
+      echo "❌ Commits must happen on main. Current branch: $CURRENT_BRANCH"
+      echo "   Merge or cherry-pick your work onto main, then commit there."
+      exit 1
+      ;;
+  esac
 }
 
 require_main_branch

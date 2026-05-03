@@ -1,0 +1,1 @@
+export { compactMarkdown } from './compactMarkdown'

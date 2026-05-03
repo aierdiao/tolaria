@@ -125,6 +125,9 @@ importers:
       '@tauri-apps/plugin-updater':
         specifier: ^2.10.0
         version: 2.10.0
+      '@tolaria/markdown':
+        specifier: workspace:*
+        version: link:packages/markdown
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1
@@ -279,6 +282,15 @@ importers:
       ws:
         specifier: ^8.19.0
         version: 8.19.0
+
+  packages/markdown:
+    devDependencies:
+      typescript:
+        specifier: ~5.9.3
+        version: 5.9.3
+      vitest:
+        specifier: ^4.0.18
+        version: 4.0.18(@opentelemetry/api@1.9.0)(@types/node@24.10.13)(jiti@2.6.1)(jsdom@28.0.0)(lightningcss@1.30.2)(yaml@2.8.3)
 
 packages:
 
