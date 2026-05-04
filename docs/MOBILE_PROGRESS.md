@@ -8,7 +8,7 @@ This file is the resumable working log for Tolaria mobile. The strategy and road
 
 - Branch: `codex/mobile`
 - Active phase: Phase 2 - Mobile Shell
-- Active slice: Connect parsed Git remotes to mobile vault configuration
+- Active slice: Add mobile editor adapter boundary for TenTap
 - Push policy: commit locally; do not push unless explicitly requested
 - Validation target: iPad/iOS simulator first
 
@@ -45,13 +45,14 @@ This file is the resumable working log for Tolaria mobile. The strategy and road
 - Re-tested the iPad simulator path; the app now launches in Expo Go on `iPad Pro 13-inch (M4)`.
 - Added a pure mobile Git remote parser that codifies the auth choice: GitHub remotes use the GitHub OAuth App path, arbitrary Git remotes use the SSH-key path.
 - Added a pure mobile vault configuration model that keeps vault storage app-local, distinguishes local-only vs remote-backed sync, and derives the required Git auth path from the parsed remote.
+- Extracted the mobile editor surface behind `MobileEditorAdapter` with a tested document projection so TenTap can replace the placeholder surface without changing shell navigation.
 
 ## Next Action
 
 Continue Phase 2 with the next mobile shell slice:
 
 1. Dismiss or suppress Expo Go's first-run tools modal during simulator QA so screenshots capture the app without the overlay.
-2. Begin the TenTap editor spike behind a `MobileEditorAdapter` once the shell/storage boundary is stable.
+2. Install and spike TenTap behind `MobileEditorAdapter`, keeping the adapter contract intact.
 3. Add the first native storage adapter around the vault config/repository contracts after the editor spike confirms the app shape.
 
 ## Verification Log
@@ -124,6 +125,10 @@ Continue Phase 2 with the next mobile shell slice:
 - `pnpm --filter @tolaria/mobile typecheck` passed after vault config extraction.
 - CodeScene after vault config extraction: `apps/mobile/src/mobileVaultConfig.ts` and `apps/mobile/src/mobileVaultConfig.test.ts` scored `10`.
 - `pnpm --filter @tolaria/mobile exec expo export --platform ios --output-dir /tmp/tolaria-mobile-export` passed after vault config extraction.
+- `pnpm --filter @tolaria/mobile test -- src/mobileEditorDocument.test.ts` passed after editor adapter extraction: 8 files / 27 tests.
+- `pnpm --filter @tolaria/mobile typecheck` passed after editor adapter extraction.
+- CodeScene after editor adapter extraction: `apps/mobile/src/MobileApp.tsx`, `apps/mobile/src/MobileEditorAdapter.tsx`, `apps/mobile/src/mobileEditorDocument.ts`, and `apps/mobile/src/mobileEditorDocument.test.ts` scored `10`.
+- `pnpm --filter @tolaria/mobile exec expo export --platform ios --output-dir /tmp/tolaria-mobile-export` passed after editor adapter extraction.
 
 ## Risks / Watch Items
 

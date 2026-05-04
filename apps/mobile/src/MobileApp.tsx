@@ -18,6 +18,7 @@ import {
   SlidersHorizontal,
 } from 'phosphor-react-native'
 import { MobileNote, notes, sidebarSections } from './demoData'
+import { MobileEditorAdapter } from './MobileEditorAdapter'
 import {
   createCompactNavigationState,
   transitionCompactNavigation,
@@ -213,7 +214,6 @@ function EditorPanel({
   onBack?: () => void
   onOpenProperties?: () => void
 }) {
-  const bodyLines = note.content.split('\n').filter((line) => line.trim() && !line.startsWith('---') && !line.includes(': '))
   return (
     <View style={styles.editor}>
       <Toolbar>
@@ -222,19 +222,7 @@ function EditorPanel({
         {onOpenProperties ? <IconButton icon={<Info size={23} color={colors.textSoft} />} onPress={onOpenProperties} /> : null}
         <IconButton icon={<DotsThreeVertical size={23} color={colors.textSoft} />} />
       </Toolbar>
-      <ScrollView contentContainerStyle={styles.editorContent}>
-        <View style={styles.breadcrumbRow}>
-          <Text style={styles.breadcrumbText}>{note.type}</Text>
-          <Text style={styles.breadcrumbDivider}>/</Text>
-          <Text style={styles.breadcrumbText}>{note.id}</Text>
-        </View>
-        <Text style={styles.editorTitle}>{note.title}</Text>
-        {bodyLines.slice(1).map((line) => (
-          <Text key={line} style={line.startsWith('-') ? styles.editorBullet : styles.editorParagraph}>
-            {line}
-          </Text>
-        ))}
-      </ScrollView>
+      <MobileEditorAdapter note={note} />
     </View>
   )
 }
