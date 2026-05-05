@@ -95,12 +95,13 @@ This file is the resumable working log for Tolaria mobile. The strategy and road
 - Wired remote-backed mobile sync status actions to credential loading and the GitHub OAuth flow, including visible syncing/failed status states when Connect is tapped.
 - Added a mobile vault remote setup prompt behind the sidebar controls, with persisted remote URL metadata validation and removal by blanking the value.
 - Exposed the missing `EXPO_PUBLIC_GITHUB_OAUTH_CLIENT_ID` requirement inside the mobile remote setup prompt and split the client-id detector away from native AuthSession imports.
+- Separated the mobile Git remote setup prompt styles from note-creation prompt styles so vault-management UI can evolve without coupling to compose UI names.
 
 ## Next Action
 
 Continue Phase 4 with editor durability:
 
-1. Add a clearer mobile settings/vault-management surface around the remote setup prompt and consider moving the prompt out of the create-note popover styling.
+1. Add a clearer mobile settings/vault-management surface around the remote setup prompt.
 2. Continue TenTap Markdown serialization coverage for any editor output observed in simulator QA.
 3. Retry the iOS development-client build after installing an iOS 26.2 simulator runtime in Xcode.
 
@@ -356,6 +357,10 @@ Continue Phase 4 with editor durability:
 - `pnpm --filter @tolaria/mobile typecheck` passed after surfacing OAuth client-id state.
 - CodeScene after surfacing OAuth client-id state: `apps/mobile/src/MobileApp.tsx`, `apps/mobile/src/MobileVaultRemotePrompt.tsx`, `apps/mobile/src/mobileGitHubOAuthClientId.ts`, `apps/mobile/src/mobileGitHubOAuthEnvironment.ts`, and `apps/mobile/src/mobileGitHubOAuthEnvironment.test.ts` scored `10`.
 - `pnpm --filter @tolaria/mobile exec expo export --platform ios --output-dir /tmp/tolaria-mobile-export` passed after surfacing OAuth client-id state.
+- `pnpm --filter @tolaria/mobile test -- src/mobileVaultRemoteSetup.test.ts src/mobileGitHubOAuthEnvironment.test.ts` passed after splitting mobile remote prompt styles: 39 files / 131 tests.
+- `pnpm --filter @tolaria/mobile typecheck` passed after splitting mobile remote prompt styles.
+- CodeScene after splitting mobile remote prompt styles: `apps/mobile/src/MobileVaultRemotePrompt.tsx`, `apps/mobile/src/styles/remotePromptStyles.ts`, and `apps/mobile/src/styles/noteCreateStyles.ts` scored `10`; `apps/mobile/src/styles.ts` returned no scorable code and no findings.
+- `pnpm --filter @tolaria/mobile exec expo export --platform ios --output-dir /tmp/tolaria-mobile-export` passed after splitting mobile remote prompt styles.
 
 ## Risks / Watch Items
 

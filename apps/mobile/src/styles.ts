@@ -6,6 +6,7 @@ import { noteCreateStyles } from './styles/noteCreateStyles'
 import { noteListStyles } from './styles/noteListStyles'
 import { propertiesStyles } from './styles/propertiesStyles'
 import { propertyChipStyles } from './styles/propertyChipStyles'
+import { remotePromptStyles } from './styles/remotePromptStyles'
 import { sidebarStyles } from './styles/sidebarStyles'
 import { vaultLoadStyles } from './styles/vaultLoadStyles'
 
@@ -18,6 +19,7 @@ export const styles = {
   ...noteListStyles,
   ...propertiesStyles,
   ...propertyChipStyles,
+  ...remotePromptStyles,
   ...sidebarStyles,
   ...vaultLoadStyles,
 }

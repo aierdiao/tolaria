@@ -19,7 +19,7 @@ export function MobileVaultRemotePrompt({
   remoteUrl: string
 }) {
   return (
-    <View style={styles.createNotePrompt}>
+    <View style={styles.remotePrompt}>
       <Text style={styles.remotePromptTitle}>Git remote</Text>
       <TextInput
         accessibilityLabel="Git remote URL"
@@ -30,14 +30,14 @@ export function MobileVaultRemotePrompt({
         onSubmitEditing={onSubmit}
         placeholder="https://github.com/owner/repo.git"
         returnKeyType="done"
-        style={styles.createNoteInput}
+        style={styles.remotePromptInput}
         value={remoteUrl}
       />
       {!hasGitHubOAuthClientId ? (
-        <Text style={styles.createNoteError}>GitHub login needs EXPO_PUBLIC_GITHUB_OAUTH_CLIENT_ID</Text>
+        <Text style={styles.remotePromptError}>GitHub login needs EXPO_PUBLIC_GITHUB_OAUTH_CLIENT_ID</Text>
       ) : null}
-      {failed ? <Text style={styles.createNoteError}>Enter a valid Git remote URL</Text> : null}
-      <View style={styles.createNoteActions}>
+      {failed ? <Text style={styles.remotePromptError}>Enter a valid Git remote URL</Text> : null}
+      <View style={styles.remotePromptActions}>
         <PromptButton label="Cancel" onPress={onCancel} />
         <PromptButton label={isSaving ? 'Saving' : 'Save'} onPress={onSubmit} disabled={isSaving} primary />
       </View>
@@ -61,13 +61,13 @@ function PromptButton({
       disabled={disabled}
       onPress={onPress}
       style={({ pressed }) => [
-        styles.createNoteAction,
-        primary ? styles.createNoteActionPrimary : null,
-        disabled ? styles.createNoteActionDisabled : null,
+        styles.remotePromptAction,
+        primary ? styles.remotePromptActionPrimary : null,
+        disabled ? styles.remotePromptActionDisabled : null,
         pressed ? styles.pressed : null,
       ]}
     >
-      <Text style={[styles.createNoteActionText, primary ? styles.createNoteActionTextPrimary : null]}>{label}</Text>
+      <Text style={[styles.remotePromptActionText, primary ? styles.remotePromptActionTextPrimary : null]}>{label}</Text>
     </Pressable>
   )
 }
