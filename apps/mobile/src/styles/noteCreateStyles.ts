@@ -61,4 +61,9 @@ export const noteCreateStyles = StyleSheet.create({
     padding: spacing.md,
     backgroundColor: colors.canvas,
   },
+  remotePromptTitle: {
+    color: colors.text,
+    fontSize: 15,
+    fontWeight: '800',
+  },
 })

@@ -93,12 +93,13 @@ This file is the resumable working log for Tolaria mobile. The strategy and road
 - Added the mobile GitHub OAuth session boundary with Expo AuthSession/WebBrowser, PKCE request shaping, code exchange, SecureStore handoff, and the `tolaria://oauth/github` redirect scheme.
 - Created [ADR-0114](./adr/0114-expo-auth-session-for-mobile-github-oauth.md) for the mobile GitHub OAuth native dependency and redirect scheme.
 - Wired remote-backed mobile sync status actions to credential loading and the GitHub OAuth flow, including visible syncing/failed status states when Connect is tapped.
+- Added a mobile vault remote setup prompt behind the sidebar controls, with persisted remote URL metadata validation and removal by blanking the value.
 
 ## Next Action
 
 Continue Phase 4 with editor durability:
 
-1. Add a mobile vault-management path for entering remote URLs and exposing the configured GitHub OAuth client ID requirement during setup.
+1. Add a clearer mobile settings/vault-management surface around the remote setup prompt and expose configured/missing GitHub OAuth client ID state.
 2. Continue TenTap Markdown serialization coverage for any editor output observed in simulator QA.
 3. Retry the iOS development-client build after installing an iOS 26.2 simulator runtime in Xcode.
 
@@ -346,6 +347,10 @@ Continue Phase 4 with editor durability:
 - `pnpm --filter @tolaria/mobile typecheck` passed after wiring Connect to mobile auth.
 - CodeScene after wiring Connect to mobile auth: `apps/mobile/src/MobileApp.tsx`, `apps/mobile/src/MobileGitSyncStatusCard.tsx`, `apps/mobile/src/useMobileGitSyncFlow.ts`, `apps/mobile/src/mobileGitAuthentication.ts`, `apps/mobile/src/mobileGitAuthentication.test.ts`, `apps/mobile/src/mobileGitCredentialStateForVault.ts`, `apps/mobile/src/mobileGitCredentialStateForVault.test.ts`, and `apps/mobile/src/mobileGitHubOAuthEnvironment.ts` scored `10`; `apps/mobile/src/mobileGitSyncRuntimePlan.ts` returned no scorable code and no findings.
 - `pnpm --filter @tolaria/mobile exec expo export --platform ios --output-dir /tmp/tolaria-mobile-export` passed after wiring Connect to mobile auth.
+- `pnpm --filter @tolaria/mobile test -- src/mobileVaultRemoteSetup.test.ts src/mobileVaultConfig.test.ts src/mobileGitSyncRuntimePlan.test.ts` passed after mobile remote setup: 38 files / 129 tests.
+- `pnpm --filter @tolaria/mobile typecheck` passed after mobile remote setup.
+- CodeScene after mobile remote setup: `apps/mobile/src/MobileApp.tsx`, `apps/mobile/src/MobileVaultRemotePrompt.tsx`, `apps/mobile/src/mobileVaultRemoteSetup.ts`, `apps/mobile/src/mobileVaultRemoteSetup.test.ts`, `apps/mobile/src/useMobileVaultRemoteSetupFlow.ts`, and `apps/mobile/src/styles/noteCreateStyles.ts` scored `10`.
+- `pnpm --filter @tolaria/mobile exec expo export --platform ios --output-dir /tmp/tolaria-mobile-export` passed after mobile remote setup.
 
 ## Risks / Watch Items
 

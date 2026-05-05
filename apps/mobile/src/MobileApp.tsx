@@ -47,9 +47,11 @@ import { styles } from './styles'
 import { colors } from './theme'
 import { MobileNoteCreatePrompt } from './MobileNoteCreatePrompt'
 import { MobilePropertiesPanel } from './MobilePropertiesPanel'
+import { MobileVaultRemotePrompt } from './MobileVaultRemotePrompt'
 import { useMobileNoteCreateFlow } from './useMobileNoteCreateFlow'
 import { useMobileNoteDeleteFlow } from './useMobileNoteDeleteFlow'
 import { useMobileNotePropertiesFlow } from './useMobileNotePropertiesFlow'
+import { useMobileVaultRemoteSetupFlow } from './useMobileVaultRemoteSetupFlow'
 import { createNativeMobileAppStateStorage } from './mobileNativeAppStateStorage'
 import { createNativeMobileVaultMetadataStorage } from './mobileNativeVaultMetadataStorage'
 import { createNativeMobileGitCredentialStorage } from './mobileNativeGitCredentialStorage'
@@ -109,6 +111,11 @@ export function MobileApp() {
     metadataStorage: vaultMetadataStorage,
     onLoaded: applyLoadedVaultRuntime,
   })
+  const remoteSetupFlow = useMobileVaultRemoteSetupFlow({
+    activeVault: activeVaultMetadata,
+    metadataStorage: vaultMetadataStorage,
+    onActiveVaultChanged: setActiveVaultMetadata,
+  })
 
   useEffect(() => () => autosaveQueue.cancelAll(), [autosaveQueue])
 
@@ -149,7 +156,7 @@ export function MobileApp() {
       <SafeAreaView style={styles.safeArea}>
         {isTablet ? (
           <View style={styles.tabletShell}>
-            <SidebarPanel />
+            <SidebarPanel onOpenRemoteSetup={remoteSetupFlow.open} />
             <NoteListPanel
               gitSyncPlan={gitSyncFlow.gitSyncPlan}
               notes={availableNotes}
@@ -208,8 +215,19 @@ export function MobileApp() {
             propertiesFailed={propertiesFlow.failed}
             isSavingProperties={propertiesFlow.isSaving}
             onChangeProperties={propertiesFlow.saveProperties}
+            onOpenRemoteSetup={remoteSetupFlow.open}
           />
         )}
+        {remoteSetupFlow.isOpen ? (
+          <MobileVaultRemotePrompt
+            failed={remoteSetupFlow.failed}
+            isSaving={remoteSetupFlow.isSaving}
+            onCancel={remoteSetupFlow.cancel}
+            onChangeRemoteUrl={remoteSetupFlow.setRemoteUrl}
+            onSubmit={remoteSetupFlow.submit}
+            remoteUrl={remoteSetupFlow.remoteUrl}
+          />
+        ) : null}
       </SafeAreaView>
     </SafeAreaProvider>
   )
@@ -234,6 +252,7 @@ function CompactShell({
   onOpenCreateNote,
   onGitSyncAction,
   onChangeProperties,
+  onOpenRemoteSetup,
   onRetryRuntimeLoad,
   onSubmitCreateNote,
   onSelectNote,
@@ -259,6 +278,7 @@ function CompactShell({
   onOpenCreateNote: () => void
   onGitSyncAction: () => void
   onChangeProperties: (patch: MobileNotePropertyPatch) => void
+  onOpenRemoteSetup: () => void
   onRetryRuntimeLoad: () => void
   onSubmitCreateNote: () => void
   onSelectNote: (note: MobileNote) => void
@@ -269,7 +289,7 @@ function CompactShell({
   if (activePanel === 'sidebar') {
     return (
       <SwipeSurface panel="sidebar" onNavigate={onNavigate}>
-        <SidebarPanel onClose={() => onNavigate({ type: 'closeSidebar' })} />
+        <SidebarPanel onClose={() => onNavigate({ type: 'closeSidebar' })} onOpenRemoteSetup={onOpenRemoteSetup} />
       </SwipeSurface>
     )
   }
@@ -327,13 +347,19 @@ function CompactShell({
   )
 }
 
-function SidebarPanel({ onClose }: { onClose?: () => void }) {
+function SidebarPanel({
+  onClose,
+  onOpenRemoteSetup,
+}: {
+  onClose?: () => void
+  onOpenRemoteSetup: () => void
+}) {
   return (
     <View style={styles.sidebar}>
       <Toolbar>
         {onClose ? <IconButton icon={<CaretLeft size={24} color={colors.textSoft} />} onPress={onClose} /> : null}
         <View style={styles.toolbarSpacer} />
-        <IconButton icon={<SlidersHorizontal size={22} color={colors.textSoft} />} />
+        <IconButton icon={<SlidersHorizontal size={22} color={colors.textSoft} />} onPress={onOpenRemoteSetup} />
       </Toolbar>
       <ScrollView contentContainerStyle={styles.sidebarContent}>
         {sidebarSections.map((section) => (
