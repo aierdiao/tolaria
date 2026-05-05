@@ -8,7 +8,7 @@ This file is the resumable working log for Tolaria mobile. The strategy and road
 
 - Branch: `codex/mobile`
 - Active phase: Phase 4 - Editor V1
-- Active slice: Core flow coverage and editor durability
+- Active slice: Git credential/auth boundaries and editor durability
 - Push policy: commit locally; do not push unless explicitly requested
 - Validation target: iPad/iOS simulator first
 
@@ -87,12 +87,13 @@ This file is the resumable working log for Tolaria mobile. The strategy and road
 - Added simple TenTap table serialization for rectangular tables, including entity decoding and escaped pipe characters, while continuing to block malformed table shapes.
 - Reworked the mobile properties panel into expandable Type/Status/Icon/Tags picker rows that show current values first and reveal chip choices on demand.
 - Added the first mobile Git sync plan model, covering local-only vaults, auth-required remotes, ready pull/push actions, active sync operations, and retryable failures.
+- Wired the mobile Git sync plan into the note-list UI through a visible status card for remote-backed vaults while local-only vaults remain chrome-free.
 
 ## Next Action
 
 Continue Phase 4 with editor durability:
 
-1. Wire the Git sync plan into the mobile runtime/status UI, still behind model-only operations until the native git adapter is selected.
+1. Add credential storage/auth facades for GitHub OAuth and SSH key presence, still behind model-only Git operations until the native git adapter is selected.
 2. Continue TenTap Markdown serialization coverage for any editor output observed in simulator QA.
 3. Retry the iOS development-client build after installing an iOS 26.2 simulator runtime in Xcode.
 
@@ -322,6 +323,10 @@ Continue Phase 4 with editor durability:
 - `pnpm --filter @tolaria/mobile typecheck` passed after mobile Git sync planning.
 - CodeScene after mobile Git sync planning: `apps/mobile/src/mobileGitSyncPlan.ts` and `apps/mobile/src/mobileGitSyncPlan.test.ts` scored `10`.
 - `pnpm --filter @tolaria/mobile exec expo export --platform ios --output-dir /tmp/tolaria-mobile-export` passed after mobile Git sync planning.
+- `pnpm --filter @tolaria/mobile test -- src/mobileGitSyncStatus.test.ts src/mobileGitSyncRuntimePlan.test.ts src/mobileGitSyncPlan.test.ts src/mobileVaultConfig.test.ts` passed after mobile Git sync status wiring: 31 files / 107 tests.
+- `pnpm --filter @tolaria/mobile typecheck` passed after mobile Git sync status wiring.
+- CodeScene after mobile Git sync status wiring: `apps/mobile/src/MobileApp.tsx`, `apps/mobile/src/MobileGitSyncStatusCard.tsx`, `apps/mobile/src/mobileGitSyncStatus.ts`, `apps/mobile/src/mobileGitSyncStatus.test.ts`, `apps/mobile/src/mobileGitSyncRuntimePlan.test.ts`, and `apps/mobile/src/styles/gitSyncStyles.ts` scored `10`; `apps/mobile/src/mobileGitSyncRuntimePlan.ts` and `apps/mobile/src/styles.ts` returned no scorable code and no findings.
+- `pnpm --filter @tolaria/mobile exec expo export --platform ios --output-dir /tmp/tolaria-mobile-export` passed after mobile Git sync status wiring.
 
 ## Risks / Watch Items
 

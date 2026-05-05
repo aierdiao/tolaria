@@ -1,6 +1,7 @@
 import { commonStyles } from './styles/commonStyles'
 import { editorSaveStateStyles } from './styles/editorSaveStateStyles'
 import { editorStyles } from './styles/editorStyles'
+import { gitSyncStyles } from './styles/gitSyncStyles'
 import { noteCreateStyles } from './styles/noteCreateStyles'
 import { noteListStyles } from './styles/noteListStyles'
 import { propertiesStyles } from './styles/propertiesStyles'
@@ -12,6 +13,7 @@ export const styles = {
   ...commonStyles,
   ...editorStyles,
   ...editorSaveStateStyles,
+  ...gitSyncStyles,
   ...noteCreateStyles,
   ...noteListStyles,
   ...propertiesStyles,

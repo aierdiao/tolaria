@@ -34,6 +34,7 @@ import {
 } from './mobileEditorSaveState'
 import { applySavedMobileEditorDraft } from './mobileSavedDraftProjection'
 import { MobileEditorAdapter } from './MobileEditorAdapter'
+import { MobileGitSyncStatusCard } from './MobileGitSyncStatusCard'
 import {
   createCompactNavigationState,
   transitionCompactNavigation,
@@ -51,6 +52,8 @@ import { useMobileNoteDeleteFlow } from './useMobileNoteDeleteFlow'
 import { useMobileNotePropertiesFlow } from './useMobileNotePropertiesFlow'
 import { createNativeMobileAppStateStorage } from './mobileNativeAppStateStorage'
 import { createNativeMobileVaultMetadataStorage } from './mobileNativeVaultMetadataStorage'
+import { createMobileGitSyncPlanForVault } from './mobileGitSyncRuntimePlan'
+import type { MobileGitSyncPlan } from './mobileGitSyncPlan'
 import { defaultMobileVaultMetadata } from './mobileVaultMetadata'
 import type { MobileVaultRuntime } from './mobileVaultRuntime'
 import { useMobileVaultRuntimeLoader } from './useMobileVaultRuntimeLoader'
@@ -71,6 +74,10 @@ export function MobileApp() {
     [availableNotes, compactNavigation.selectedNoteId],
   )
   const selectedSaveState = saveStateByNoteId[selectedNote.id] ?? idleMobileEditorSaveState
+  const gitSyncPlan = useMemo(
+    () => createMobileGitSyncPlanForVault({ vault: activeVaultMetadata }),
+    [activeVaultMetadata],
+  )
   const autosaveQueue = useMemo(
     () =>
       createMobileAutosaveQueue({
@@ -140,6 +147,7 @@ export function MobileApp() {
           <View style={styles.tabletShell}>
             <SidebarPanel />
             <NoteListPanel
+              gitSyncPlan={gitSyncPlan}
               notes={availableNotes}
               selectedNoteId={compactNavigation.selectedNoteId}
               createNoteFailed={createFlow.failed}
@@ -173,6 +181,7 @@ export function MobileApp() {
           <CompactShell
             activePanel={compactNavigation.panel}
             note={selectedNote}
+            gitSyncPlan={gitSyncPlan}
             notes={availableNotes}
             saveState={selectedSaveState}
             selectedNoteId={compactNavigation.selectedNoteId}
@@ -203,6 +212,7 @@ export function MobileApp() {
 function CompactShell({
   activePanel,
   note,
+  gitSyncPlan,
   notes,
   saveState,
   onNavigate,
@@ -226,6 +236,7 @@ function CompactShell({
 }: {
   activePanel: CompactPanel
   note: MobileNote
+  gitSyncPlan: MobileGitSyncPlan
   notes: MobileNote[]
   saveState: MobileEditorSaveState
   createNoteFailed: boolean
@@ -287,6 +298,7 @@ function CompactShell({
   return (
     <SwipeSurface panel="list" onNavigate={onNavigate}>
       <NoteListPanel
+        gitSyncPlan={gitSyncPlan}
         notes={notes}
         selectedNoteId={selectedNoteId}
         createNoteFailed={createNoteFailed}
@@ -340,6 +352,7 @@ function SidebarPanel({ onClose }: { onClose?: () => void }) {
 }
 
 function NoteListPanel({
+  gitSyncPlan,
   notes,
   createNoteFailed,
   createNoteTitle,
@@ -355,6 +368,7 @@ function NoteListPanel({
   onSubmitCreateNote,
   selectedNoteId,
 }: {
+  gitSyncPlan: MobileGitSyncPlan
   notes: MobileNote[]
   createNoteFailed: boolean
   createNoteTitle: string
@@ -378,6 +392,7 @@ function NoteListPanel({
         <View style={styles.toolbarSpacer} />
         <IconButton icon={<MagnifyingGlass size={23} color={colors.textSoft} />} />
       </Toolbar>
+      <MobileGitSyncStatusCard plan={gitSyncPlan} />
       {runtimeLoadFailed ? <VaultLoadErrorNotice onRetry={onRetryRuntimeLoad} /> : null}
       <FlatList
         data={notes}
