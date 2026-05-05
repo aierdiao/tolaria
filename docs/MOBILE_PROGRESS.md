@@ -77,12 +77,13 @@ This file is the resumable working log for Tolaria mobile. The strategy and road
 - Deferred archive as a first-class mobile note state until the mobile vault schema/frontmatter model is explicit; implementing archive now as file movement would create throwaway semantics that may conflict with desktop-compatible metadata.
 - Added mobile frontmatter metadata parsing for stored markdown notes, including type, icon, date, and inline tags, so app-local vault scans can project note metadata instead of hardcoding every stored note as a generic file.
 - Added mobile frontmatter serialization helpers that can create/update supported type/status/date/icon/tags fields while preserving unknown metadata lines.
+- Added a mobile frontmatter save boundary that updates persisted note metadata through the vault storage driver and exposes the same path through the demo vault facade for future properties UI calls.
 
 ## Next Action
 
 Continue Phase 4 with editor durability:
 
-1. Wire mobile property edits to the frontmatter read/write helpers for type/date/status/icon/tags.
+1. Wire the mobile properties panel to the frontmatter save boundary for type/date/status/icon/tags.
 2. Expand TenTap Markdown serialization coverage for common writing constructs and preserve unsupported blocks without corrupting files.
 3. Add simulator interaction coverage for create/open/edit/autosave/delete using a development-client path or another route that avoids Expo Go's overlay controls.
 
@@ -271,6 +272,11 @@ Continue Phase 4 with editor durability:
 - CodeScene after mobile frontmatter serialization helpers: `apps/mobile/src/mobileNoteFrontmatterWrite.ts` and `apps/mobile/src/mobileNoteFrontmatterWrite.test.ts` scored `10`.
 - `pnpm --filter @tolaria/mobile test` passed after mobile frontmatter serialization helpers: 24 files / 78 tests.
 - `pnpm --filter @tolaria/mobile exec expo export --platform ios --output-dir /tmp/tolaria-mobile-export` passed after mobile frontmatter serialization helpers.
+- `pnpm --filter @tolaria/mobile test -- src/mobileNoteFrontmatterSave.test.ts src/mobileNoteFrontmatterWrite.test.ts` passed after mobile frontmatter save boundary: 25 files / 80 tests.
+- `pnpm --filter @tolaria/mobile typecheck` passed after mobile frontmatter save boundary.
+- CodeScene after mobile frontmatter save boundary: `apps/mobile/src/mobileNoteFrontmatterSave.ts`, `apps/mobile/src/mobileNoteFrontmatterSave.test.ts`, and `apps/mobile/src/mobileDemoVault.ts` scored `10`.
+- `pnpm --filter @tolaria/mobile test` passed after mobile frontmatter save boundary: 25 files / 80 tests.
+- `pnpm --filter @tolaria/mobile exec expo export --platform ios --output-dir /tmp/tolaria-mobile-export` passed after mobile frontmatter save boundary.
 
 ## Risks / Watch Items
 

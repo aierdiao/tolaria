@@ -1,6 +1,8 @@
 import { demoNoteSources } from './demoData'
 import type { MobileEditorDraft } from './mobileEditorDraft'
 import { saveMobileEditorDraft } from './mobileEditorDraftSave'
+import { saveMobileNoteFrontmatter } from './mobileNoteFrontmatterSave'
+import type { WritableMobileNoteFrontmatter } from './mobileNoteFrontmatterWrite'
 import { createMobileNoteFile } from './mobileNoteCreate'
 import {
   createMobileVaultConfigFromMetadata,
@@ -49,6 +51,23 @@ export async function deleteDemoVaultNote(noteId: string, vaultMetadata = defaul
     storage,
     vault: createDemoVaultConfig(vaultMetadata),
   }).deleteNote(noteId)
+}
+
+export function saveDemoVaultNoteFrontmatter({
+  metadata,
+  noteId,
+  vaultMetadata = defaultMobileVaultMetadata,
+}: {
+  metadata: WritableMobileNoteFrontmatter
+  noteId: string
+  vaultMetadata?: MobileVaultMetadata
+}) {
+  return saveMobileNoteFrontmatter({
+    metadata,
+    noteId,
+    storage: createNativeMobileVaultStorage(),
+    vault: createDemoVaultConfig(vaultMetadata),
+  })
 }
 
 function demoVaultFiles(): MobileVaultFile[] {
