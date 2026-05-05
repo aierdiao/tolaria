@@ -8,6 +8,7 @@ export type MobileNoteSource = {
   modified: string
   filename: string
   content: string
+  status?: string
   tags: string[]
 }
 
@@ -30,6 +31,7 @@ export function projectMobileNote(source: MobileNoteSource): MobileNote {
     date: source.date,
     modified: source.modified,
     content: source.content,
+    status: source.status,
     tags: source.tags,
     title: titleState.title,
     snippet: extractSnippet(source.content),

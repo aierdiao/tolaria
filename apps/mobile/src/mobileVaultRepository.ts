@@ -64,6 +64,7 @@ function fileToSource(file: MobileVaultFile): MobileNoteSource {
     modified: '',
     filename: file.path,
     content: file.content,
+    status: metadata.status,
     tags: metadata.tags,
   }
 }

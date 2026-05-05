@@ -8,7 +8,7 @@ This file is the resumable working log for Tolaria mobile. The strategy and road
 
 - Branch: `codex/mobile`
 - Active phase: Phase 4 - Editor V1
-- Active slice: Markdown editor durability and frontmatter round-trip
+- Active slice: Properties panel persistence and editor durability
 - Push policy: commit locally; do not push unless explicitly requested
 - Validation target: iPad/iOS simulator first
 
@@ -78,14 +78,15 @@ This file is the resumable working log for Tolaria mobile. The strategy and road
 - Added mobile frontmatter metadata parsing for stored markdown notes, including type, icon, date, and inline tags, so app-local vault scans can project note metadata instead of hardcoding every stored note as a generic file.
 - Added mobile frontmatter serialization helpers that can create/update supported type/status/date/icon/tags fields while preserving unknown metadata lines.
 - Added a mobile frontmatter save boundary that updates persisted note metadata through the vault storage driver and exposes the same path through the demo vault facade for future properties UI calls.
+- Wired the iPad/mobile properties panel to the frontmatter save boundary for type, status, icon, date, and tags; successful saves reload projected notes from app-local storage, and large iPads now show the right properties column.
 
 ## Next Action
 
 Continue Phase 4 with editor durability:
 
-1. Wire the mobile properties panel to the frontmatter save boundary for type/date/status/icon/tags.
-2. Expand TenTap Markdown serialization coverage for common writing constructs and preserve unsupported blocks without corrupting files.
-3. Add simulator interaction coverage for create/open/edit/autosave/delete using a development-client path or another route that avoids Expo Go's overlay controls.
+1. Expand TenTap Markdown serialization coverage for common writing constructs and preserve unsupported blocks without corrupting files.
+2. Add simulator interaction coverage for create/open/edit/autosave/delete using a development-client path or another route that avoids Expo Go's overlay controls.
+3. Replace the first property chips with richer desktop-compatible pickers once the mobile metadata schema is finalized.
 
 ## Verification Log
 
@@ -277,6 +278,12 @@ Continue Phase 4 with editor durability:
 - CodeScene after mobile frontmatter save boundary: `apps/mobile/src/mobileNoteFrontmatterSave.ts`, `apps/mobile/src/mobileNoteFrontmatterSave.test.ts`, and `apps/mobile/src/mobileDemoVault.ts` scored `10`.
 - `pnpm --filter @tolaria/mobile test` passed after mobile frontmatter save boundary: 25 files / 80 tests.
 - `pnpm --filter @tolaria/mobile exec expo export --platform ios --output-dir /tmp/tolaria-mobile-export` passed after mobile frontmatter save boundary.
+- `pnpm --filter @tolaria/mobile test -- src/mobileNoteProperties.test.ts src/mobileNoteFrontmatter.test.ts src/mobileVaultRepository.test.ts src/mobileNoteFrontmatterSave.test.ts` passed after properties persistence wiring: 26 files / 84 tests.
+- `pnpm --filter @tolaria/mobile typecheck` passed after properties persistence wiring.
+- CodeScene after properties persistence wiring: `apps/mobile/src/MobileApp.tsx`, `apps/mobile/src/MobilePropertiesPanel.tsx`, `apps/mobile/src/mobileNoteFrontmatter.ts`, `apps/mobile/src/mobileNoteFrontmatter.test.ts`, `apps/mobile/src/mobileNoteProjection.ts`, `apps/mobile/src/mobileVaultRepository.ts`, `apps/mobile/src/mobileVaultRepository.test.ts`, `apps/mobile/src/mobileNoteProperties.ts`, `apps/mobile/src/mobileNoteProperties.test.ts`, `apps/mobile/src/useMobileNotePropertiesFlow.ts`, `apps/mobile/src/styles/propertiesStyles.ts`, and `apps/mobile/src/styles/propertyChipStyles.ts` scored `10`.
+- `pnpm --filter @tolaria/mobile test` passed after properties persistence wiring: 26 files / 84 tests.
+- `pnpm --filter @tolaria/mobile exec expo export --platform ios --output-dir /tmp/tolaria-mobile-export` passed after properties persistence wiring.
+- iPad simulator screenshot captured at `/tmp/tolaria-mobile-properties-ipad-visible.png`; the large iPad layout renders the properties column with save-backed type/status/icon/date/tag controls and no red runtime error overlay.
 
 ## Risks / Watch Items
 

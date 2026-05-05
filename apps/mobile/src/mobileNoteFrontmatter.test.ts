@@ -7,12 +7,14 @@ describe('mobile note frontmatter', () => {
       '---',
       'type: Essay',
       'icon: pen-nib',
+      'status: Active',
       'date: "2026-05-05"',
       '---',
       '# Workflow',
     ].join('\n'))).toEqual({
       date: '2026-05-05',
       icon: 'pen-nib',
+      status: 'Active',
       tags: [],
       type: 'Essay',
     })
@@ -22,6 +24,7 @@ describe('mobile note frontmatter', () => {
     expect(readMobileNoteFrontmatter('---\ntags: [Tolaria MVP, "mobile"]\n---\n# Note')).toEqual({
       date: undefined,
       icon: undefined,
+      status: undefined,
       tags: ['Tolaria MVP', 'mobile'],
       type: undefined,
     })
@@ -31,6 +34,7 @@ describe('mobile note frontmatter', () => {
     expect(readMobileNoteFrontmatter('# Note')).toEqual({
       date: undefined,
       icon: undefined,
+      status: undefined,
       tags: [],
       type: undefined,
     })

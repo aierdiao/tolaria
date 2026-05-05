@@ -19,7 +19,13 @@ import {
   Trash,
 } from 'phosphor-react-native'
 import { MobileNote, notes as fallbackNotes, sidebarSections } from './demoData'
-import { createDemoVaultNote, deleteDemoVaultNote, loadDemoVaultNotes, saveDemoVaultDraft } from './mobileDemoVault'
+import {
+  createDemoVaultNote,
+  deleteDemoVaultNote,
+  loadDemoVaultNotes,
+  saveDemoVaultDraft,
+  saveDemoVaultNoteFrontmatter,
+} from './mobileDemoVault'
 import { createMobileAutosaveQueue } from './mobileAutosaveQueue'
 import type { MobileEditorDraft } from './mobileEditorDraft'
 import {
@@ -39,18 +45,21 @@ import { SwipeSurface } from './SwipeSurface'
 import { styles } from './styles'
 import { colors } from './theme'
 import { MobileNoteCreatePrompt } from './MobileNoteCreatePrompt'
+import { MobilePropertiesPanel } from './MobilePropertiesPanel'
 import { useMobileNoteCreateFlow } from './useMobileNoteCreateFlow'
 import { useMobileNoteDeleteFlow } from './useMobileNoteDeleteFlow'
+import { useMobileNotePropertiesFlow } from './useMobileNotePropertiesFlow'
 import { createNativeMobileAppStateStorage } from './mobileNativeAppStateStorage'
 import { createNativeMobileVaultMetadataStorage } from './mobileNativeVaultMetadataStorage'
 import { defaultMobileVaultMetadata } from './mobileVaultMetadata'
 import type { MobileVaultRuntime } from './mobileVaultRuntime'
 import { useMobileVaultRuntimeLoader } from './useMobileVaultRuntimeLoader'
+import type { MobileNotePropertyPatch } from './mobileNoteProperties'
 
 export function MobileApp() {
   const { width } = useWindowDimensions()
   const isTablet = width >= 820
-  const showsProperties = width >= 1120
+  const showsProperties = width >= 1000
   const appStateStorage = useMemo(() => createNativeMobileAppStateStorage(), [])
   const vaultMetadataStorage = useMemo(() => createNativeMobileVaultMetadataStorage(), [])
   const [activeVaultMetadata, setActiveVaultMetadata] = useState(defaultMobileVaultMetadata)
@@ -113,6 +122,16 @@ export function MobileApp() {
       selectNoteId(note.id)
     },
   })
+  const propertiesFlow = useMobileNotePropertiesFlow({
+    loadNotes: () => loadDemoVaultNotes(activeVaultMetadata),
+    onNotesLoaded: setAvailableNotes,
+    saveFrontmatter: (noteId, metadata) => saveDemoVaultNoteFrontmatter({
+      metadata,
+      noteId,
+      vaultMetadata: activeVaultMetadata,
+    }),
+    selectedNote,
+  })
 
   return (
     <SafeAreaProvider>
@@ -141,7 +160,14 @@ export function MobileApp() {
               onDeleteNote={deleteFlow.canDelete ? deleteFlow.deleteSelectedNote : undefined}
               onDraftChange={saveDraft}
             />
-            {showsProperties ? <PropertiesPanel note={selectedNote} /> : null}
+            {showsProperties ? (
+              <MobilePropertiesPanel
+                failed={propertiesFlow.failed}
+                isSaving={propertiesFlow.isSaving}
+                note={selectedNote}
+                onChangeProperties={propertiesFlow.saveProperties}
+              />
+            ) : null}
           </View>
         ) : (
           <CompactShell
@@ -164,6 +190,9 @@ export function MobileApp() {
             onRetryRuntimeLoad={runtimeLoader.retry}
             onSubmitCreateNote={createFlow.submit}
             onSelectNote={selectNote}
+            propertiesFailed={propertiesFlow.failed}
+            isSavingProperties={propertiesFlow.isSaving}
+            onChangeProperties={propertiesFlow.saveProperties}
           />
         )}
       </SafeAreaView>
@@ -187,9 +216,12 @@ function CompactShell({
   onCancelCreateNote,
   onChangeCreateNoteTitle,
   onOpenCreateNote,
+  onChangeProperties,
   onRetryRuntimeLoad,
   onSubmitCreateNote,
   onSelectNote,
+  propertiesFailed,
+  isSavingProperties,
   selectedNoteId,
 }: {
   activePanel: CompactPanel
@@ -207,9 +239,12 @@ function CompactShell({
   onCancelCreateNote: () => void
   onChangeCreateNoteTitle: (title: string) => void
   onOpenCreateNote: () => void
+  onChangeProperties: (patch: MobileNotePropertyPatch) => void
   onRetryRuntimeLoad: () => void
   onSubmitCreateNote: () => void
   onSelectNote: (note: MobileNote) => void
+  propertiesFailed: boolean
+  isSavingProperties: boolean
   selectedNoteId: string
 }) {
   if (activePanel === 'sidebar') {
@@ -238,7 +273,13 @@ function CompactShell({
   if (activePanel === 'properties') {
     return (
       <SwipeSurface panel="properties" onNavigate={onNavigate}>
-        <PropertiesPanel note={note} onClose={() => onNavigate({ type: 'closeProperties' })} />
+        <MobilePropertiesPanel
+          failed={propertiesFailed}
+          isSaving={isSavingProperties}
+          note={note}
+          onChangeProperties={onChangeProperties}
+          onClose={() => onNavigate({ type: 'closeProperties' })}
+        />
       </SwipeSurface>
     )
   }
@@ -446,31 +487,6 @@ function EditorPanel({
   )
 }
 
-function PropertiesPanel({ note, onClose }: { note: MobileNote; onClose?: () => void }) {
-  return (
-    <View style={styles.properties}>
-      <Toolbar>
-        <Text style={styles.propertiesTitle}>Properties</Text>
-        <View style={styles.toolbarSpacer} />
-        {onClose ? <IconButton icon={<CaretLeft size={23} color={colors.textSoft} />} onPress={onClose} /> : null}
-      </Toolbar>
-      <ScrollView contentContainerStyle={styles.propertiesContent}>
-        <PropertyRow label="Type" value={note.type} />
-        <PropertyRow label="Date" value={note.date} />
-        <PropertyRow label="Words" value={String(note.words)} />
-        <PropertyRow label="Modified" value={note.modified} />
-        <Text style={styles.propertyGroupTitle}>Tags</Text>
-        <View style={styles.tagRow}>
-          {note.tags.map((tag) => <Tag key={tag} label={tag} />)}
-        </View>
-        <Text style={styles.propertyGroupTitle}>History</Text>
-        <Text style={styles.historyItem}>eb373865c - Updated 1 note</Text>
-        <Text style={styles.historyItem}>5e853fdfe - Updated 1 note</Text>
-      </ScrollView>
-    </View>
-  )
-}
-
 function Toolbar({ children }: { children: React.ReactNode }) {
   return <View style={styles.toolbar}>{children}</View>
 }
@@ -480,15 +496,6 @@ function IconButton({ icon, onPress }: { icon: React.ReactNode; onPress?: () => 
     <Pressable onPress={onPress} style={({ pressed }) => [styles.iconButton, pressed ? styles.pressed : null]}>
       {icon}
     </Pressable>
-  )
-}
-
-function PropertyRow({ label, value }: { label: string; value: string }) {
-  return (
-    <View style={styles.propertyRow}>
-      <Text style={styles.propertyLabel}>{label}</Text>
-      <Text style={styles.propertyValue}>{value}</Text>
-    </View>
   )
 }
 

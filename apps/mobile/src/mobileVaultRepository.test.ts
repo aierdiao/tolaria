@@ -60,6 +60,7 @@ describe('mobile vault repository', () => {
             '---',
             'type: Essay',
             'icon: pen-nib',
+            'status: Active',
             'date: 2026-05-05',
             'tags: [Tolaria MVP, mobile]',
             '---',
@@ -74,6 +75,7 @@ describe('mobile vault repository', () => {
       id: 'workflow',
       type: 'Essay',
       icon: 'pen-nib',
+      status: 'Active',
       date: '2026-05-05',
       tags: ['Tolaria MVP', 'mobile'],
     })

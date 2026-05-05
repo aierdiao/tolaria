@@ -3,6 +3,7 @@ import { splitFrontmatter } from '@tolaria/markdown'
 export type MobileNoteFrontmatter = {
   date?: string
   icon?: string
+  status?: string
   tags: string[]
   type?: string
 }
@@ -14,6 +15,7 @@ export function readMobileNoteFrontmatter(content: string): MobileNoteFrontmatte
   return {
     date: readScalarField({ key: 'date', lines }),
     icon: readScalarField({ key: 'icon', lines }),
+    status: readScalarField({ key: 'status', lines }),
     tags: readTags(lines),
     type: readScalarField({ key: 'type', lines }),
   }
