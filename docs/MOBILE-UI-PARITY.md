@@ -27,6 +27,17 @@ The default screenshot matrix is:
 | Tablet portrait | 1024 x 1366 | Tablet reflow and panel density |
 | Phone portrait | 390 x 844 | Early visibility into phone reduction pressure |
 
+The tablet state matrix currently captures:
+
+| Scenario | Purpose |
+| --- | --- |
+| `default` | Baseline sidebar, note list, editor, properties, and sync footer |
+| `selected-open-source-project` | Note selection state and properties refresh |
+| `empty-inbox` | Empty list, no selected note, empty editor, empty properties, pull-required sync |
+| `long-title` | Long title pressure across note rows, toolbar, and editor heading |
+| `property-heavy` | Multi-tag note, grouped multi-value relationships, and property actions |
+| `dense-sidebar` | Sidebar overflow, long counts, and expanded navigation groups in tablet landscape |
+
 Run the full desktop/native Tolaria gate only before promotion or when desktop/native production files are intentionally changed:
 
 ```bash

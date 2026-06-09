@@ -11,6 +11,30 @@ type ScreenshotRecord = {
 
 const screenshotDir = process.env.MOBILE_QA_SCREENSHOT_DIR ?? '/tmp/tolaria-mobile-ui-screenshots'
 
+const tabletScenarioStates = [
+  {
+    description: 'empty-inbox',
+    expectedText: 'All notes are organized',
+    scenario: 'empty-inbox',
+  },
+  {
+    description: 'long-title',
+    expectedText: 'A Very Long Note Title That Should Stay Readable',
+    scenario: 'long-title',
+  },
+  {
+    description: 'property-heavy',
+    expectedText: 'Depends on',
+    scenario: 'property-heavy',
+  },
+  {
+    description: 'dense-sidebar',
+    expectedText: 'Research Backlog',
+    landscapeOnly: true,
+    scenario: 'dense-sidebar',
+  },
+]
+
 async function recordScreenshot(record: ScreenshotRecord) {
   const manifestPath = join(screenshotDir, 'manifest.json')
   let existing: ScreenshotRecord[] = []
@@ -68,8 +92,11 @@ test.describe('mobile UI lab screenshots', () => {
 
     await page.goto('/')
 
-    await page.getByText('How I Run an Open Source Project').click()
-    await expect(page.getByText('Inbox / How I Run an Open Source Project')).toBeVisible()
+    const openSourceProjectNote = page.getByText('How I Run an Open Source Project').first()
+
+    await expect(openSourceProjectNote).toBeVisible()
+    await openSourceProjectNote.click()
+    await expect(openSourceProjectNote).toBeVisible()
     await expect(page.getByText('Procedure').last()).toBeVisible()
 
     await captureUiState({
@@ -78,4 +105,21 @@ test.describe('mobile UI lab screenshots', () => {
       projectName: testInfo.project.name,
     })
   })
+
+  for (const scenarioState of tabletScenarioStates) {
+    test(`captures the ${scenarioState.description} state on tablet layouts`, async ({ page }, testInfo) => {
+      test.skip(testInfo.project.name === 'phone-portrait', 'Phone layout captures the scrollable tablet preview only.')
+      test.skip(Boolean(scenarioState.landscapeOnly) && testInfo.project.name !== 'tablet-landscape', 'Sidebar density is visible only in tablet landscape.')
+
+      await page.goto(`/?scenario=${scenarioState.scenario}`)
+
+      await expect(page.getByText(scenarioState.expectedText).first()).toBeVisible()
+
+      await captureUiState({
+        description: scenarioState.description,
+        page,
+        projectName: testInfo.project.name,
+      })
+    })
+  }
 })

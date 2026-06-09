@@ -15,7 +15,15 @@ import {
   Tray,
 } from 'phosphor-react-native'
 import { ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native'
-import { fixtureEditorBullets, fixtureNotes, type FixtureNote } from '../fixtures/workspaceFixtures'
+import {
+  workspaceScenarios,
+  type FixtureNote,
+  type FixtureRelationship,
+  type FixtureSidebarIcon,
+  type FixtureSidebarSection,
+  type FixtureSyncStatus,
+  type WorkspaceScenario,
+} from '../fixtures/workspaceFixtures'
 import { mobileCopy, mobileText } from '../i18n/mobileText'
 import { MobileButton } from '../ui/MobileButton'
 import { MobileChip } from '../ui/MobileChip'
@@ -25,23 +33,50 @@ import { MobilePanel, MobileToolbar, MobileToolbarSpacer, MobileToolbarTitle } f
 import { MobilePropertyRow } from '../ui/MobilePropertyRow'
 import { mobileColors, mobileRadius, mobileSpace, mobileType } from '../ui/tokens'
 
-export function TabletWorkspaceMock() {
+export function TabletWorkspaceMock({
+  scenario = workspaceScenarios.default,
+}: {
+  scenario?: WorkspaceScenario
+}) {
   const { width } = useWindowDimensions()
-  const [selectedNoteId, setSelectedNoteId] = useState(fixtureNotes[0].id)
-  const selectedNote = fixtureNotes.find((note) => note.id === selectedNoteId) ?? fixtureNotes[0]
+  const [selectedNoteId, setSelectedNoteId] = useState<string | null>(scenario.selectedNoteId ?? scenario.notes[0]?.id ?? null)
+  const selectedNote = scenario.notes.find((note) => note.id === selectedNoteId) ?? scenario.notes[0] ?? null
   const compactTablet = width < 1180
 
   return (
-    <View style={layoutStyles.shell}>
-      {compactTablet ? null : <SidebarPanel />}
-      <NoteListPanel compact={compactTablet} selectedNoteId={selectedNoteId} onSelectNote={setSelectedNoteId} />
-      <EditorPanel compact={compactTablet} note={selectedNote} />
-      <PropertiesPanel compact={compactTablet} note={selectedNote} />
+    <View style={layoutStyles.shellRoot}>
+      <View style={layoutStyles.shell}>
+        {compactTablet ? null : <SidebarPanel sections={scenario.sidebarSections} />}
+        <NoteListPanel
+          compact={compactTablet}
+          notes={scenario.notes}
+          searchQuery={scenario.searchQuery}
+          selectedNoteId={selectedNoteId}
+          subtitle={scenario.noteListSubtitle}
+          onSelectNote={setSelectedNoteId}
+        />
+        <EditorPanel compact={compactTablet} note={selectedNote} bullets={scenario.editorBullets} />
+        <PropertiesPanel compact={compactTablet} note={selectedNote} />
+      </View>
+      <SyncStatusBar sync={scenario.sync} />
     </View>
   )
 }
 
-function SidebarPanel() {
+function SyncStatusBar({ sync }: { sync: FixtureSyncStatus }) {
+  return (
+    <View style={layoutStyles.syncBar}>
+      <View style={layoutStyles.syncStatusGroup}>
+        <Tray color={syncStatusColor(sync)} size={16} />
+        <Text numberOfLines={1} style={layoutStyles.syncStatusText}>{syncStatusLabel(sync)}</Text>
+        <Text numberOfLines={1} style={layoutStyles.syncDetailText}>{syncStatusDetail(sync)}</Text>
+      </View>
+      <MobileButton icon={<Tray color={mobileColors.text} size={14} />} label={mobileText('status.sync.now')} variant="ghost" />
+    </View>
+  )
+}
+
+function SidebarPanel({ sections }: { sections: FixtureSidebarSection[] }) {
   return (
     <MobilePanel style={sidebarStyles.panel}>
       <MobileToolbar>
@@ -51,16 +86,20 @@ function SidebarPanel() {
         <Text numberOfLines={1} style={sidebarStyles.vaultTitle}>Tolaria Vault</Text>
       </MobileToolbar>
       <ScrollView contentContainerStyle={sidebarStyles.content}>
-        <SidebarItem active count="7" icon={<Tray color={mobileColors.primary} size={15} />} label={mobileCopy.inbox} />
-        <SidebarItem count="8846" icon={<FileText color={mobileColors.textMuted} size={15} />} label={mobileCopy.allNotes} />
-        <SidebarItem count="276" icon={<Archive color={mobileColors.textMuted} size={15} />} label={mobileCopy.archive} />
-        <SectionTitle label={mobileCopy.favorites} />
-        <SidebarItem icon={<Star color={mobileColors.textMuted} size={15} />} label="Personal Journal" />
-        <SidebarItem icon={<FolderOpen color={mobileColors.textMuted} size={15} />} label="Tolaria MVP" />
-        <SectionTitle count="517" label={mobileCopy.types} />
-        <SidebarItem count="448" icon={<FileText color={mobileColors.green} size={15} />} label="Essays" />
-        <SidebarItem count="51" icon={<StackSimple color={mobileColors.purple} size={15} />} label="Procedures" />
-        <SidebarItem count="18" icon={<Tag color={mobileColors.orange} size={15} />} label="Responsibilities" />
+        {sections.map((section) => (
+          <View key={section.id}>
+            {section.label ? <SectionTitle count={section.count} label={section.label} /> : null}
+            {section.items.map((item) => (
+              <SidebarItem
+                active={item.active}
+                count={item.count}
+                icon={sidebarIcon(item.icon, item.active ? 'primary' : item.tone)}
+                key={item.id}
+                label={sidebarLabel(item.id, item.label)}
+              />
+            ))}
+          </View>
+        ))}
       </ScrollView>
     </MobilePanel>
   )
@@ -68,19 +107,25 @@ function SidebarPanel() {
 
 function NoteListPanel({
   compact,
+  notes,
   onSelectNote,
+  searchQuery,
   selectedNoteId,
+  subtitle,
 }: {
   compact: boolean
+  notes: FixtureNote[]
   onSelectNote: (noteId: string) => void
-  selectedNoteId: string
+  searchQuery?: string
+  selectedNoteId: string | null
+  subtitle: string
 }) {
   return (
     <MobilePanel style={[noteListStyles.panel, compact ? noteListStyles.panelCompact : null]}>
       <MobileToolbar>
         <View style={noteListStyles.toolbarTitleBlock}>
           <MobileToolbarTitle title={mobileCopy.inbox} />
-          <Text style={noteListStyles.toolbarSubtitle}>7 open notes</Text>
+          <Text style={noteListStyles.toolbarSubtitle}>{subtitle}</Text>
         </View>
         <MobileToolbarSpacer />
         <MobileIconButton accessibilityLabel={mobileCopy.searchNotes}>
@@ -90,43 +135,62 @@ function NoteListPanel({
           <Plus color={mobileColors.textMuted} size={20} />
         </MobileIconButton>
       </MobileToolbar>
-      <ScrollView>
-        {fixtureNotes.map((note) => (
-          <MobileListRow
-            chips={<NoteRowChips note={note} />}
-            key={note.id}
-            leading={<NoteTypeDot note={note} />}
-            meta={`${mobileCopy.modified} ${note.modified} · ${note.words} words`}
-            selected={note.id === selectedNoteId}
-            subtitle={note.snippet}
-            title={note.title}
-            trailing={note.favorite ? <Star color={mobileColors.primary} size={16} weight="fill" /> : <WorkspaceBadge label={note.workspace} />}
-            onPress={() => onSelectNote(note.id)}
-          />
-        ))}
-      </ScrollView>
-      <MobileButton
-        icon={<Plus color={mobileColors.textInverse} size={16} />}
-        label={mobileCopy.createNote}
-        style={noteListStyles.compose}
-        variant="primary"
-      />
+      {searchQuery ? (
+        <View style={noteListStyles.searchPill}>
+          <MagnifyingGlass color={mobileColors.textMuted} size={16} />
+          <Text numberOfLines={1} style={noteListStyles.searchText}>{searchQuery}</Text>
+        </View>
+      ) : null}
+      {notes.length === 0 ? (
+        <NoteListEmptyState />
+      ) : (
+        <ScrollView>
+          {notes.map((note) => (
+            <MobileListRow
+              chips={<NoteRowChips note={note} />}
+              key={note.id}
+              leading={<NoteTypeDot note={note} />}
+              selected={note.id === selectedNoteId}
+              subtitle={note.snippet}
+              title={note.title}
+              trailing={<NoteTypeIcon note={note} />}
+              onPress={() => onSelectNote(note.id)}
+            />
+          ))}
+        </ScrollView>
+      )}
     </MobilePanel>
   )
 }
 
 function EditorPanel({
+  bullets,
   compact,
   note,
 }: {
+  bullets: string[]
   compact: boolean
-  note: FixtureNote
+  note: FixtureNote | null
 }) {
+  if (!note) {
+    return (
+      <MobilePanel style={editorStyles.panel}>
+        <MobileToolbar>
+          <FileText color={mobileColors.textMuted} size={18} />
+          <MobileToolbarTitle title={mobileText('inspector.empty.noNoteSelected')} />
+        </MobileToolbar>
+        <View style={editorStyles.emptyState}>
+          <Text style={editorStyles.emptyTitle}>{mobileText('editor.empty.selectNote')}</Text>
+        </View>
+      </MobilePanel>
+    )
+  }
+
   return (
     <MobilePanel style={editorStyles.panel}>
       <MobileToolbar>
         <FileText color={mobileColors.textMuted} size={18} />
-        <Text numberOfLines={1} style={editorStyles.breadcrumb}>{mobileCopy.inbox} / {note.title}</Text>
+        <MobileToolbarTitle title={note.title} />
         <MobileChip label={note.workspace} tone="gray" />
         <MobileIconButton accessibilityLabel={mobileText('command.note.addFavorite')}>
           <Star color={note.favorite ? mobileColors.primary : mobileColors.textMuted} size={18} weight={note.favorite ? 'fill' : 'regular'} />
@@ -136,13 +200,8 @@ function EditorPanel({
         </MobileIconButton>
       </MobileToolbar>
       <ScrollView contentContainerStyle={[editorStyles.content, compact ? editorStyles.contentCompact : null]}>
-        <View style={editorStyles.metaRow}>
-          <MobileChip label={note.type} tone={note.typeTone} />
-          <Text style={editorStyles.metaText}>{note.status}</Text>
-          <Text style={editorStyles.metaText}>{note.date}</Text>
-        </View>
         <Text style={[editorStyles.title, compact ? editorStyles.titleCompact : null]}>{note.title}</Text>
-        {fixtureEditorBullets.map((item) => (
+        {bullets.map((item) => (
           <View key={item} style={editorStyles.bulletRow}>
             <Text style={editorStyles.bullet}>•</Text>
             <Text style={editorStyles.text}>{item}</Text>
@@ -158,7 +217,7 @@ function PropertiesPanel({
   note,
 }: {
   compact: boolean
-  note: FixtureNote
+  note: FixtureNote | null
 }) {
   return (
     <MobilePanel style={[propertyStyles.panel, compact ? propertyStyles.panelCompact : null]}>
@@ -166,25 +225,53 @@ function PropertiesPanel({
         <MobileToolbarTitle title={mobileCopy.properties} />
       </MobileToolbar>
       <ScrollView contentContainerStyle={propertyStyles.content}>
-        <MobilePropertyRow label="Type" value={<MobileChip label={note.type} tone={note.typeTone} />} />
-        <MobilePropertyRow label={mobileText('noteList.sort.status')} value={<MobileChip label={note.status} tone={statusTone(note.status)} />} />
-        <MobilePropertyRow label={mobileText('noteList.sort.created')} value={note.created} />
-        <MobilePropertyRow label={mobileCopy.modified} value={note.modified} />
-        <MobilePropertyRow label={mobileText('inspector.properties.workspace')} value={<WorkspaceBadge label={note.workspace} />} />
-        <MobilePropertyRow label="Tags" value={<ChipStack labels={note.tags} tone="gray" />} />
-        <MobilePropertyRow label="Links" value={`${note.links}`} />
-        <SectionTitle label="Relationships" />
-        <View style={propertyStyles.relationshipList}>
-          {note.relationships.map((relationship) => (
-            <View key={relationship} style={propertyStyles.relationshipRow}>
-              <LinkSimple color={mobileColors.textMuted} size={14} />
-              <Text numberOfLines={1} style={propertyStyles.relationshipText}>{relationship}</Text>
-            </View>
-          ))}
-        </View>
-        <MobileButton label={mobileText('inspector.relationship.addRelationship')} style={propertyStyles.fullWidthButton} variant="secondary" />
+        {note ? (
+          <>
+            <MobilePropertyRow label="Type" value={<MobileChip label={note.type} tone={note.typeTone} />} />
+            <MobilePropertyRow label={mobileText('noteList.sort.status')} value={<MobileChip label={note.status} tone={statusTone(note.status)} />} />
+            <MobilePropertyRow label={mobileText('noteList.sort.created')} value={note.created} />
+            <MobilePropertyRow label={mobileCopy.modified} value={note.modified} />
+            <MobilePropertyRow label={mobileText('inspector.properties.workspace')} value={<WorkspaceBadge label={note.workspace} />} />
+            <MobilePropertyRow label="Tags" value={<ChipStack labels={note.tags} tone="gray" />} />
+            <MobilePropertyRow label="Links" value={`${note.links}`} />
+            <SectionTitle label="Relationships" />
+            {note.relationships.map((relationship) => (
+              <MobilePropertyRow
+                key={`${relationship.kind}-${relationship.label ?? relationship.values.join('-')}`}
+                label={relationshipHeading(relationship)}
+                value={<RelationshipValues values={relationship.values} />}
+              />
+            ))}
+            <MobileButton
+              icon={<Plus color={mobileColors.text} size={14} />}
+              label={mobileText('inspector.properties.addProperty')}
+              style={propertyStyles.fullWidthButton}
+              variant="secondary"
+            />
+            <MobileButton
+              icon={<Plus color={mobileColors.text} size={14} />}
+              label={mobileText('inspector.relationship.addRelationship')}
+              style={propertyStyles.fullWidthButton}
+              variant="secondary"
+            />
+          </>
+        ) : (
+          <View style={propertyStyles.emptyState}>
+            <Text style={propertyStyles.emptyTitle}>{mobileText('inspector.empty.noNoteSelected')}</Text>
+            <Text style={propertyStyles.emptyText}>{mobileText('inspector.empty.noProperties')}</Text>
+          </View>
+        )}
       </ScrollView>
     </MobilePanel>
+  )
+}
+
+function NoteListEmptyState() {
+  return (
+    <View style={noteListStyles.emptyState}>
+      <Text style={noteListStyles.emptyTitle}>{mobileText('noteList.empty.allOrganized')}</Text>
+      <Text style={noteListStyles.emptyText}>{mobileText('noteList.empty.noNotes')}</Text>
+    </View>
   )
 }
 
@@ -196,6 +283,29 @@ function NoteRowChips({ note }: { note: FixtureNote }) {
       {note.tags.slice(0, 1).map((tag) => <MobileChip key={tag} label={tag} tone="gray" />)}
     </View>
   )
+}
+
+function RelationshipValues({ values }: { values: string[] }) {
+  return (
+    <View style={propertyStyles.relationshipValues}>
+      {values.map((value, index) => (
+        <View key={`${value}-${index}`} style={propertyStyles.relationshipRow}>
+          <LinkSimple color={mobileColors.textMuted} size={14} />
+          <Text numberOfLines={1} style={propertyStyles.relationshipText}>{value}</Text>
+        </View>
+      ))}
+    </View>
+  )
+}
+
+function relationshipHeading(relationship: FixtureRelationship): string {
+  if (relationship.kind === 'custom') {
+    return relationship.label ?? 'Custom'
+  }
+
+  if (relationship.kind === 'belongsTo') return 'Belongs to'
+  if (relationship.kind === 'has') return 'Has'
+  return 'Related to'
 }
 
 function ChipStack({
@@ -214,6 +324,78 @@ function ChipStack({
 
 function NoteTypeDot({ note }: { note: FixtureNote }) {
   return <View style={[noteListStyles.typeDot, noteTypeDotStyles[note.typeTone]]} />
+}
+
+function NoteTypeIcon({ note }: { note: FixtureNote }) {
+  const normalizedType = note.type.toLowerCase()
+
+  if (normalizedType.includes('release')) {
+    return <Archive color={noteTypeColor(note.typeTone)} size={16} />
+  }
+
+  if (normalizedType.includes('procedure')) {
+    return <StackSimple color={noteTypeColor(note.typeTone)} size={16} />
+  }
+
+  return <FileText color={noteTypeColor(note.typeTone)} size={16} />
+}
+
+function noteTypeColor(tone: FixtureNote['typeTone']) {
+  if (tone === 'green') return mobileColors.green
+  if (tone === 'orange') return mobileColors.orange
+  return mobileColors.purple
+}
+
+function sidebarIcon(icon: FixtureSidebarIcon, tone?: FixtureNote['typeTone'] | 'primary') {
+  const color = sidebarIconColor(tone)
+
+  if (icon === 'archive') return <Archive color={color} size={15} />
+  if (icon === 'folder') return <FolderOpen color={color} size={15} />
+  if (icon === 'inbox') return <Tray color={color} size={15} />
+  if (icon === 'procedure') return <StackSimple color={color} size={15} />
+  if (icon === 'star') return <Star color={color} size={15} />
+  if (icon === 'tag') return <Tag color={color} size={15} />
+
+  return <FileText color={color} size={15} />
+}
+
+function sidebarIconColor(tone?: FixtureNote['typeTone'] | 'primary') {
+  if (tone === 'primary') return mobileColors.primary
+  if (tone === 'green') return mobileColors.green
+  if (tone === 'orange') return mobileColors.orange
+  if (tone === 'purple') return mobileColors.purple
+
+  return mobileColors.textMuted
+}
+
+function sidebarLabel(id: string, fallback: string) {
+  if (id === 'all-notes') return mobileCopy.allNotes
+  if (id === 'archive') return mobileCopy.archive
+  if (id === 'inbox') return mobileCopy.inbox
+
+  return fallback
+}
+
+function syncStatusColor(sync: FixtureSyncStatus) {
+  if (sync.kind === 'conflict') return mobileColors.danger
+  if (sync.kind === 'pullRequired') return mobileColors.orange
+
+  return mobileColors.green
+}
+
+function syncStatusDetail(sync: FixtureSyncStatus) {
+  if (sync.kind === 'conflict') return mobileText('status.sync.resolveConflicts')
+  if (sync.kind === 'pullRequired') return mobileText('status.sync.pullAndPush')
+  if (sync.minutesAgo) return mobileText('status.sync.minutesAgo').replace('{minutes}', `${sync.minutesAgo}`)
+
+  return mobileText('status.sync.justNow')
+}
+
+function syncStatusLabel(sync: FixtureSyncStatus) {
+  if (sync.kind === 'conflict') return mobileText('status.sync.conflict')
+  if (sync.kind === 'pullRequired') return mobileText('status.sync.pullRequired')
+
+  return mobileText('status.sync.synced')
 }
 
 function SidebarItem({
@@ -275,10 +457,42 @@ const noteTypeDotStyles = StyleSheet.create({
 })
 
 const layoutStyles = StyleSheet.create({
+  shellRoot: {
+    flex: 1,
+    flexDirection: 'column',
+    backgroundColor: mobileColors.app,
+  },
   shell: {
     flex: 1,
     flexDirection: 'row',
     backgroundColor: mobileColors.app,
+  },
+  syncBar: {
+    alignItems: 'center',
+    backgroundColor: mobileColors.card,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: mobileColors.border,
+    flexDirection: 'row',
+    gap: mobileSpace.md,
+    justifyContent: 'space-between',
+    minHeight: 40,
+    paddingHorizontal: mobileSpace.lg,
+  },
+  syncStatusGroup: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: mobileSpace.sm,
+    flex: 1,
+    minWidth: 0,
+  },
+  syncStatusText: {
+    color: mobileColors.text,
+    fontSize: mobileType.body,
+    fontWeight: '700',
+  },
+  syncDetailText: {
+    color: mobileColors.textMuted,
+    fontSize: mobileType.micro,
   },
 })
 
@@ -381,10 +595,23 @@ const noteListStyles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: mobileSpace.xs,
   },
-  compose: {
-    bottom: mobileSpace.xl,
-    position: 'absolute',
-    right: mobileSpace.xl,
+  emptyState: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: mobileSpace.xl,
+  },
+  emptyText: {
+    marginTop: mobileSpace.sm,
+    color: mobileColors.textMuted,
+    fontSize: mobileType.body,
+    textAlign: 'center',
+  },
+  emptyTitle: {
+    color: mobileColors.text,
+    fontSize: mobileType.title,
+    fontWeight: '700',
+    textAlign: 'center',
   },
   panel: {
     borderRightWidth: StyleSheet.hairlineWidth,
@@ -392,6 +619,21 @@ const noteListStyles = StyleSheet.create({
   },
   panelCompact: {
     width: 336,
+  },
+  searchPill: {
+    minHeight: 36,
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: mobileSpace.sm,
+    borderBottomColor: mobileColors.border,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    paddingHorizontal: mobileSpace.lg,
+  },
+  searchText: {
+    flex: 1,
+    color: mobileColors.text,
+    fontSize: mobileType.body,
+    fontWeight: '600',
   },
   toolbarSubtitle: {
     color: mobileColors.textMuted,
@@ -409,12 +651,6 @@ const noteListStyles = StyleSheet.create({
 })
 
 const editorStyles = StyleSheet.create({
-  breadcrumb: {
-    flex: 1,
-    color: mobileColors.textMuted,
-    fontSize: mobileType.body,
-    fontWeight: '600',
-  },
   bullet: {
     color: mobileColors.primary,
     fontSize: 20,
@@ -435,17 +671,17 @@ const editorStyles = StyleSheet.create({
   contentCompact: {
     paddingHorizontal: mobileSpace.xl,
   },
-  metaRow: {
+  emptyState: {
+    flex: 1,
     alignItems: 'center',
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: mobileSpace.sm,
-    marginBottom: mobileSpace.lg,
+    justifyContent: 'center',
+    padding: mobileSpace.xxl,
   },
-  metaText: {
+  emptyTitle: {
     color: mobileColors.textMuted,
-    fontSize: mobileType.caption,
-    fontWeight: '600',
+    fontSize: mobileType.title,
+    fontWeight: '700',
+    textAlign: 'center',
   },
   panel: {
     flex: 1,
@@ -471,7 +707,26 @@ const editorStyles = StyleSheet.create({
 
 const propertyStyles = StyleSheet.create({
   content: {
+    flexGrow: 1,
     padding: mobileSpace.lg,
+  },
+  emptyState: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: mobileSpace.xxl,
+  },
+  emptyText: {
+    marginTop: mobileSpace.sm,
+    color: mobileColors.textMuted,
+    fontSize: mobileType.body,
+    textAlign: 'center',
+  },
+  emptyTitle: {
+    color: mobileColors.text,
+    fontSize: mobileType.title,
+    fontWeight: '700',
+    textAlign: 'center',
   },
   fullWidthButton: {
     marginTop: mobileSpace.lg,
@@ -482,9 +737,6 @@ const propertyStyles = StyleSheet.create({
   },
   panelCompact: {
     width: 280,
-  },
-  relationshipList: {
-    gap: mobileSpace.sm,
   },
   relationshipRow: {
     minHeight: 34,
@@ -500,5 +752,10 @@ const propertyStyles = StyleSheet.create({
     color: mobileColors.text,
     fontSize: mobileType.body,
     fontWeight: '600',
+    textAlign: 'right',
+  },
+  relationshipValues: {
+    alignItems: 'flex-end',
+    gap: mobileSpace.sm,
   },
 })
