@@ -2,10 +2,11 @@ import { useState, type ReactNode } from 'react'
 import {
   Archive,
   CaretDown,
+  CaretRight,
   DotsThree,
+  Folder,
   FileText,
   FolderOpen,
-  LinkSimple,
   MagnifyingGlass,
   Plus,
   SidebarSimple,
@@ -13,12 +14,15 @@ import {
   Star,
   Tag,
   Tray,
+  X,
 } from 'phosphor-react-native'
 import { ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native'
 import {
   workspaceScenarios,
   type FixtureNote,
   type FixtureRelationship,
+  type FixtureRelationshipValue,
+  type FixtureSidebarFolder,
   type FixtureSidebarIcon,
   type FixtureSidebarSection,
   type FixtureSyncStatus,
@@ -88,8 +92,8 @@ function SidebarPanel({ sections }: { sections: FixtureSidebarSection[] }) {
       <ScrollView contentContainerStyle={sidebarStyles.content}>
         {sections.map((section) => (
           <View key={section.id}>
-            {section.label ? <SectionTitle count={section.count} label={section.label} /> : null}
-            {section.items.map((item) => (
+            {section.label ? <SectionTitle count={section.count} label={sidebarSectionLabel(section.id, section.label)} /> : null}
+            {section.items?.map((item) => (
               <SidebarItem
                 active={item.active}
                 count={item.count}
@@ -98,6 +102,7 @@ function SidebarPanel({ sections }: { sections: FixtureSidebarSection[] }) {
                 label={sidebarLabel(item.id, item.label)}
               />
             ))}
+            {section.folders ? <FolderTree folders={section.folders} /> : null}
           </View>
         ))}
       </ScrollView>
@@ -232,15 +237,18 @@ function PropertiesPanel({
             <MobilePropertyRow label={mobileText('noteList.sort.created')} value={note.created} />
             <MobilePropertyRow label={mobileCopy.modified} value={note.modified} />
             <MobilePropertyRow label={mobileText('inspector.properties.workspace')} value={<WorkspaceBadge label={note.workspace} />} />
-            <MobilePropertyRow label="Tags" value={<ChipStack labels={note.tags} tone="gray" />} />
+            <PropertySection label="Tags">
+              <TagWrap labels={note.tags} />
+            </PropertySection>
             <MobilePropertyRow label="Links" value={`${note.links}`} />
             <SectionTitle label="Relationships" />
             {note.relationships.map((relationship) => (
-              <MobilePropertyRow
-                key={`${relationship.kind}-${relationship.label ?? relationship.values.join('-')}`}
+              <PropertySection
+                key={`${relationship.kind}-${relationship.label ?? relationship.values.map((value) => value.title).join('-')}`}
                 label={relationshipHeading(relationship)}
-                value={<RelationshipValues values={relationship.values} />}
-              />
+              >
+                <RelationshipValues values={relationship.values} />
+              </PropertySection>
             ))}
             <MobileButton
               icon={<Plus color={mobileColors.text} size={14} />}
@@ -285,13 +293,31 @@ function NoteRowChips({ note }: { note: FixtureNote }) {
   )
 }
 
-function RelationshipValues({ values }: { values: string[] }) {
+function PropertySection({
+  children,
+  label,
+}: {
+  children: ReactNode
+  label: string
+}) {
+  return (
+    <View style={propertyStyles.sectionRow}>
+      <Text style={propertyStyles.sectionLabel}>{label}</Text>
+      <View style={propertyStyles.sectionValue}>{children}</View>
+    </View>
+  )
+}
+
+function RelationshipValues({ values }: { values: FixtureRelationshipValue[] }) {
   return (
     <View style={propertyStyles.relationshipValues}>
-      {values.map((value, index) => (
-        <View key={`${value}-${index}`} style={propertyStyles.relationshipRow}>
-          <LinkSimple color={mobileColors.textMuted} size={14} />
-          <Text numberOfLines={1} style={propertyStyles.relationshipText}>{value}</Text>
+      {values.map((value) => (
+        <View key={`${value.type}-${value.title}`} style={[propertyStyles.relationshipRow, relationshipToneStyles[value.typeTone]]}>
+          <TypeIcon type={value.type} tone={value.typeTone} size={14} />
+          <Text numberOfLines={1} style={[propertyStyles.relationshipText, relationshipTextToneStyles[value.typeTone]]}>{value.title}</Text>
+          <View style={propertyStyles.relationshipRemove}>
+            <X color={noteTypeColor(value.typeTone)} size={11} weight="bold" />
+          </View>
         </View>
       ))}
     </View>
@@ -308,16 +334,10 @@ function relationshipHeading(relationship: FixtureRelationship): string {
   return 'Related to'
 }
 
-function ChipStack({
-  labels,
-  tone,
-}: {
-  labels: string[]
-  tone: 'gray' | 'green' | 'orange' | 'purple'
-}) {
+function TagWrap({ labels }: { labels: string[] }) {
   return (
-    <View style={sharedStyles.chipStack}>
-      {labels.map((label) => <MobileChip key={label} label={label} tone={tone} />)}
+    <View style={propertyStyles.tagWrap}>
+      {labels.map((label) => <MobileChip key={label} label={label} tone={tagTone(label)} />)}
     </View>
   )
 }
@@ -327,23 +347,113 @@ function NoteTypeDot({ note }: { note: FixtureNote }) {
 }
 
 function NoteTypeIcon({ note }: { note: FixtureNote }) {
-  const normalizedType = note.type.toLowerCase()
+  return <TypeIcon type={note.type} tone={note.typeTone} size={16} />
+}
+
+function TypeIcon({
+  size,
+  tone,
+  type,
+}: {
+  size: number
+  tone: FixtureNote['typeTone']
+  type: string
+}) {
+  const normalizedType = type.toLowerCase()
 
   if (normalizedType.includes('release')) {
-    return <Archive color={noteTypeColor(note.typeTone)} size={16} />
+    return <Archive color={noteTypeColor(tone)} size={size} />
   }
 
   if (normalizedType.includes('procedure')) {
-    return <StackSimple color={noteTypeColor(note.typeTone)} size={16} />
+    return <StackSimple color={noteTypeColor(tone)} size={size} />
   }
 
-  return <FileText color={noteTypeColor(note.typeTone)} size={16} />
+  if (normalizedType.includes('project')) {
+    return <FolderOpen color={noteTypeColor(tone)} size={size} />
+  }
+
+  return <FileText color={noteTypeColor(tone)} size={size} />
+}
+
+function FolderTree({ folders }: { folders: FixtureSidebarFolder[] }) {
+  return (
+    <View style={folderTreeStyles.tree}>
+      {folders.map((folder) => <FolderTreeRow depth={0} folder={folder} key={folder.id} />)}
+    </View>
+  )
+}
+
+function FolderTreeRow({
+  depth,
+  folder,
+}: {
+  depth: number
+  folder: FixtureSidebarFolder
+}) {
+  const hasChildren = folder.children.length > 0
+
+  return (
+    <View>
+      <View style={[folderTreeStyles.row, folder.active ? folderTreeStyles.rowActive : null, folderTreeIndent(depth)]}>
+        <FolderTreeCaret expanded={folder.expanded} hasChildren={hasChildren} />
+        <FolderTreeIcon active={folder.active} expanded={folder.expanded} />
+        <Text numberOfLines={1} style={[folderTreeStyles.rowText, folder.active ? folderTreeStyles.rowTextActive : null]}>{folder.name}</Text>
+      </View>
+      {folder.expanded && hasChildren ? (
+        <View style={folderTreeStyles.children}>
+          {folder.children.map((child) => <FolderTreeRow depth={depth + 1} folder={child} key={child.id} />)}
+        </View>
+      ) : null}
+    </View>
+  )
+}
+
+function FolderTreeCaret({
+  expanded,
+  hasChildren,
+}: {
+  expanded?: boolean
+  hasChildren: boolean
+}) {
+  if (!hasChildren) {
+    return <View style={folderTreeStyles.caretSpacer} />
+  }
+
+  return expanded ? <CaretDown color={mobileColors.textMuted} size={11} /> : <CaretRight color={mobileColors.textMuted} size={11} />
+}
+
+function FolderTreeIcon({
+  active,
+  expanded,
+}: {
+  active?: boolean
+  expanded?: boolean
+}) {
+  const iconColor = active ? mobileColors.primary : mobileColors.textMuted
+
+  if (active || expanded) {
+    return <FolderOpen color={iconColor} size={16} weight={active ? 'fill' : 'regular'} />
+  }
+
+  return <Folder color={iconColor} size={16} />
+}
+
+function folderTreeIndent(depth: number) {
+  return { paddingLeft: mobileSpace.md + depth * 16 }
 }
 
 function noteTypeColor(tone: FixtureNote['typeTone']) {
   if (tone === 'green') return mobileColors.green
   if (tone === 'orange') return mobileColors.orange
   return mobileColors.purple
+}
+
+function tagTone(label: string): 'blue' | 'green' | 'orange' | 'purple' | 'red' {
+  const tones = ['blue', 'green', 'orange', 'purple', 'red'] as const
+  const index = Array.from(label).reduce((sum, char) => sum + char.charCodeAt(0), 0) % tones.length
+
+  return tones[index]
 }
 
 function sidebarIcon(icon: FixtureSidebarIcon, tone?: FixtureNote['typeTone'] | 'primary') {
@@ -372,6 +482,14 @@ function sidebarLabel(id: string, fallback: string) {
   if (id === 'all-notes') return mobileCopy.allNotes
   if (id === 'archive') return mobileCopy.archive
   if (id === 'inbox') return mobileCopy.inbox
+
+  return fallback
+}
+
+function sidebarSectionLabel(id: string, fallback: string) {
+  if (id === 'folders') return mobileText('sidebar.group.folders')
+  if (id === 'favorites') return mobileCopy.favorites
+  if (id === 'types') return mobileCopy.types
 
   return fallback
 }
@@ -453,6 +571,30 @@ const noteTypeDotStyles = StyleSheet.create({
   },
   purple: {
     backgroundColor: mobileColors.purple,
+  },
+})
+
+const relationshipToneStyles = StyleSheet.create({
+  green: {
+    backgroundColor: mobileColors.greenSoft,
+  },
+  orange: {
+    backgroundColor: mobileColors.orangeSoft,
+  },
+  purple: {
+    backgroundColor: mobileColors.purpleSoft,
+  },
+})
+
+const relationshipTextToneStyles = StyleSheet.create({
+  green: {
+    color: mobileColors.green,
+  },
+  orange: {
+    color: mobileColors.orange,
+  },
+  purple: {
+    color: mobileColors.purple,
   },
 })
 
@@ -585,6 +727,39 @@ const sidebarStyles = StyleSheet.create({
     color: mobileColors.text,
     fontSize: mobileType.body,
     fontWeight: '700',
+  },
+})
+
+const folderTreeStyles = StyleSheet.create({
+  caretSpacer: {
+    width: 11,
+  },
+  children: {
+    position: 'relative',
+  },
+  row: {
+    minHeight: 32,
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: mobileSpace.sm,
+    borderRadius: mobileRadius.sm,
+    paddingRight: mobileSpace.md,
+  },
+  rowActive: {
+    backgroundColor: mobileColors.selected,
+  },
+  rowText: {
+    flex: 1,
+    color: mobileColors.text,
+    fontSize: mobileType.body,
+    fontWeight: '600',
+  },
+  rowTextActive: {
+    color: mobileColors.primary,
+  },
+  tree: {
+    gap: mobileSpace.xs,
+    paddingBottom: mobileSpace.sm,
   },
 })
 
@@ -744,18 +919,45 @@ const propertyStyles = StyleSheet.create({
     flexDirection: 'row',
     gap: mobileSpace.sm,
     borderRadius: mobileRadius.md,
-    backgroundColor: mobileColors.graySoft,
     paddingHorizontal: mobileSpace.md,
+    paddingVertical: mobileSpace.xs,
+    width: '100%',
+  },
+  relationshipRemove: {
+    minHeight: 18,
+    minWidth: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: mobileRadius.pill,
+    backgroundColor: mobileColors.card,
   },
   relationshipText: {
     flex: 1,
-    color: mobileColors.text,
     fontSize: mobileType.body,
-    fontWeight: '600',
-    textAlign: 'right',
+    fontWeight: '700',
   },
   relationshipValues: {
-    alignItems: 'flex-end',
+    alignItems: 'stretch',
     gap: mobileSpace.sm,
+  },
+  sectionLabel: {
+    color: mobileColors.textMuted,
+    fontSize: mobileType.body,
+  },
+  sectionRow: {
+    minHeight: 44,
+    borderBottomColor: mobileColors.border,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    gap: mobileSpace.sm,
+    paddingVertical: mobileSpace.md,
+  },
+  sectionValue: {
+    minWidth: 0,
+  },
+  tagWrap: {
+    alignItems: 'flex-start',
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: mobileSpace.xs,
   },
 })

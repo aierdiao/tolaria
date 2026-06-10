@@ -1,7 +1,7 @@
-import { ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native'
+import { useWindowDimensions } from 'react-native'
+import { PhoneWorkspaceMock, type PhoneWorkspaceState } from './PhoneWorkspaceMock'
 import { TabletWorkspaceMock } from './TabletWorkspaceMock'
 import { workspaceScenarioForId } from '../fixtures/workspaceFixtures'
-import { mobileColors } from '../ui/tokens'
 
 export function MobileUiLab() {
   const { width } = useWindowDimensions()
@@ -12,13 +12,7 @@ export function MobileUiLab() {
     return <TabletWorkspaceMock scenario={scenario} />
   }
 
-  return (
-    <ScrollView horizontal style={styles.scroller}>
-      <View style={styles.tabletPreview}>
-        <TabletWorkspaceMock scenario={scenario} />
-      </View>
-    </ScrollView>
-  )
+  return <PhoneWorkspaceMock initialState={currentPhoneState()} scenario={scenario} />
 }
 
 function currentScenarioId() {
@@ -29,13 +23,14 @@ function currentScenarioId() {
   return new URLSearchParams(search).get('scenario')
 }
 
-const styles = StyleSheet.create({
-  scroller: {
-    flex: 1,
-    backgroundColor: mobileColors.app,
-  },
-  tabletPreview: {
-    width: 1100,
-    flex: 1,
-  },
-})
+function currentPhoneState(): PhoneWorkspaceState {
+  const search = (globalThis as { location?: { search?: string } }).location?.search
+
+  if (!search) return 'list'
+
+  const value = new URLSearchParams(search).get('phoneState')
+
+  if (value === 'editor' || value === 'sidebar') return value
+
+  return 'list'
+}

@@ -14,7 +14,10 @@ describe('workspaceFixtures', () => {
     expect(workspaceScenarios['empty-inbox'].notes).toHaveLength(0)
     expect(workspaceScenarios['property-heavy'].notes[0].relationships[0]).toMatchObject({
       kind: 'belongsTo',
-      values: ['Tolaria Mobile', 'Tablet Workspace'],
+      values: [
+        { title: 'Tolaria Mobile', type: 'Project', typeTone: 'purple' },
+        { title: 'Tablet Workspace', type: 'Essay', typeTone: 'green' },
+      ],
     })
     expect(workspaceScenarioForId('missing')).toBe(workspaceScenarios.default)
   })

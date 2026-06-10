@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
-import { join } from 'node:path'
+import { basename, join } from 'node:path'
 
 type ScreenshotRecord = {
   description: string
@@ -28,12 +28,38 @@ const tabletScenarioStates = [
     scenario: 'property-heavy',
   },
   {
-    description: 'dense-sidebar',
+    description: 'folder-tree',
     expectedText: 'Research Backlog',
     landscapeOnly: true,
-    scenario: 'dense-sidebar',
+    scenario: 'folder-tree',
   },
 ]
+
+const phoneStates = [
+  {
+    description: 'sidebar-open',
+    expectedText: 'Tolaria',
+    query: '?phoneState=sidebar',
+  },
+  {
+    description: 'editor-open',
+    expectedText: 'Workflow Orchestration Essay',
+    query: '?phoneState=editor',
+  },
+]
+
+const tabletProjectNames = ['tablet-landscape', 'tablet-portrait'] as const
+const currentScreenshotNames = new Set([
+  ...tabletProjectNames.flatMap((projectName) => [
+    `${projectName}-initial.png`,
+    `${projectName}-selected-open-source-project.png`,
+    ...tabletScenarioStates
+      .filter((scenarioState) => projectName === 'tablet-landscape' || !scenarioState.landscapeOnly)
+      .map((scenarioState) => `${projectName}-${scenarioState.description}.png`),
+  ]),
+  'phone-portrait-initial.png',
+  ...phoneStates.map((phoneState) => `phone-portrait-${phoneState.description}.png`),
+])
 
 async function recordScreenshot(record: ScreenshotRecord) {
   const manifestPath = join(screenshotDir, 'manifest.json')
@@ -44,7 +70,7 @@ async function recordScreenshot(record: ScreenshotRecord) {
     existing = []
   }
 
-  const next = existing.filter((item) => item.path !== record.path)
+  const next = existing.filter((item) => currentScreenshotNames.has(basename(item.path)) && item.path !== record.path)
   next.push(record)
   await writeFile(manifestPath, `${JSON.stringify(next, null, 2)}\n`)
 }
@@ -117,6 +143,22 @@ test.describe('mobile UI lab screenshots', () => {
 
       await captureUiState({
         description: scenarioState.description,
+        page,
+        projectName: testInfo.project.name,
+      })
+    })
+  }
+
+  for (const phoneState of phoneStates) {
+    test(`captures the phone ${phoneState.description} state`, async ({ page }, testInfo) => {
+      test.skip(testInfo.project.name !== 'phone-portrait', 'Phone shell states are captured only in the phone viewport.')
+
+      await page.goto(phoneState.query)
+
+      await expect(page.getByText(phoneState.expectedText).first()).toBeVisible()
+
+      await captureUiState({
+        description: phoneState.description,
         page,
         projectName: testInfo.project.name,
       })

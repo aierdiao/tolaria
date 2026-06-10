@@ -20,7 +20,13 @@ export type FixtureRelationshipKind = 'belongsTo' | 'has' | 'relatedTo' | 'custo
 export type FixtureRelationship = {
   kind: FixtureRelationshipKind
   label?: string
-  values: string[]
+  values: FixtureRelationshipValue[]
+}
+
+export type FixtureRelationshipValue = {
+  title: string
+  type: string
+  typeTone: FixtureTone
 }
 
 export type FixtureTone = 'green' | 'orange' | 'purple'
@@ -45,9 +51,18 @@ export type FixtureSidebarItem = {
 
 export type FixtureSidebarSection = {
   count?: string
+  folders?: FixtureSidebarFolder[]
   id: string
-  items: FixtureSidebarItem[]
+  items?: FixtureSidebarItem[]
   label?: string
+}
+
+export type FixtureSidebarFolder = {
+  active?: boolean
+  children: FixtureSidebarFolder[]
+  expanded?: boolean
+  id: string
+  name: string
 }
 
 export type FixtureSyncStatus = {
@@ -68,8 +83,8 @@ export type WorkspaceScenario = {
 
 export type WorkspaceScenarioId =
   | 'default'
-  | 'dense-sidebar'
   | 'empty-inbox'
+  | 'folder-tree'
   | 'long-title'
   | 'property-heavy'
 
@@ -96,16 +111,23 @@ export const fixtureNotes: FixtureNote[] = [
     relationships: [
       {
         kind: 'belongsTo',
-        values: ['LLM Workflow', 'Tolaria MVP'],
+        values: [
+          { title: 'LLM Workflow', type: 'Essay', typeTone: 'green' },
+          { title: 'Tolaria MVP', type: 'Project', typeTone: 'purple' },
+        ],
       },
       {
         kind: 'relatedTo',
-        values: ['Release Notes'],
+        values: [
+          { title: 'Release Notes', type: 'Release', typeTone: 'orange' },
+        ],
       },
       {
         kind: 'custom',
         label: 'Mentions',
-        values: ['AI Ops Guide'],
+        values: [
+          { title: 'AI Ops Guide', type: 'Procedure', typeTone: 'purple' },
+        ],
       },
     ],
     workspace: 'TV',
@@ -126,11 +148,16 @@ export const fixtureNotes: FixtureNote[] = [
     relationships: [
       {
         kind: 'has',
-        values: ['Contributor Guide', 'Community Forum'],
+        values: [
+          { title: 'Contributor Guide', type: 'Procedure', typeTone: 'purple' },
+          { title: 'Community Forum', type: 'Essay', typeTone: 'green' },
+        ],
       },
       {
         kind: 'belongsTo',
-        values: ['Project Board'],
+        values: [
+          { title: 'Project Board', type: 'Project', typeTone: 'purple' },
+        ],
       },
     ],
     workspace: 'TV',
@@ -151,11 +178,17 @@ export const fixtureNotes: FixtureNote[] = [
     relationships: [
       {
         kind: 'relatedTo',
-        values: ['QA Checklist', 'Mobile Planning'],
+        values: [
+          { title: 'QA Checklist', type: 'Procedure', typeTone: 'purple' },
+          { title: 'Mobile Planning', type: 'Essay', typeTone: 'green' },
+        ],
       },
       {
         kind: 'has',
-        values: ['Release Notes', 'Postmortem'],
+        values: [
+          { title: 'Release Notes', type: 'Release', typeTone: 'orange' },
+          { title: 'Postmortem', type: 'Essay', typeTone: 'green' },
+        ],
       },
     ],
     workspace: 'TV',
@@ -178,7 +211,10 @@ const longTitleNote: FixtureNote = {
   relationships: [
     {
       kind: 'relatedTo',
-      values: ['Tablet Shell', 'Properties Panel'],
+      values: [
+        { title: 'Tablet Shell', type: 'Project', typeTone: 'purple' },
+        { title: 'Properties Panel', type: 'Procedure', typeTone: 'purple' },
+      ],
     },
   ],
   workspace: 'TV',
@@ -200,20 +236,36 @@ const propertyHeavyNote: FixtureNote = {
   relationships: [
     {
       kind: 'belongsTo',
-      values: ['Tolaria Mobile', 'Tablet Workspace'],
+      values: [
+        { title: 'Tolaria Mobile', type: 'Project', typeTone: 'purple' },
+        { title: 'Tablet Workspace', type: 'Essay', typeTone: 'green' },
+      ],
     },
     {
       kind: 'has',
-      values: ['Navigation Pass', 'Property Inspector Pass', 'Sync Footer Pass', 'Screenshot QA Matrix'],
+      values: [
+        { title: 'Navigation Pass', type: 'Procedure', typeTone: 'purple' },
+        { title: 'Property Inspector Pass', type: 'Procedure', typeTone: 'purple' },
+        { title: 'Sync Footer Pass', type: 'Procedure', typeTone: 'purple' },
+        { title: 'Screenshot QA Matrix', type: 'Release', typeTone: 'orange' },
+      ],
     },
     {
       kind: 'relatedTo',
-      values: ['Desktop Inspector', 'Relationship Model', 'Mobile Design Review'],
+      values: [
+        { title: 'Desktop Inspector', type: 'Essay', typeTone: 'green' },
+        { title: 'Relationship Model', type: 'Essay', typeTone: 'green' },
+        { title: 'Mobile Design Review', type: 'Procedure', typeTone: 'purple' },
+      ],
     },
     {
       kind: 'custom',
       label: 'Depends on',
-      values: ['Fixture Harness', 'Expo Web Export', 'Playwright Screenshots'],
+      values: [
+        { title: 'Fixture Harness', type: 'Procedure', typeTone: 'purple' },
+        { title: 'Expo Web Export', type: 'Procedure', typeTone: 'purple' },
+        { title: 'Playwright Screenshots', type: 'Release', typeTone: 'orange' },
+      ],
     },
   ],
   workspace: 'TV',
@@ -246,28 +298,76 @@ const defaultSidebarSections: FixtureSidebarSection[] = [
       { id: 'responsibilities', count: '18', icon: 'tag', label: 'Responsibilities', tone: 'orange' },
     ],
   },
-]
-
-const denseSidebarSections: FixtureSidebarSection[] = [
-  ...defaultSidebarSections,
   {
-    count: '24',
-    id: 'projects',
-    label: 'Projects',
-    items: [
-      { id: 'mobile', count: '12', icon: 'folder', label: 'Tolaria Mobile' },
-      { id: 'research', count: '8', icon: 'folder', label: 'Research Backlog' },
-      { id: 'publishing', count: '4', icon: 'folder', label: 'Publishing System' },
+    id: 'folders',
+    label: 'Folders',
+    folders: [
+      {
+        id: 'writing',
+        name: 'Writing',
+        expanded: true,
+        children: [
+          { id: 'writing-essays', name: 'Essays', children: [] },
+          { id: 'writing-drafts', name: 'Drafts', children: [] },
+        ],
+      },
+      {
+        id: 'tolaria',
+        name: 'Tolaria',
+        expanded: true,
+        active: true,
+        children: [
+          { id: 'tolaria-mobile', name: 'Mobile UI', children: [] },
+          { id: 'tolaria-releases', name: 'Releases', children: [] },
+        ],
+      },
     ],
   },
+]
+
+const folderTreePressureSections: FixtureSidebarSection[] = [
+  ...defaultSidebarSections.filter((section) => section.id !== 'folders'),
   {
-    count: '86',
-    id: 'statuses',
-    label: 'Statuses',
-    items: [
-      { id: 'draft', count: '44', icon: 'tag', label: 'Draft', tone: 'orange' },
-      { id: 'active', count: '29', icon: 'tag', label: 'Active', tone: 'purple' },
-      { id: 'shipped', count: '13', icon: 'tag', label: 'Shipped', tone: 'green' },
+    id: 'folders',
+    label: 'Folders',
+    folders: [
+      {
+        id: 'writing',
+        name: 'Writing',
+        expanded: true,
+        children: [
+          { id: 'writing-essays', name: 'Essays', children: [] },
+          { id: 'writing-drafts', name: 'Drafts', children: [] },
+          { id: 'writing-research', name: 'Research Backlog', children: [] },
+        ],
+      },
+      {
+        id: 'tolaria',
+        name: 'Tolaria',
+        expanded: true,
+        active: true,
+        children: [
+          {
+            id: 'tolaria-mobile',
+            name: 'Mobile UI',
+            expanded: true,
+            children: [
+              { id: 'tolaria-mobile-tablet', name: 'Tablet Shell', children: [] },
+              { id: 'tolaria-mobile-properties', name: 'Properties Panel', children: [] },
+            ],
+          },
+          { id: 'tolaria-releases', name: 'Releases', children: [] },
+        ],
+      },
+      {
+        id: 'attachments',
+        name: 'Attachments',
+        expanded: true,
+        children: [
+          { id: 'attachments-images', name: 'Images', children: [] },
+          { id: 'attachments-pdfs', name: 'PDFs', children: [] },
+        ],
+      },
     ],
   },
 ]
@@ -284,13 +384,13 @@ export const workspaceScenarios: Record<WorkspaceScenarioId, WorkspaceScenario> 
     sidebarSections: defaultSidebarSections,
     sync: { kind: 'synced', minutesAgo: 2 },
   },
-  'dense-sidebar': {
+  'folder-tree': {
     editorBullets: fixtureEditorBullets,
-    id: 'dense-sidebar',
+    id: 'folder-tree',
     noteListSubtitle: '7 open notes',
     notes: fixtureNotes,
     selectedNoteId: fixtureNotes[1].id,
-    sidebarSections: denseSidebarSections,
+    sidebarSections: folderTreePressureSections,
     sync: { kind: 'synced', minutesAgo: 8 },
   },
   'empty-inbox': {

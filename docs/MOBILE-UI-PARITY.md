@@ -36,7 +36,15 @@ The tablet state matrix currently captures:
 | `empty-inbox` | Empty list, no selected note, empty editor, empty properties, pull-required sync |
 | `long-title` | Long title pressure across note rows, toolbar, and editor heading |
 | `property-heavy` | Multi-tag note, grouped multi-value relationships, and property actions |
-| `dense-sidebar` | Sidebar overflow, long counts, and expanded navigation groups in tablet landscape |
+| `folder-tree` | Vault folder tree pressure in tablet landscape |
+
+The phone navigation matrix currently captures:
+
+| Scenario | Purpose |
+| --- | --- |
+| `initial` | Full-screen note list |
+| `sidebar-open` | Left drawer over the note list, leaving a visible strip of list content on the right |
+| `editor-open` | Note editor opened from the right with a back path to the list |
 
 Run the full desktop/native Tolaria gate only before promotion or when desktop/native production files are intentionally changed:
 
