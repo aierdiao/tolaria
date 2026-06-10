@@ -10,7 +10,7 @@ import { MobilePropertyRow } from '../../ui/MobilePropertyRow'
 import { mobileColors, mobileRadius, mobileSpace, mobileType } from '../../ui/tokens'
 import type { MobileNote, MobileRelationship, MobileRelationshipValue, MobileTone } from '../../workspace/mobileWorkspaceModel'
 import { MobileTypeIcon } from './MobileWorkspaceIcons'
-import { noteTypeColor, statusTone, tagTone } from './mobileWorkspaceTone'
+import { chipTone, noteTypeColor, noteTypeSoftColor, statusTone, tagTone } from './mobileWorkspaceTone'
 
 export function MobilePropertiesPanel({
   compact,
@@ -34,8 +34,8 @@ export function MobilePropertiesPanel({
 function NoteProperties({ note }: { note: MobileNote }) {
   return (
     <>
-      <MobilePropertyRow label="Type" value={<MobileChip label={note.type} tone={note.typeTone} />} />
-      <MobilePropertyRow label={mobileText('noteList.sort.status')} value={<MobileChip label={note.status} tone={statusTone(note.status)} />} />
+      <MobilePropertyRow label="Type" value={<MobileChip label={note.type} tone={chipTone(note.typeTone)} />} />
+      {note.status ? <MobilePropertyRow label={mobileText('noteList.sort.status')} value={<MobileChip label={note.status} tone={statusTone(note.status)} />} /> : null}
       <MobilePropertyRow label={mobileText('noteList.sort.created')} value={note.created} />
       <MobilePropertyRow label={mobileCopy.modified} value={note.modified} />
       <MobilePropertyRow label={mobileText('inspector.properties.workspace')} value={<WorkspaceBadge label={note.workspace} />} />
@@ -130,17 +130,11 @@ function WorkspaceBadge({ label }: { label: string }) {
 }
 
 function relationshipRowTone(tone: MobileTone) {
-  return { backgroundColor: relationshipColors[tone].backgroundColor }
+  return { backgroundColor: noteTypeSoftColor(tone) }
 }
 
 function relationshipTextTone(tone: MobileTone) {
-  return { color: relationshipColors[tone].textColor }
-}
-
-const relationshipColors: Record<MobileTone, { backgroundColor: string; textColor: string }> = {
-  green: { backgroundColor: mobileColors.greenSoft, textColor: mobileColors.green },
-  orange: { backgroundColor: mobileColors.orangeSoft, textColor: mobileColors.orange },
-  purple: { backgroundColor: mobileColors.purpleSoft, textColor: mobileColors.purple },
+  return { color: noteTypeColor(tone) }
 }
 
 const styles = StyleSheet.create({

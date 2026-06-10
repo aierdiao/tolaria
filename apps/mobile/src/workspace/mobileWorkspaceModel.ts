@@ -1,8 +1,10 @@
-export type MobileTone = 'green' | 'orange' | 'purple'
+export type MobileTone = 'blue' | 'gray' | 'green' | 'orange' | 'purple' | 'red' | 'yellow'
 
 export type MobileNote = {
   created: string
   date: string
+  editorBlocks?: MobileEditorBlock[]
+  editorBullets?: string[]
   favorite: boolean
   id: string
   links: number
@@ -92,5 +94,13 @@ export type MobileWorkspaceSnapshot = {
   searchQuery?: string
   selectedNoteId?: string
   sidebarSections: MobileSidebarSection[]
+  source?: MobileWorkspaceSource
   sync: MobileSyncStatus
+}
+
+export type MobileWorkspaceSource = {
+  kind: 'fixture' | 'localVault'
+  label: string
+  totalNotes: number
+  visibleNotes: number
 }

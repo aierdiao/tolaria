@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import { workspaceScenarios } from '../fixtures/workspaceFixtures'
-import { fixtureReadOnlyWorkspaceRepository } from './readOnlyWorkspaceRepository'
+import {
+  fixtureReadOnlyWorkspaceRepository,
+  HOST_WORKSPACE_SNAPSHOT_STORAGE_KEY,
+  readOnlyWorkspaceRepository,
+} from './readOnlyWorkspaceRepository'
 
 describe('fixtureReadOnlyWorkspaceRepository', () => {
   it('returns the default read-only workspace snapshot when no scenario is requested', () => {
@@ -15,5 +19,34 @@ describe('fixtureReadOnlyWorkspaceRepository', () => {
 
     expect(snapshot).toBe(workspaceScenarios['property-heavy'])
     expect(snapshot.sidebarSections.some((section) => section.id === 'folders')).toBe(true)
+  })
+
+  it('prefers an injected host snapshot only when explicitly requested', () => {
+    const hostSnapshot = {
+      ...workspaceScenarios.default,
+      noteListSubtitle: '12 / 6,011',
+      source: {
+        kind: 'localVault' as const,
+        label: 'Laputa',
+        totalNotes: 6011,
+        visibleNotes: 12,
+      },
+    }
+    const storage = {
+      getItem: (key: string) => key === HOST_WORKSPACE_SNAPSHOT_STORAGE_KEY ? JSON.stringify(hostSnapshot) : null,
+    }
+
+    Object.defineProperty(globalThis, 'localStorage', {
+      configurable: true,
+      value: storage,
+    })
+
+    expect(readOnlyWorkspaceRepository.readSnapshot({ source: 'fixture' })).toBe(workspaceScenarios.default)
+    expect(readOnlyWorkspaceRepository.readSnapshot({ source: 'host' })).toMatchObject({
+      noteListSubtitle: '12 / 6,011',
+      source: { kind: 'localVault', label: 'Laputa' },
+    })
+
+    Reflect.deleteProperty(globalThis, 'localStorage')
   })
 })

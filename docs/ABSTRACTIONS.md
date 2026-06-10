@@ -87,9 +87,9 @@ Read-only workspace surfaces now sit one level above those primitives:
 
 Mobile UI copy should reuse the localization catalog in `src/lib/locales/en.json` whenever the desktop concept already exists. New mobile-specific copy must be added to that catalog and translated through the normal Lara workflow.
 
-The mobile UI lab uses a fixture-backed read-only repository until a surface has passed visual and interaction QA. Vault storage, editor, Git, and sync mutation logic should be wired only after the corresponding native shell has a stable fixture state and screenshot target.
+The mobile UI lab uses a fixture-backed read-only repository until a surface has passed visual and interaction QA. The same repository boundary can read an injected host snapshot from `tolaria:mobile-workspace-snapshot` for local large-vault QA. `localVaultSnapshot.ts` owns the pure read-only conversion from scanned Markdown files into `MobileWorkspaceSnapshot`, including type-color inheritance, relationship value resolution, markdown block previews, sidebar counts, and a capped visible note list. Vault storage, editor, Git, and sync mutation logic should be wired only after the corresponding native shell has a stable fixture state and screenshot target.
 
-`apps/mobile/docs/ui-parity-inventory.md` is the working checklist for mobile surface parity. `pnpm mobile:qa:screenshots` is the fast visual QA command for this branch: it exports the Expo web bundle, serves it locally, and captures tablet/phone screenshots for the UI lab without running the full desktop/native Tolaria suite.
+`apps/mobile/docs/ui-parity-inventory.md` is the working checklist for mobile surface parity. `pnpm mobile:qa:screenshots` is the fast visual QA command for this branch: it exports the Expo web bundle, serves it locally, and captures tablet/phone screenshots for the UI lab without running the full desktop/native Tolaria suite. For a representative large-vault pass, run it with `MOBILE_QA_VAULT_PATH=$HOME/Laputa`; the harness scans that vault read-only and adds local-vault screenshots without committing vault content.
 
 ### Vault Git Capability
 

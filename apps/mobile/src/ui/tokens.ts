@@ -3,6 +3,8 @@ export const mobileColors = {
   border: '#E9E9E7',
   borderStrong: '#D9D9D6',
   card: '#FFFFFF',
+  blue: '#3182CE',
+  blueSoft: '#3182CE1A',
   control: '#EBEBEA',
   controlPressed: '#D9D9D6',
   danger: '#E53E3E',
@@ -17,6 +19,7 @@ export const mobileColors = {
   primarySoft: '#155DFF18',
   purple: '#805AD5',
   purpleSoft: '#805AD51A',
+  red: '#E53E3E',
   redSoft: '#E53E3E1A',
   selected: '#E8F4FE',
   selectedStrong: '#D8ECFE',
@@ -25,6 +28,8 @@ export const mobileColors = {
   textInverse: '#FFFFFF',
   textMuted: '#787774',
   textFaint: '#B4B4B4',
+  yellow: '#D69E2E',
+  yellowSoft: '#D69E2E1A',
 } as const
 
 export const mobileSpace = {

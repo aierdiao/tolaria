@@ -10,7 +10,7 @@ import {
   List,
   MagnifyingGlass,
 } from 'phosphor-react-native'
-import { Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native'
+import { FlatList, Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native'
 import { Button } from '../components/ui/button'
 import { Text } from '../components/ui/text'
 import { cn } from '../components/ui/utils'
@@ -28,18 +28,70 @@ export function PhoneWorkspaceMock({
   initialState?: PhoneWorkspaceState
   snapshot: MobileWorkspaceSnapshot
 }) {
+  const controller = usePhoneWorkspaceController({ initialState, snapshot })
+
+  return <PhoneWorkspaceView controller={controller} snapshot={snapshot} />
+}
+
+function PhoneWorkspaceView({
+  controller,
+  snapshot,
+}: {
+  controller: PhoneWorkspaceController
+  snapshot: MobileWorkspaceSnapshot
+}) {
+  if (controller.phoneState === 'sidebar') {
+    return <PhoneSidebarDrawer snapshot={snapshot} onClose={controller.openList} onOpenEditor={controller.openEditor} />
+  }
+
+  if (controller.phoneState === 'editor' && controller.selectedNote) {
+    return <PhoneEditor note={controller.selectedNote} bullets={phoneEditorBullets(controller.selectedNote, snapshot)} onBack={controller.openList} />
+  }
+
+  return <PhoneNoteList notes={snapshot.notes} onOpenEditor={controller.openEditor} onOpenSidebar={controller.openSidebar} />
+}
+
+type PhoneWorkspaceController = {
+  openEditor: (noteId?: string) => void
+  openList: () => void
+  openSidebar: () => void
+  phoneState: PhoneWorkspaceState
+  selectedNote: MobileNote | null
+}
+
+function usePhoneWorkspaceController({
+  initialState,
+  snapshot,
+}: {
+  initialState: PhoneWorkspaceState
+  snapshot: MobileWorkspaceSnapshot
+}): PhoneWorkspaceController {
   const [phoneState, setPhoneState] = useState(initialState)
-  const selectedNote = snapshot.notes.find((note) => note.id === snapshot.selectedNoteId) ?? snapshot.notes[0] ?? null
+  const [selectedNoteId, setSelectedNoteId] = useState(initialPhoneNoteId(snapshot))
+  const selectedNote = selectedPhoneNote(snapshot.notes, selectedNoteId)
 
-  if (phoneState === 'sidebar') {
-    return <PhoneSidebarDrawer snapshot={snapshot} onClose={() => setPhoneState('list')} onOpenEditor={() => setPhoneState('editor')} />
+  return {
+    openEditor: (noteId) => {
+      if (noteId) setSelectedNoteId(noteId)
+      setPhoneState('editor')
+    },
+    openList: () => setPhoneState('list'),
+    openSidebar: () => setPhoneState('sidebar'),
+    phoneState,
+    selectedNote,
   }
+}
 
-  if (phoneState === 'editor' && selectedNote) {
-    return <PhoneEditor note={selectedNote} bullets={snapshot.editorBullets} onBack={() => setPhoneState('list')} />
-  }
+function initialPhoneNoteId(snapshot: MobileWorkspaceSnapshot) {
+  return snapshot.selectedNoteId ?? snapshot.notes[0]?.id ?? null
+}
 
-  return <PhoneNoteList notes={snapshot.notes} onOpenEditor={() => setPhoneState('editor')} onOpenSidebar={() => setPhoneState('sidebar')} />
+function selectedPhoneNote(notes: MobileNote[], selectedNoteId: string | null) {
+  return notes.find((note) => note.id === selectedNoteId) ?? notes[0] ?? null
+}
+
+function phoneEditorBullets(note: MobileNote, snapshot: MobileWorkspaceSnapshot) {
+  return note.editorBullets ?? snapshot.editorBullets
 }
 
 function PhoneNoteList({
@@ -48,15 +100,21 @@ function PhoneNoteList({
   onOpenSidebar,
 }: {
   notes: MobileNote[]
-  onOpenEditor: () => void
+  onOpenEditor: (noteId: string) => void
   onOpenSidebar: () => void
 }) {
   return (
     <View style={phoneStyles.screen}>
       <PhoneListHeader onOpenSidebar={onOpenSidebar} />
-      <ScrollView contentContainerStyle={phoneStyles.listContent}>
-        {notes.map((note) => <PhoneNoteRow key={note.id} note={note} onPress={onOpenEditor} />)}
-      </ScrollView>
+      <FlatList
+        contentContainerStyle={phoneStyles.listContent}
+        data={notes}
+        initialNumToRender={12}
+        keyExtractor={(note) => note.id}
+        renderItem={({ item: note }) => <PhoneNoteRow note={note} onPress={() => onOpenEditor(note.id)} />}
+        removeClippedSubviews
+        windowSize={5}
+      />
     </View>
   )
 }
@@ -102,7 +160,7 @@ function PhoneSidebarDrawer({
   snapshot,
 }: {
   onClose: () => void
-  onOpenEditor: () => void
+  onOpenEditor: (noteId?: string) => void
   snapshot: MobileWorkspaceSnapshot
 }) {
   const { width } = useWindowDimensions()

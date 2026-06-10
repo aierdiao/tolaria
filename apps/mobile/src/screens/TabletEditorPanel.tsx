@@ -4,13 +4,13 @@ import {
   Star,
 } from 'phosphor-react-native'
 import { ScrollView, StyleSheet, type TextStyle, View } from 'react-native'
-import type { FixtureEditorBlock, FixtureEditorInline, FixtureNote } from '../fixtures/workspaceFixtures'
 import { Text } from '../components/ui/text'
 import { mobileText } from '../i18n/mobileText'
 import { MobileChip } from '../ui/MobileChip'
 import { MobileIconButton } from '../ui/MobileIconButton'
 import { MobilePanel, MobileToolbar, MobileToolbarTitle } from '../ui/MobilePanel'
 import { mobileColors, mobileRadius, mobileSpace, mobileType } from '../ui/tokens'
+import type { MobileEditorBlock, MobileEditorInline, MobileNote } from '../workspace/mobileWorkspaceModel'
 
 export function TabletEditorPanel({
   blocks,
@@ -18,10 +18,10 @@ export function TabletEditorPanel({
   compact,
   note,
 }: {
-  blocks: FixtureEditorBlock[]
+  blocks: MobileEditorBlock[]
   bullets: string[]
   compact: boolean
-  note: FixtureNote | null
+  note: MobileNote | null
 }) {
   if (!note) {
     return <EmptyEditorPanel />
@@ -68,7 +68,7 @@ function EditorBlocks({
   blocks,
   fallbackBullets,
 }: {
-  blocks: FixtureEditorBlock[]
+  blocks: MobileEditorBlock[]
   fallbackBullets: string[]
 }) {
   if (blocks.length === 0) {
@@ -95,7 +95,7 @@ function FallbackBullets({ bullets }: { bullets: string[] }) {
   )
 }
 
-function EditorBlock({ block }: { block: FixtureEditorBlock }) {
+function EditorBlock({ block }: { block: MobileEditorBlock }) {
   if (block.kind === 'paragraph') {
     return <InlineText content={block.content} style={textStyles.paragraph} />
   }
@@ -115,7 +115,7 @@ function EditorBlock({ block }: { block: FixtureEditorBlock }) {
   return <EditorTable headers={block.headers} rows={block.rows} />
 }
 
-function EditorHeading({ block }: { block: Extract<FixtureEditorBlock, { kind: 'heading' }> }) {
+function EditorHeading({ block }: { block: Extract<MobileEditorBlock, { kind: 'heading' }> }) {
   return (
     <Text style={[textStyles.heading, block.level === 3 ? textStyles.headingSmall : null]}>
       {block.text}
@@ -123,7 +123,7 @@ function EditorHeading({ block }: { block: Extract<FixtureEditorBlock, { kind: '
   )
 }
 
-function EditorBulletList({ items }: { items: FixtureEditorInline[][] }) {
+function EditorBulletList({ items }: { items: MobileEditorInline[][] }) {
   return (
     <View style={bulletStyles.group}>
       {items.map((item, index) => (
@@ -136,7 +136,7 @@ function EditorBulletList({ items }: { items: FixtureEditorInline[][] }) {
   )
 }
 
-function EditorQuote({ content }: { content: FixtureEditorInline[] }) {
+function EditorQuote({ content }: { content: MobileEditorInline[] }) {
   return (
     <View style={quoteStyles.container}>
       <InlineText content={content} style={quoteStyles.text} />
@@ -148,7 +148,7 @@ function InlineText({
   content,
   style,
 }: {
-  content: FixtureEditorInline[]
+  content: MobileEditorInline[]
   style: TextStyle
 }) {
   return (

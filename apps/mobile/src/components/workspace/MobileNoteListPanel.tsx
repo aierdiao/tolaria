@@ -1,5 +1,5 @@
 import { MagnifyingGlass, Plus } from 'phosphor-react-native'
-import { ScrollView, StyleSheet, View } from 'react-native'
+import { FlatList, StyleSheet, View } from 'react-native'
 import { Text } from '../ui/text'
 import { mobileCopy, mobileText } from '../../i18n/mobileText'
 import { MobileChip } from '../../ui/MobileChip'
@@ -9,7 +9,7 @@ import { MobilePanel, MobileToolbar, MobileToolbarSpacer, MobileToolbarTitle } f
 import { mobileColors, mobileRadius, mobileSpace, mobileType } from '../../ui/tokens'
 import type { MobileNote } from '../../workspace/mobileWorkspaceModel'
 import { MobileTypeIcon } from './MobileWorkspaceIcons'
-import { statusTone, tagTone } from './mobileWorkspaceTone'
+import { chipTone, noteTypeColor, statusTone, tagTone } from './mobileWorkspaceTone'
 
 export function MobileNoteListPanel({
   compact,
@@ -45,11 +45,13 @@ export function MobileNoteListPanel({
       {notes.length === 0 ? (
         <NoteListEmptyState />
       ) : (
-        <ScrollView>
-          {notes.map((note) => (
+        <FlatList
+          data={notes}
+          initialNumToRender={16}
+          keyExtractor={(note) => note.id}
+          renderItem={({ item: note }) => (
             <MobileListRow
               chips={<NoteRowChips note={note} />}
-              key={note.id}
               leading={<NoteTypeDot note={note} />}
               selected={note.id === selectedNoteId}
               subtitle={note.snippet}
@@ -57,8 +59,10 @@ export function MobileNoteListPanel({
               trailing={<MobileTypeIcon size={16} tone={note.typeTone} type={note.type} />}
               onPress={() => onSelectNote(note.id)}
             />
-          ))}
-        </ScrollView>
+          )}
+          removeClippedSubviews
+          windowSize={5}
+        />
       )}
     </MobilePanel>
   )
@@ -85,28 +89,16 @@ function NoteListEmptyState() {
 function NoteRowChips({ note }: { note: MobileNote }) {
   return (
     <View style={styles.chipRow}>
-      <MobileChip label={note.type} tone={note.typeTone} />
-      <MobileChip label={note.status} tone={statusTone(note.status)} />
+      <MobileChip label={note.type} tone={chipTone(note.typeTone)} />
+      {note.status ? <MobileChip label={note.status} tone={statusTone(note.status)} /> : null}
       {note.tags.slice(0, 1).map((tag) => <MobileChip key={tag} label={tag} tone={tagTone(tag)} />)}
     </View>
   )
 }
 
 function NoteTypeDot({ note }: { note: MobileNote }) {
-  return <View style={[styles.typeDot, noteTypeDotStyles[note.typeTone]]} />
+  return <View style={[styles.typeDot, { backgroundColor: noteTypeColor(note.typeTone) }]} />
 }
-
-const noteTypeDotStyles = StyleSheet.create({
-  green: {
-    backgroundColor: mobileColors.green,
-  },
-  orange: {
-    backgroundColor: mobileColors.orange,
-  },
-  purple: {
-    backgroundColor: mobileColors.purple,
-  },
-})
 
 const styles = StyleSheet.create({
   chipRow: {

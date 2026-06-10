@@ -24,6 +24,7 @@ import type {
   MobileSidebarIcon,
   MobileSidebarSection,
 } from '../../workspace/mobileWorkspaceModel'
+import { noteTypeColor } from './mobileWorkspaceTone'
 
 export function MobileWorkspaceSidebar({
   sections,
@@ -179,9 +180,7 @@ function sidebarIcon(icon: MobileSidebarIcon, tone?: MobileNote['typeTone'] | 'p
 
 function sidebarIconColor(tone?: MobileNote['typeTone'] | 'primary') {
   if (tone === 'primary') return mobileColors.primary
-  if (tone === 'green') return mobileColors.green
-  if (tone === 'orange') return mobileColors.orange
-  if (tone === 'purple') return mobileColors.purple
+  if (tone) return noteTypeColor(tone)
 
   return mobileColors.textMuted
 }

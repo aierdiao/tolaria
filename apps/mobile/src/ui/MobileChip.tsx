@@ -3,7 +3,7 @@ import { Badge } from '../components/ui/badge'
 import { Text } from '../components/ui/text'
 import { cn } from '../components/ui/utils'
 
-type MobileChipTone = 'blue' | 'gray' | 'green' | 'orange' | 'purple' | 'red'
+type MobileChipTone = 'blue' | 'gray' | 'green' | 'orange' | 'purple' | 'red' | 'yellow'
 
 export function MobileChip({
   label,
@@ -28,6 +28,7 @@ const chipClassNames: Record<MobileChipTone, string> = {
   orange: 'bg-orange-50',
   purple: 'bg-violet-50',
   red: 'bg-red-50',
+  yellow: 'bg-yellow-50',
 }
 
 const chipTextClassNames: Record<MobileChipTone, string> = {
@@ -37,4 +38,5 @@ const chipTextClassNames: Record<MobileChipTone, string> = {
   orange: 'text-orange-700',
   purple: 'text-violet-700',
   red: 'text-red-700',
+  yellow: 'text-yellow-700',
 }

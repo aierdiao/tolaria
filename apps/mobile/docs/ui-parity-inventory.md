@@ -6,7 +6,7 @@ This inventory is the working source map for the experimental mobile UI foundati
 
 | Mobile file | Desktop source | Parity target |
 | --- | --- | --- |
-| `src/ui/tokens.ts` | `src/index.css`, `src/theme.json` | Mirror light theme colors: sidebar `#F7F6F3`, text `#37352F`, secondary/muted text `#787774`, faint text `#B4B4B4`, borders `#E9E9E7` and `#D9D9D6`, selected `#E8F4FE`, accent blue `#155DFF`. |
+| `src/ui/tokens.ts` | `src/index.css`, `src/theme.json` | Mirror light theme colors: sidebar `#F7F6F3`, text `#37352F`, secondary/muted text `#787774`, faint text `#B4B4B4`, borders `#E9E9E7` and `#D9D9D6`, selected `#E8F4FE`, accent blue `#155DFF`, and desktop type accent keys. |
 | `src/ui/tokens.ts` | `src/theme.json` | Mirror editor scale: body 15/1.5, H1 32/700/1.2 with a bottom separator, H2 27/600, H3 20/600, table 14, blockquote secondary italic with blue left border. |
 
 ## Shared Wrappers
@@ -30,7 +30,7 @@ This inventory is the working source map for the experimental mobile UI foundati
 | `MobileSyncStatusBar` | `StatusBar.tsx` | Owns subtle bottom sync footer display. |
 | `TabletWorkspace` | Desktop four-panel layout | Owns tablet shell layout and selected-note state only. |
 
-The tablet shell consumes `MobileWorkspaceSnapshot` from `src/workspace/mobileWorkspaceModel.ts`. The current repository is fixture-backed for UI lab speed, but the component boundary is read-only and production-shaped so native vault loading can replace the fixture repository without rewriting the tablet surfaces.
+The tablet shell consumes `MobileWorkspaceSnapshot` from `src/workspace/mobileWorkspaceModel.ts`. The default repository is fixture-backed for UI lab speed, and the Playwright harness can inject a read-only local-vault snapshot from `MOBILE_QA_VAULT_PATH` through the same boundary. Native vault loading should replace the snapshot provider, not the tablet surfaces.
 
 ## Tablet Screens
 
@@ -52,6 +52,7 @@ The tablet shell consumes `MobileWorkspaceSnapshot` from `src/workspace/mobileWo
 
 ## Current Intentional Gaps
 
-- These screens are still static mocks; they validate UI structure and visual parity before full mobile business logic is wired.
+- Fixture screens are still static mocks; they validate UI structure and visual parity before full mobile business logic is wired.
+- Local-vault screenshots are read-only QA fixtures generated at test time. They should exercise large-vault metadata, real type colors, real relationship keys, and markdown body pressure without committing vault content.
 - Phone navigation is represented as discrete states for screenshot QA. Gestures and native navigation transitions will come after the visual language is stable.
 - Mobile wrappers are thin Tolaria wrappers over RNR-style primitives so the eventual implementation can swap in more RNR coverage without changing Tolaria-specific tokens and semantics.
