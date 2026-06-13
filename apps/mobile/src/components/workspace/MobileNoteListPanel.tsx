@@ -46,7 +46,9 @@ export function MobileNoteListPanel({
         <NoteListEmptyState />
       ) : (
         <FlatList
+          contentContainerStyle={styles.listContent}
           data={notes}
+          extraData={selectedNoteId}
           initialNumToRender={16}
           keyExtractor={(note) => note.id}
           renderItem={({ item: note }) => (
@@ -61,6 +63,7 @@ export function MobileNoteListPanel({
             />
           )}
           removeClippedSubviews
+          showsVerticalScrollIndicator={false}
           windowSize={5}
         />
       )}
@@ -131,6 +134,10 @@ const styles = StyleSheet.create({
   },
   panelCompact: {
     width: 336,
+  },
+  listContent: {
+    paddingHorizontal: mobileSpace.sm,
+    paddingVertical: mobileSpace.xs,
   },
   searchPill: {
     minHeight: 36,

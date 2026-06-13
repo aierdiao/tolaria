@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test'
+import { expect, test, type Page } from '@playwright/test'
 import { mkdir, readdir, readFile, stat, writeFile } from 'node:fs/promises'
 import { basename, join, relative } from 'node:path'
 import { buildLocalVaultWorkspaceSnapshot, type LocalVaultFile } from '../src/workspace/localVaultSnapshot'
@@ -172,6 +172,40 @@ test.describe('mobile UI lab screenshots', () => {
     })
   })
 
+  test('hides and reveals tablet chrome with horizontal swipe gestures', async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== 'tablet-landscape', 'Tablet chrome gestures are exercised in the full-width tablet layout.')
+
+    await page.goto('/')
+
+    const sidebarTitle = page.getByText('Tolaria Vault')
+    const noteListSubtitle = page.getByText('7 open notes')
+    const propertiesTitle = page.getByText('Properties', { exact: true })
+
+    await expect(sidebarTitle).toBeVisible()
+    await swipeHorizontally(page, { x: 210, y: 220 }, { x: 90, y: 220 })
+    await expect(sidebarTitle).toBeHidden()
+
+    await swipeHorizontally(page, { x: 8, y: 220 }, { x: 140, y: 220 })
+    await expect(sidebarTitle).toBeVisible()
+
+    await expect(noteListSubtitle).toBeVisible()
+    await swipeHorizontally(page, { x: 480, y: 220 }, { x: 330, y: 220 })
+    await expect(noteListSubtitle).toBeHidden()
+
+    await swipeHorizontally(page, { x: 270, y: 220 }, { x: 410, y: 220 })
+    await expect(noteListSubtitle).toBeVisible()
+
+    await expect(propertiesTitle).toBeVisible()
+    await swipeHorizontally(page, { x: 1210, y: 220 }, { x: 1340, y: 220 })
+    await expect(propertiesTitle).toBeHidden()
+
+    const viewport = page.viewportSize()
+    if (!viewport) throw new Error('Expected viewport for tablet gesture test.')
+
+    await swipeHorizontally(page, { x: viewport.width - 8, y: 220 }, { x: viewport.width - 150, y: 220 })
+    await expect(propertiesTitle).toBeVisible()
+  })
+
   for (const scenarioState of tabletScenarioStates) {
     test(`captures the ${scenarioState.description} state on tablet layouts`, async ({ page }, testInfo) => {
       test.skip(testInfo.project.name === 'phone-portrait', 'Phone layout captures the scrollable tablet preview only.')
@@ -237,6 +271,33 @@ test.describe('mobile UI lab screenshots', () => {
     })
   })
 })
+
+async function swipeHorizontally(
+  page: Page,
+  start: { x: number; y: number },
+  end: { x: number; y: number },
+) {
+  const client = await page.context().newCDPSession(page)
+  const midpoint = { x: (start.x + end.x) / 2, y: (start.y + end.y) / 2 }
+
+  await client.send('Input.dispatchTouchEvent', {
+    touchPoints: [start],
+    type: 'touchStart',
+  })
+  await client.send('Input.dispatchTouchEvent', {
+    touchPoints: [midpoint],
+    type: 'touchMove',
+  })
+  await client.send('Input.dispatchTouchEvent', {
+    touchPoints: [end],
+    type: 'touchMove',
+  })
+  await client.send('Input.dispatchTouchEvent', {
+    touchPoints: [],
+    type: 'touchEnd',
+  })
+  await client.detach()
+}
 
 async function localVaultSnapshot(): Promise<MobileWorkspaceSnapshot | null> {
   if (!localVaultPath) return null

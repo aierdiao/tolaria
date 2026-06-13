@@ -1,18 +1,9 @@
 import type { ReactNode } from 'react'
 import { Pressable, StyleSheet, View } from 'react-native'
 import { Text } from '../components/ui/text'
-import { mobileColors, mobileSpace, mobileType } from './tokens'
+import { mobileColors, mobileRadius, mobileSpace, mobileType } from './tokens'
 
-export function MobileListRow({
-  chips,
-  leading,
-  meta,
-  onPress,
-  selected = false,
-  subtitle,
-  title,
-  trailing,
-}: {
+type MobileListRowProps = {
   chips?: ReactNode
   leading?: ReactNode
   meta?: string
@@ -21,7 +12,20 @@ export function MobileListRow({
   subtitle: string
   title: string
   trailing?: ReactNode
-}) {
+}
+
+export function MobileListRow(props: MobileListRowProps) {
+  const {
+    chips,
+    leading,
+    meta,
+    onPress,
+    selected = false,
+    subtitle,
+    title,
+    trailing,
+  } = props
+
   return (
     <Pressable
       accessibilityRole="button"
@@ -48,11 +52,12 @@ export function MobileListRow({
 
 const styles = StyleSheet.create({
   base: {
-    borderBottomColor: mobileColors.border,
-    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderColor: 'transparent',
     borderLeftColor: 'transparent',
     borderLeftWidth: 3,
-    paddingHorizontal: mobileSpace.lg,
+    borderRadius: mobileRadius.md,
+    marginBottom: mobileSpace.xs,
+    paddingHorizontal: mobileSpace.md,
     paddingVertical: mobileSpace.md,
   },
   footer: {
@@ -72,10 +77,11 @@ const styles = StyleSheet.create({
     fontSize: mobileType.caption,
   },
   pressed: {
-    opacity: 0.72,
+    backgroundColor: mobileColors.graySoft,
   },
   selected: {
     backgroundColor: mobileColors.selected,
+    borderColor: mobileColors.selectedStrong,
     borderLeftColor: mobileColors.primary,
   },
   subtitle: {
