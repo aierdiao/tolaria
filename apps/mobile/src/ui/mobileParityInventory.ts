@@ -64,6 +64,13 @@ export const mobileParityInventory = [
     surface: 'Workspace sidebar',
   },
   {
+    assertions: ['sidebar folder computed styles, measured native row insets, and click navigation'],
+    contracts: ['desktopSidebarParity'],
+    desktopSource: 'FolderTree',
+    mobileFile: 'src/components/workspace/MobileWorkspaceSidebarFolderTree.tsx',
+    surface: 'Workspace sidebar folder tree',
+  },
+  {
     assertions: ['sidebar count computed styles'],
     contracts: ['desktopSidebarParity'],
     desktopSource: 'SidebarCountPill',

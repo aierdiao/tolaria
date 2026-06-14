@@ -95,6 +95,16 @@ pnpm mobile:qa:ios-simulator
 
 For tablet UI review, treat this simulator artifact as mandatory alongside Playwright screenshots. Playwright catches measurable parity regressions quickly; the simulator screenshot catches native Expo Go rendering differences that browser automation can miss. Use `--open-url` only for native deep links such as `exp://...`; an `http://...` URL opens Mobile Safari and is not an acceptance target for the mobile app.
 
+For padding, margin, row-height, and indentation regressions, do not rely on screenshots alone. Enable the layout probe and compare measured React Native layout numbers against the desktop parity contract:
+
+```bash
+EXPO_PUBLIC_TOLARIA_LAYOUT_PROBE=1 pnpm mobile:start
+xcrun simctl terminate booted host.exp.Exponent || true
+xcrun simctl openurl booted 'exp://<host-ip>:8081'
+```
+
+The native app emits `TOLARIA_MOBILE_LAYOUT_METRIC` lines for probed sidebar rows. A healthy sidebar row should report desktop-derived content insets and hit areas, for example `sidebar.item.inbox.content.x = 12`, `sidebar.item.inbox.row.height = 32`, and nested folder content offsets of `12 + depth * 25`. The browser screenshot lane also runs `enforces measured sidebar row layout invariants` with `?layoutProbe=1`, but native metrics remain required because React Native browser rendering can pass while the iPad simulator is wrong.
+
 The harness also exercises a read-only real-vault path. By default it looks for:
 
 ```text

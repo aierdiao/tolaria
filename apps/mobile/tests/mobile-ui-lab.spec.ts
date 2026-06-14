@@ -2,7 +2,7 @@ import { expect, test, type Page } from '@playwright/test'
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { basename, join } from 'node:path'
 import { assertDesktopParitySources } from './mobile-ui-desktopParitySources'
-import { assertTabletDesktopParity } from './mobile-ui-parityAssertions'
+import { assertSidebarRuntimeLayoutProbe, assertTabletDesktopParity } from './mobile-ui-parityAssertions'
 import { installLocalVaultSnapshot, localVaultPath } from './local-vault-snapshot-loader'
 
 type ScreenshotRecord = {
@@ -177,6 +177,14 @@ test.describe('mobile UI lab screenshots', () => {
     await page.goto('/')
 
     await assertTabletDesktopParity(page)
+  })
+
+  test('enforces measured sidebar row layout invariants', async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== 'tablet-landscape', 'Sidebar row metrics use the full-width tablet reference layout.')
+
+    await page.goto('/?layoutProbe=1')
+
+    await assertSidebarRuntimeLayoutProbe(page)
   })
 
   test('keeps mobile parity constants synced with desktop token sources', async ({ browserName }, testInfo) => {

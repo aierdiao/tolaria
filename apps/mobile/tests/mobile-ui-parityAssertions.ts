@@ -44,6 +44,25 @@ export async function assertTabletDesktopParity(page: Page) {
   await assertStatusBarParity(page)
 }
 
+export async function assertSidebarRuntimeLayoutProbe(page: Page) {
+  await page.waitForFunction(() => {
+    const target = globalThis as { __TOLARIA_MOBILE_LAYOUT_METRICS__?: Record<string, unknown> }
+    return Boolean(target.__TOLARIA_MOBILE_LAYOUT_METRICS__?.['sidebar.item.inbox.row'])
+  })
+
+  const metrics = await page.evaluate(() => {
+    const target = globalThis as { __TOLARIA_MOBILE_LAYOUT_METRICS__?: Record<string, LayoutMetric> }
+    return target.__TOLARIA_MOBILE_LAYOUT_METRICS__ ?? {}
+  })
+
+  assertSidebarItemLayout(metrics, 'sidebar.item.inbox', desktopSidebarParity.itemPadding.withCount)
+  assertSidebarItemLayout(metrics, 'sidebar.item.all-notes', desktopSidebarParity.itemPadding.withCount)
+  assertSidebarItemLayout(metrics, 'sidebar.item.personal-journal', desktopSidebarParity.itemPadding.regular)
+  assertSidebarItemLayout(metrics, 'sidebar.item.essays', desktopSidebarParity.itemPadding.withCount)
+  assertFolderLayout(metrics, 'sidebar.folder.writing', desktopSidebarParity.folderRowContentInset)
+  assertFolderLayout(metrics, 'sidebar.folder.tolaria-mobile', desktopSidebarParity.folderRowContentInset + desktopSidebarParity.folderRowIndent)
+}
+
 async function assertPanelChromeParity(page: Page) {
   await expectCssValue({ locator: page.getByTestId('workspace-sidebar-panel'), property: 'width', expected: `${desktopPanelParity.sidebarWidth}px` })
   await expectCssValue({ locator: page.getByTestId('note-list-panel'), property: 'width', expected: `${desktopPanelParity.noteListWidth}px` })
@@ -249,4 +268,42 @@ async function requiredBox(locator: Locator) {
 
 function expectClose({ actual, expected, message }: LayoutExpectation) {
   expect(Math.abs(actual - expected), message).toBeLessThanOrEqual(layoutTolerance)
+}
+
+type LayoutMetric = {
+  height: number
+  width: number
+  x: number
+  y: number
+}
+
+type SidebarPadding = {
+  bottom: number
+  left: number
+  right: number
+  top: number
+}
+
+function assertSidebarItemLayout(metrics: Record<string, LayoutMetric>, id: string, padding: SidebarPadding) {
+  const row = requiredMetric(metrics, `${id}.row`)
+  const content = requiredMetric(metrics, `${id}.content`)
+
+  expectClose({ actual: content.x, expected: padding.left, message: `${id} has desktop left padding` })
+  expectClose({ actual: row.width - content.x - content.width, expected: padding.right, message: `${id} has desktop right padding` })
+  expectClose({ actual: row.height - content.height, expected: padding.top + padding.bottom, message: `${id} has desktop vertical padding` })
+}
+
+function assertFolderLayout(metrics: Record<string, LayoutMetric>, id: string, expectedLeftInset: number) {
+  const row = requiredMetric(metrics, `${id}.row`)
+  const content = requiredMetric(metrics, `${id}.content`)
+
+  expectClose({ actual: content.x, expected: expectedLeftInset, message: `${id} has desktop folder indentation` })
+  expect(row.height, `${id} has a non-collapsed row hit area`).toBeGreaterThanOrEqual(28)
+}
+
+function requiredMetric(metrics: Record<string, LayoutMetric>, id: string) {
+  const metric = metrics[id]
+  if (!metric) throw new Error(`Missing layout metric: ${id}`)
+
+  return metric
 }

@@ -2,9 +2,7 @@ import type { ReactNode } from 'react'
 import {
   Archive,
   CaretDown,
-  CaretRight,
   FileText,
-  Folder,
   FolderOpen,
   SidebarSimple,
   StackSimple,
@@ -15,23 +13,22 @@ import {
 import { Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native'
 import { Text } from '../ui/text'
 import { mobileCopy, mobileText } from '../../i18n/mobileText'
+import { MobileLayoutProbeReadout } from '../../qa/MobileLayoutProbeReadout'
+import { probeProps, useMobileLayoutProbe, type MobileLayoutProbe } from '../../qa/mobileLayoutProbe'
 import { MobileIconButton } from '../../ui/MobileIconButton'
 import { MobilePanel, MobileToolbar } from '../../ui/MobilePanel'
 import { desktopPanelParity, desktopSidebarParity, desktopToolbarActionParity } from '../../ui/desktopParity'
 import { mobileColors, mobileSpace, mobileType } from '../../ui/tokens'
 import type {
   MobileNote,
-  MobileSidebarFolder,
   MobileSidebarIcon,
   MobileSidebarSection,
 } from '../../workspace/mobileWorkspaceModel'
 import { MobileSidebarCountPill } from './MobileSidebarCountPill'
+import { FolderTree, type MobileSidebarFolderSelection } from './MobileWorkspaceSidebarFolderTree'
 import { noteTypeColor, noteTypeSoftColor } from './mobileWorkspaceTone'
 
-export type MobileSidebarFolderSelection = {
-  id: string
-  name: string
-}
+export type { MobileSidebarFolderSelection } from './MobileWorkspaceSidebarFolderTree'
 
 export type MobileSidebarItemSelection = {
   count?: string
@@ -43,6 +40,7 @@ export type MobileSidebarItemSelection = {
 export function MobileWorkspaceSidebar({
   activeFolderId,
   activeItemId,
+  layoutProbe: layoutProbeEnabled = false,
   onSelectFolder,
   onSelectItem,
   sections,
@@ -52,29 +50,33 @@ export function MobileWorkspaceSidebar({
   activeItemId?: string | null
   onSelectFolder?: (selection: MobileSidebarFolderSelection) => void
   onSelectItem?: (selection: MobileSidebarItemSelection) => void
+  layoutProbe?: boolean
   sections: MobileSidebarSection[]
   title?: string
 }) {
+  const layoutProbe = useMobileLayoutProbe(layoutProbeEnabled)
+
   return (
-    <MobilePanel style={styles.panel} testID="workspace-sidebar-panel">
+    <MobilePanel {...layoutProbe.probe('sidebar.panel')} style={styles.panel} testID="workspace-sidebar-panel">
       <MobileToolbar testID="sidebar-toolbar">
         <MobileIconButton accessibilityLabel={mobileText('sidebar.action.collapse')} testID="sidebar-collapse-action">
           <SidebarSimple color={mobileColors.textMuted} size={desktopToolbarActionParity.iconSize} />
         </MobileIconButton>
         <Text numberOfLines={1} style={styles.vaultTitle} testID="sidebar-toolbar-title">{title}</Text>
       </MobileToolbar>
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView {...layoutProbe.probe('sidebar.scroll')} contentContainerStyle={styles.content}>
         {sections.map((section) => (
           <View
             key={section.id}
             style={[styles.section, section.id === 'primary' ? styles.primarySection : styles.groupSection]}
             testID={`sidebar-section-${section.id}`}
           >
-            {section.label ? <SectionTitle count={section.count} label={sidebarSectionLabel(section.id, section.label)} sectionId={section.id} /> : null}
+            {section.label ? <SectionTitle count={section.count} label={sidebarSectionLabel(section.id, section.label)} layoutProbe={layoutProbe.probe} sectionId={section.id} /> : null}
             {section.items?.map((item) => {
               const active = activeItemId ? item.id === activeItemId : item.active
               const label = sidebarLabel(item.id, item.label)
               const activeColor = sidebarActiveColor(item.tone)
+              const metricId = `sidebar.item.${item.id}`
 
               return (
                 <SidebarItem
@@ -85,6 +87,9 @@ export function MobileWorkspaceSidebar({
                   icon={sidebarIcon(item.icon, active ? item.tone ?? 'primary' : item.tone)}
                   key={item.id}
                   label={label}
+                  layoutProbe={layoutProbe.probe}
+                  metricId={metricId}
+                  slug={item.id}
                   onPress={() => onSelectItem?.({
                     count: item.count,
                     id: item.id,
@@ -98,12 +103,14 @@ export function MobileWorkspaceSidebar({
               <FolderTree
                 activeFolderId={activeFolderId}
                 folders={section.folders}
+                layoutProbe={layoutProbe.probe}
                 onSelectFolder={onSelectFolder}
               />
             ) : null}
           </View>
         ))}
       </ScrollView>
+      {layoutProbeEnabled ? <MobileLayoutProbeReadout metrics={layoutProbe.metrics} testID="sidebar-layout-metrics" /> : null}
     </MobilePanel>
   )
 }
@@ -115,7 +122,10 @@ function SidebarItem({
   count,
   icon,
   label,
+  layoutProbe,
+  metricId,
   onPress,
+  slug,
 }: {
   active?: boolean
   activeBackgroundColor?: string
@@ -123,29 +133,39 @@ function SidebarItem({
   count?: string
   icon: ReactNode
   label: string
+  layoutProbe?: MobileLayoutProbe
+  metricId: string
   onPress?: () => void
+  slug: string
 }) {
   return (
     <Pressable
+      {...probeProps(layoutProbe, `${metricId}.row`)}
       accessibilityLabel={label}
       accessibilityRole="button"
       onPress={onPress}
-      style={({ pressed }) => [
+      style={[
         styles.item,
         nativeItemStyle,
         sidebarItemPadding(Boolean(count)),
         active ? { backgroundColor: activeBackgroundColor } : null,
-        pressed ? styles.itemPressed : null,
       ]}
-      testID={`sidebar-item-${label.toLowerCase().replaceAll(' ', '-')}`}
+      testID={`sidebar-item-${slug}`}
     >
-      <View style={styles.itemContent}>
+      <View {...probeProps(layoutProbe, `${metricId}.content`)} style={styles.itemContent}>
         {icon}
-        <Text numberOfLines={1} style={[styles.itemText, nativeItemTextStyle, active ? { color: activeColor } : null]} testID={`sidebar-item-${label.toLowerCase().replaceAll(' ', '-')}-label`}>{label}</Text>
+        <Text
+          {...probeProps(layoutProbe, `${metricId}.label`)}
+          numberOfLines={1}
+          style={[styles.itemText, nativeItemTextStyle, active ? { color: activeColor } : null]}
+          testID={`sidebar-item-${slug}-label`}
+        >
+          {label}
+        </Text>
         {count ? (
           <MobileSidebarCountPill
             activeColor={active ? activeColor : undefined}
-            testID={`sidebar-item-${label.toLowerCase().replaceAll(' ', '-')}-count`}
+            testID={`sidebar-item-${slug}-count`}
             value={count}
           />
         ) : null}
@@ -157,134 +177,33 @@ function SidebarItem({
 function SectionTitle({
   count,
   label,
+  layoutProbe,
   sectionId,
 }: {
   count?: string
   label: string
+  layoutProbe?: MobileLayoutProbe
   sectionId: string
 }) {
+  const metricId = `sidebar.section.${sectionId}`
+
   return (
     <View
+      {...probeProps(layoutProbe, `${metricId}.row`)}
       style={[styles.sectionTitleRow, nativeSectionTitleRowStyle, count ? styles.sectionTitleRowWithCount : styles.sectionTitleRowRegular]}
       testID={`sidebar-section-title-${sectionId}`}
     >
       <CaretDown color={mobileColors.textMuted} size={11} />
-      <Text style={[styles.sectionTitle, nativeSectionTitleTextStyle]} testID={`sidebar-section-title-text-${sectionId}`}>{label}</Text>
+      <Text
+        {...probeProps(layoutProbe, `${metricId}.label`)}
+        style={[styles.sectionTitle, nativeSectionTitleTextStyle]}
+        testID={`sidebar-section-title-text-${sectionId}`}
+      >
+        {label}
+      </Text>
       {count ? <MobileSidebarCountPill compact testID={`sidebar-section-count-${sectionId}`} value={count} /> : null}
     </View>
   )
-}
-
-function FolderTree({
-  activeFolderId,
-  folders,
-  onSelectFolder,
-}: {
-  activeFolderId?: string | null
-  folders: MobileSidebarFolder[]
-  onSelectFolder?: (selection: MobileSidebarFolderSelection) => void
-}) {
-  return (
-    <View style={folderTreeStyles.tree}>
-      {folders.map((folder) => (
-        <FolderTreeRow
-          activeFolderId={activeFolderId}
-          depth={0}
-          folder={folder}
-          key={folder.id}
-          onSelectFolder={onSelectFolder}
-        />
-      ))}
-    </View>
-  )
-}
-
-function FolderTreeRow({
-  activeFolderId,
-  depth,
-  folder,
-  onSelectFolder,
-}: {
-  activeFolderId?: string | null
-  depth: number
-  folder: MobileSidebarFolder
-  onSelectFolder?: (selection: MobileSidebarFolderSelection) => void
-}) {
-  const hasChildren = folder.children.length > 0
-  const active = activeFolderId ? folder.id === activeFolderId : folder.active
-
-  return (
-    <View>
-      <Pressable
-        accessibilityLabel={folder.name}
-        accessibilityRole="button"
-        onPress={() => onSelectFolder?.({ id: folder.id, name: folder.name })}
-        style={({ pressed }) => [
-          folderTreeStyles.row,
-          nativeFolderTreeRowStyle,
-          active ? folderTreeStyles.rowActive : null,
-          pressed ? folderTreeStyles.rowPressed : null,
-          folderTreeIndent(depth),
-        ]}
-      >
-        <View style={folderTreeStyles.rowContent}>
-          <FolderTreeCaret expanded={folder.expanded} hasChildren={hasChildren} />
-          <FolderTreeIcon active={active} expanded={folder.expanded} />
-          <Text numberOfLines={1} style={[folderTreeStyles.rowText, nativeFolderTreeTextStyle, active ? folderTreeStyles.rowTextActive : null]}>{folder.name}</Text>
-        </View>
-      </Pressable>
-      {folder.expanded && hasChildren ? (
-        <View style={folderTreeStyles.children}>
-          {folder.children.map((child) => (
-            <FolderTreeRow
-              activeFolderId={activeFolderId}
-              depth={depth + 1}
-              folder={child}
-              key={child.id}
-              onSelectFolder={onSelectFolder}
-            />
-          ))}
-        </View>
-      ) : null}
-    </View>
-  )
-}
-
-function FolderTreeCaret({
-  expanded,
-  hasChildren,
-}: {
-  expanded?: boolean
-  hasChildren: boolean
-}) {
-  if (!hasChildren) {
-    return <View style={folderTreeStyles.caretSpacer} />
-  }
-
-  return expanded ? <CaretDown color={mobileColors.textMuted} size={11} /> : <CaretRight color={mobileColors.textMuted} size={11} />
-}
-
-function FolderTreeIcon({
-  active,
-  expanded,
-}: {
-  active?: boolean
-  expanded?: boolean
-}) {
-  const iconColor = active ? mobileColors.primary : mobileColors.textMuted
-
-  if (active || expanded) {
-    return <FolderOpen color={iconColor} size={16} weight={active ? 'fill' : 'regular'} />
-  }
-
-  return <Folder color={iconColor} size={16} />
-}
-
-function folderTreeIndent(depth: number) {
-  return {
-    paddingLeft: desktopSidebarParity.folderRowContentInset
-      + depth * desktopSidebarParity.folderRowIndent,
-  }
 }
 
 function sidebarIcon(icon: MobileSidebarIcon, tone?: MobileNote['typeTone'] | 'primary') {
@@ -409,79 +328,16 @@ const styles = {
   ...sectionTitleStyles,
 } as const
 
-const folderTreeLayoutStyles = StyleSheet.create({
-  caretSpacer: {
-    width: 11,
-  },
-  children: {
-    position: 'relative',
-  },
-  tree: {
-    gap: 2,
-    paddingBottom: desktopSidebarParity.sectionContentPaddingBottom,
-  },
-})
-
-const folderTreeRowStyles = StyleSheet.create({
-  row: {
-    justifyContent: 'center',
-    borderRadius: desktopSidebarParity.itemRadius,
-    paddingBottom: desktopSidebarParity.itemPadding.regular.bottom,
-    paddingRight: desktopSidebarParity.itemPadding.regular.right,
-    paddingTop: desktopSidebarParity.itemPadding.regular.top,
-    width: '100%',
-  },
-})
-
-const folderTreeStateStyles = StyleSheet.create({
-  rowActive: {
-    backgroundColor: mobileColors.primarySoft,
-  },
-  rowPressed: {
-    backgroundColor: mobileColors.graySoft,
-  },
-})
-
-const folderTreeContentStyles = StyleSheet.create({
-  rowContent: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: desktopSidebarParity.folderIconGap,
-  },
-})
-
-const folderTreeTextStyles = StyleSheet.create({
-  rowText: {
-    flex: 1,
-    color: mobileColors.text,
-    fontSize: desktopSidebarParity.itemTextSize,
-    fontWeight: '500',
-  },
-  rowTextActive: { color: mobileColors.primary, fontWeight: '600' },
-})
-
-const folderTreeStyles = {
-  ...folderTreeLayoutStyles,
-  ...folderTreeRowStyles,
-  ...folderTreeStateStyles,
-  ...folderTreeContentStyles,
-  ...folderTreeTextStyles,
-} as const
-
 const nativeRowStyles = StyleSheet.create({
-  folderRow: { marginVertical: 1, minHeight: 34 },
-  item: { marginVertical: 2, minHeight: 38 },
-  sectionTitleRow: { marginTop: 4, minHeight: 34 },
+  item: { minHeight: 32 },
+  sectionTitleRow: { minHeight: 30 },
 })
 
 const nativeTextStyles = StyleSheet.create({
-  folderText: { lineHeight: 18 },
   itemText: { lineHeight: 18 },
   sectionTitle: { lineHeight: 14 },
 })
 
-const nativeFolderTreeRowStyle = Platform.OS === 'web' ? null : nativeRowStyles.folderRow
-const nativeFolderTreeTextStyle = Platform.OS === 'web' ? null : nativeTextStyles.folderText
 const nativeItemStyle = Platform.OS === 'web' ? null : nativeRowStyles.item
 const nativeItemTextStyle = Platform.OS === 'web' ? null : nativeTextStyles.itemText
 const nativeSectionTitleRowStyle = Platform.OS === 'web' ? null : nativeRowStyles.sectionTitleRow

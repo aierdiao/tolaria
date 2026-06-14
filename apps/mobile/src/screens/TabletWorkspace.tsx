@@ -24,8 +24,10 @@ const emptyReadOnlyForm: TabletReadOnlyForm = {
 }
 
 export function TabletWorkspace({
+  layoutProbe = false,
   snapshot,
 }: {
+  layoutProbe?: boolean
   snapshot: MobileWorkspaceSnapshot
 }) {
   const { height, width } = useWindowDimensions()
@@ -73,6 +75,7 @@ export function TabletWorkspace({
         defaultPropertiesVisible={defaultPropertiesVisible}
         editorBlocks={editorBlocks}
         editorBullets={editorBullets}
+        layoutProbe={layoutProbe}
         noteListSubtitle={noteListSubtitle}
         noteListTitle={noteListTitle}
         notes={notes}
@@ -112,6 +115,7 @@ function TabletWorkspaceChrome(props: TabletWorkspaceChromeProps) {
     defaultPropertiesVisible,
     editorBlocks,
     editorBullets,
+    layoutProbe,
     noteListSubtitle,
     noteListTitle,
     notes,
@@ -147,6 +151,7 @@ function TabletWorkspaceChrome(props: TabletWorkspaceChromeProps) {
           <MobileWorkspaceSidebar
             activeFolderId={activeFolderId}
             activeItemId={activeItemId}
+            layoutProbe={layoutProbe}
             sections={snapshot.sidebarSections}
             title={snapshot.source?.label}
             onSelectFolder={onSelectFolder}
