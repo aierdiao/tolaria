@@ -72,6 +72,7 @@ export type TabletWorkspaceChromeProps = {
   onSelectFolder: (selection: MobileSidebarFolderSelection) => void
   onSelectNote: (noteId: NoteId) => void
   onSelectSidebarItem: (selection: MobileSidebarItemSelection) => void
+  onSetArchived: (archived: boolean) => void
   onToggleFavorite: () => void
   openAction: MobileWorkspaceAction | null
   readOnlyForm: TabletReadOnlyForm

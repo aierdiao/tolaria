@@ -119,6 +119,28 @@ describe('applyMobileWorkspaceEdit', () => {
     )
   })
 
+  it('archives notes through frontmatter and exposes the derived archive state', () => {
+    const base = workspaceScenarioForId('default')
+    const editableNote = {
+      ...base.notes[0],
+      rawContent: '# Workflow Orchestration Essay\n\nArchive me.\n',
+    }
+    const result = applyMobileWorkspaceEditWithWrites({ ...base, notes: [editableNote, ...base.notes.slice(1)] }, {
+      archived: true,
+      noteId: editableNote.id,
+      type: 'setArchived',
+    })
+    const archivedNote = result.snapshot.notes.find((note) => note.id === editableNote.id)
+
+    expect(archivedNote).toMatchObject({ archived: true })
+    expect(archivedNote?.rawContent).toContain('_archived: true')
+    expect(result.writes).toEqual([{
+      content: expect.stringContaining('_archived: true'),
+      kind: 'saveNote',
+      path: archivedNote?.path,
+    }])
+  })
+
   it('hydrates metadata-only notes without creating a persistence write', () => {
     const base = workspaceScenarioForId('default')
     const metadataOnlyNote = {

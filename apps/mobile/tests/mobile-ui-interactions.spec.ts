@@ -19,7 +19,7 @@ test.describe('mobile UI lab interactions', () => {
     await addDatePropertyFromSuggestion(page)
     await addRelationshipFromSuggestion(page)
     await editMarkdownWithWikilink(page)
-    await openMoreActions(page)
+    await archiveAndUnarchiveSelectedNote(page)
   })
 
 
@@ -159,12 +159,27 @@ async function editMarkdownWithWikilink(page: PageLike) {
   await expect(page.getByText('Draft body referencing').first()).toBeVisible()
 }
 
-async function openMoreActions(page: PageLike) {
+async function archiveAndUnarchiveSelectedNote(page: PageLike) {
   await page.getByTestId('editor-more-action').click()
   await expect(page.getByText('Archive Note')).toBeVisible()
   await expect(page.getByText('Copy deep link to current item')).toBeVisible()
-  await page.getByTestId('workspace-action-sheet-backdrop').click()
+  await page.getByTestId('workspace-action-archive-note').click()
   await expect(page.getByTestId('workspace-action-sheet')).toBeHidden()
+  await expect(page.getByTestId('note-row-mobile-qa-draft.md')).toBeHidden()
+
+  await page.getByTestId('sidebar-item-archive').click()
+  await expect(page.getByTestId('note-list-toolbar-title')).toHaveText('Archive')
+  await expect(page.getByTestId('note-row-mobile-qa-draft.md')).toBeVisible()
+
+  await page.getByTestId('editor-more-action').click()
+  await expect(page.getByText('Unarchive Note')).toBeVisible()
+  await page.getByTestId('workspace-action-archive-note').click()
+  await expect(page.getByTestId('workspace-action-sheet')).toBeHidden()
+  await expect(page.getByTestId('note-row-mobile-qa-draft.md')).toBeHidden()
+
+  await page.getByRole('button', { name: 'Mobile Inbox View' }).click()
+  await expect(page.getByTestId('note-list-toolbar-title')).toHaveText('Mobile Inbox View')
+  await expect(page.getByTestId('note-row-mobile-qa-draft.md')).toBeVisible()
 }
 
 async function installRequiredLocalVaultSnapshot(page: PageLike): Promise<LocalVaultSnapshotState> {

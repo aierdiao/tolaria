@@ -48,6 +48,7 @@ type MobileWorkspaceActionSheetProps = {
   onSaveView: () => void
   onSearchQueryChange: (value: string) => void
   onSelectNote: (noteId: string) => void
+  onSetArchived: (archived: boolean) => void
   onViewFiltersChange: (value: MobileViewFilterGroup) => void
   onViewNameChange: (value: string) => void
   propertyName: string
@@ -91,6 +92,7 @@ export function MobileWorkspaceActionSheet({
   onSaveView,
   onSearchQueryChange,
   onSelectNote,
+  onSetArchived,
   onViewFiltersChange,
   onViewNameChange,
   propertyName,
@@ -129,6 +131,7 @@ export function MobileWorkspaceActionSheet({
           onSaveView={onSaveView}
           onSearchQueryChange={onSearchQueryChange}
           onSelectNote={onSelectNote}
+          onSetArchived={onSetArchived}
           onViewFiltersChange={onViewFiltersChange}
           onViewNameChange={onViewNameChange}
           propertyName={propertyName}
@@ -158,7 +161,7 @@ function ActionContent(props: MobileWorkspaceActionSheetProps) {
     case 'search':
       return <SearchContent {...props} />
     default:
-      return <MoreActionsContent note={props.selectedNote} onClose={props.onClose} />
+      return <MoreActionsContent note={props.selectedNote} onClose={props.onClose} onSetArchived={props.onSetArchived} />
   }
 }
 
@@ -428,14 +431,28 @@ function AddRelationshipContent({
 function MoreActionsContent({
   note,
   onClose,
+  onSetArchived,
 }: {
   note: MobileNote | null
   onClose: () => void
+  onSetArchived: (archived: boolean) => void
 }) {
+  const archiveLabel = mobileText(note?.archived ? 'command.note.unarchiveNote' : 'command.note.archiveNote')
+
   return (
     <View style={styles.content}>
       {note ? <SelectedNoteSummary note={note} /> : null}
-      <ActionRow icon={<Archive color={mobileColors.textMuted} size={desktopToolbarActionParity.iconSize} />} label={mobileText('command.note.archiveNote')} onPress={onClose} />
+      {note ? (
+        <ActionRow
+          icon={<Archive color={mobileColors.textMuted} size={desktopToolbarActionParity.iconSize} />}
+          label={archiveLabel}
+          testID="workspace-action-archive-note"
+          onPress={() => {
+            onSetArchived(!note.archived)
+            onClose()
+          }}
+        />
+      ) : null}
       <ActionRow icon={<LinkSimple color={mobileColors.textMuted} size={desktopToolbarActionParity.iconSize} />} label={mobileText('command.note.copyDeepLink')} onPress={onClose} />
       <ActionRow icon={<FilePlus color={mobileColors.textMuted} size={desktopToolbarActionParity.iconSize} />} label={mobileText('command.note.exportPdf')} onPress={onClose} />
     </View>
@@ -457,13 +474,15 @@ function ActionRow({
   icon,
   label,
   onPress,
+  testID,
 }: {
   icon: ReactNode
   label: string
   onPress: () => void
+  testID?: string
 }) {
   return (
-    <Pressable accessibilityLabel={label} accessibilityRole="button" style={({ pressed }) => [styles.actionRow, pressed ? styles.actionRowPressed : null]} onPress={onPress}>
+    <Pressable accessibilityLabel={label} accessibilityRole="button" style={({ pressed }) => [styles.actionRow, pressed ? styles.actionRowPressed : null]} testID={testID} onPress={onPress}>
       {icon}
       <Text numberOfLines={1} style={styles.actionText}>{label}</Text>
     </Pressable>

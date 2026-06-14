@@ -384,6 +384,9 @@ function editorWorkspaceActions({
   selectedNote: MobileNote | null
 }) {
   return {
+    onSetArchived: (archived: boolean) => {
+      if (selectedNote) applyEdit({ archived, noteId: selectedNote.id, type: 'setArchived' })
+    },
     onToggleFavorite: () => {
       if (selectedNote) applyEdit({ noteId: selectedNote.id, type: 'toggleFavorite' })
     },

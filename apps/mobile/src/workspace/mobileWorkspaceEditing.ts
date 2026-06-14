@@ -519,11 +519,13 @@ function deriveEditableNote({
   return {
     note: {
       ...fallback,
+      archived: frontmatterFlag(document.frontmatter, ['_archived', 'archived']),
       editorBlocks: blocks,
       editorBullets: localVaultEditorBullets(blocks),
       favorite: frontmatterFlag(document.frontmatter, ['_favorite', 'favorite']),
       links: linkCount(document.body),
       modified: '0m ago',
+      organized: frontmatterFlag(document.frontmatter, ['_organized', 'organized']),
       path: fallback.path ?? fallback.id,
       properties,
       rawContent,
@@ -574,6 +576,7 @@ function fallbackMetadataFrontmatter(note: MobileNote): LocalVaultFrontmatter {
   addFrontmatterValue(frontmatter, 'tags', note.tags.length > 0 ? note.tags : undefined)
   addFrontmatterValue(frontmatter, '_favorite', note.favorite ? true : undefined)
   addFrontmatterValue(frontmatter, '_archived', note.archived ? true : undefined)
+  addFrontmatterValue(frontmatter, '_organized', note.organized ? true : undefined)
   return frontmatter
 }
 

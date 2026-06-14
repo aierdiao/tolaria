@@ -169,6 +169,7 @@ function WorkspaceActionSheetHost(props: TabletWorkspaceChromeProps & { suggesti
     onSaveView,
     onSearchQueryChange,
     onSelectNote,
+    onSetArchived,
     onViewFiltersChange,
     onViewNameChange,
     openAction,
@@ -205,6 +206,7 @@ function WorkspaceActionSheetHost(props: TabletWorkspaceChromeProps & { suggesti
       onSaveView={onSaveView}
       onSearchQueryChange={onSearchQueryChange}
       onSelectNote={onSelectNote}
+      onSetArchived={onSetArchived}
       onViewFiltersChange={onViewFiltersChange}
       onViewNameChange={onViewNameChange}
       viewName={readOnlyForm.viewName}
