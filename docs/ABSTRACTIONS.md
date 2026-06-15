@@ -79,7 +79,8 @@ Workspace surfaces now sit one level above those primitives:
 | Surface | Purpose |
 |---|---|
 | `MobileWorkspaceSnapshot` | Production-shaped data contract for mobile workspace UI |
-| `mobileWorkspaceEditing.ts` | Pure in-process reducer for note creation, markdown body/title edits, frontmatter scalar properties, favorite/archive flags, relationship add/remove, and wikilink suggestions |
+| `mobileWorkspaceEditing.ts` | Pure in-process reducer for note creation, markdown body/title edits, frontmatter scalar properties, favorite/archive flags, relationship add/remove, and write planning |
+| `mobileWikilinkAutocomplete.ts` | Cursor-aware mobile wikilink query detection, canonical target insertion, and desktop-style suggestion matching across title, aliases, filename, type, tags, and path |
 | `TabletWorkspace` | Tablet shell that owns selected-note state, panel layout, action-sheet forms, and editable snapshot state |
 | `MobileWorkspaceSidebar` | Sidebar groups, counts, and folder tree |
 | `MobileNoteListPanel` | Note-list toolbar, rows, chips, and empty state |

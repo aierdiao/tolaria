@@ -5,8 +5,8 @@ import {
   PencilSimple,
   Star,
 } from 'phosphor-react-native'
-import { Pressable, ScrollView, StyleSheet, type TextStyle, View } from 'react-native'
-import { useMemo, useState } from 'react'
+import { Pressable, ScrollView, StyleSheet, type NativeSyntheticEvent, type TextInputSelectionChangeEventData, type TextStyle, View } from 'react-native'
+import { useCallback, useMemo, useState } from 'react'
 import { Text } from '../components/ui/text'
 import { mobileText } from '../i18n/mobileText'
 import { MobileChip } from '../ui/MobileChip'
@@ -17,10 +17,11 @@ import { desktopEditorParity, desktopToolbarActionParity } from '../ui/desktopPa
 import { mobileColors, mobileRadius, mobileSpace, mobileType } from '../ui/tokens'
 import { parseLocalVaultDocument } from '../workspace/localVaultFrontmatter'
 import {
-  mobileWikilinkSuggestions,
-  replaceTrailingWikilinkQuery,
-  trailingWikilinkQuery,
-} from '../workspace/mobileWorkspaceEditing'
+  activeMobileWikilinkQuery,
+  mobileWikilinkAutocompleteSuggestions,
+  mobileWikilinkAutocompleteTarget,
+  replaceActiveMobileWikilinkQuery,
+} from '../workspace/mobileWikilinkAutocomplete'
 import type { MobileEditorBlock, MobileEditorInline, MobileNote } from '../workspace/mobileWorkspaceModel'
 
 type TabletEditorPanelProps = {
@@ -54,6 +55,11 @@ type EditorContentProps = {
   onNavigateWikilink: (target: string) => void
   onUpdateContent: (noteId: string, content: string) => void
   onUpdateTitle: (noteId: string, title: string) => void
+}
+
+type TextSelectionRange = {
+  end: number
+  start: number
 }
 
 export function TabletEditorPanel(props: TabletEditorPanelProps) {
@@ -183,11 +189,32 @@ function MarkdownEditor({
   onUpdateTitle: (noteId: string, title: string) => void
 }) {
   const content = parseLocalVaultDocument(note.rawContent ?? `# ${note.title}\n\n`).body
-  const wikilinkQuery = trailingWikilinkQuery(content)
+  const [selection, setSelection] = useState<TextSelectionRange>({ end: content.length, start: content.length })
+  const [controlledSelection, setControlledSelection] = useState<TextSelectionRange | undefined>()
+  const wikilinkMatch = activeMobileWikilinkQuery(content, selection.start)
+  const wikilinkQuery = wikilinkMatch?.query ?? null
   const suggestions = useMemo(
-    () => wikilinkQuery === null ? [] : mobileWikilinkSuggestions(notes, wikilinkQuery),
+    () => wikilinkQuery === null ? [] : mobileWikilinkAutocompleteSuggestions(notes, wikilinkQuery),
     [notes, wikilinkQuery],
   )
+  const handleSelectionChange = useCallback((event: NativeSyntheticEvent<TextInputSelectionChangeEventData>) => {
+    setSelection(event.nativeEvent.selection)
+    setControlledSelection(undefined)
+  }, [setControlledSelection, setSelection])
+  const handleMarkdownChange = useCallback((nextContent: string) => {
+    onUpdateContent(note.id, nextContent)
+    const endSelection = { end: nextContent.length, start: nextContent.length }
+    if (activeMobileWikilinkQuery(nextContent, nextContent.length)) setSelection(endSelection)
+  }, [note.id, onUpdateContent, setSelection])
+  const insertWikilinkSuggestion = useCallback((suggestion: MobileNote) => {
+    const replacement = replaceActiveMobileWikilinkQuery(content, selection.start, mobileWikilinkAutocompleteTarget(suggestion))
+    if (!replacement) return
+
+    const nextSelection = { end: replacement.cursor, start: replacement.cursor }
+    onUpdateContent(note.id, replacement.text)
+    setSelection(nextSelection)
+    setControlledSelection(nextSelection)
+  }, [content, note.id, onUpdateContent, selection.start, setControlledSelection, setSelection])
 
   return (
     <View style={editorFormStyles.form} testID="editor-markdown-form">
@@ -205,7 +232,9 @@ function MarkdownEditor({
         testID="editor-markdown-input"
         textAlignVertical="top"
         value={content}
-        onChangeText={(nextContent) => onUpdateContent(note.id, nextContent)}
+        selection={controlledSelection}
+        onChangeText={handleMarkdownChange}
+        onSelectionChange={handleSelectionChange}
       />
       {suggestions.length > 0 ? (
         <View style={editorFormStyles.suggestions} testID="editor-wikilink-suggestions">
@@ -216,9 +245,7 @@ function MarkdownEditor({
               key={suggestion.id}
               style={({ pressed }) => [editorFormStyles.suggestionRow, pressed ? editorFormStyles.suggestionRowPressed : null]}
               testID={`editor-wikilink-suggestion-${suggestion.id}`}
-              onPress={() => {
-                onUpdateContent(note.id, replaceTrailingWikilinkQuery(content, wikilinkQuery ?? '', suggestion))
-              }}
+              onPress={() => insertWikilinkSuggestion(suggestion)}
             >
               <Text numberOfLines={1} style={editorFormStyles.suggestionTitle}>{suggestion.title}</Text>
               <MobileChip label={suggestion.type} tone="gray" />

@@ -47,6 +47,7 @@ function mobileNoteTargetCandidates(note: MobileNote): string[] {
 
   return [
     note.title,
+    ...(note.aliases ?? []),
     note.id,
     idStem,
     note.path ?? '',

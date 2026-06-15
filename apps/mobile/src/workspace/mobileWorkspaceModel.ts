@@ -1,6 +1,7 @@
 export type MobileTone = 'blue' | 'gray' | 'green' | 'orange' | 'purple' | 'red' | 'yellow'
 
 export type MobileNote = {
+  aliases?: string[]
   archived?: boolean
   created: string
   createdAt?: number | null

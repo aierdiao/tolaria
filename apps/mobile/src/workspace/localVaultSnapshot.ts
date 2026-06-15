@@ -61,6 +61,7 @@ export type LocalVaultSnapshotOptions = {
 
 type LocalVaultEntry = {
   archived: boolean
+  aliases: string[]
   body: string
   createdAt: TimestampMs | null
   favorite: boolean
@@ -154,6 +155,7 @@ function parseLocalVaultEntry(file: LocalVaultFile): LocalVaultEntry {
 
   return {
     archived: frontmatterFlag(document.frontmatter, ['_archived', 'Archived', 'archived']),
+    aliases: frontmatterList(document.frontmatter, ['aliases', 'Aliases']),
     body: document.body,
     createdAt: file.createdAt,
     favorite: frontmatterFlag(document.frontmatter, ['_favorite', 'favorite']),
@@ -246,6 +248,7 @@ function localEntryToMobileNote(
   return {
     created: relativeDate(entry.createdAt),
     createdAt: entry.createdAt,
+    aliases: entry.aliases,
     date: absoluteDate(entry.modifiedAt),
     editorBlocks: blocks,
     editorBullets: blocks ? localVaultEditorBullets(blocks) : undefined,

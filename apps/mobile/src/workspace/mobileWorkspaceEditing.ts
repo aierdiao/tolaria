@@ -831,6 +831,7 @@ function deriveEditableNote({
   return {
     note: {
       ...fallback,
+      aliases: frontmatterList(document.frontmatter, ['aliases', 'Aliases']),
       archived: frontmatterFlag(document.frontmatter, ['_archived', 'archived']),
       editorBlocks: blocks,
       editorBullets: localVaultEditorBullets(blocks),
@@ -892,13 +893,26 @@ function mergeFrontmatter(target: LocalVaultFrontmatter, source: LocalVaultFront
 
 function fallbackMetadataFrontmatter(note: MobileNote): LocalVaultFrontmatter {
   const frontmatter: LocalVaultFrontmatter = {}
-  addFrontmatterValue(frontmatter, 'type', note.type && note.type !== 'Note' ? note.type : undefined)
+  addFrontmatterValue(frontmatter, 'type', fallbackTypeValue(note))
   addFrontmatterValue(frontmatter, 'Status', note.status)
-  addFrontmatterValue(frontmatter, 'tags', note.tags.length > 0 ? note.tags : undefined)
-  addFrontmatterValue(frontmatter, '_favorite', note.favorite ? true : undefined)
-  addFrontmatterValue(frontmatter, '_archived', note.archived ? true : undefined)
-  addFrontmatterValue(frontmatter, '_organized', note.organized ? true : undefined)
+  addFrontmatterValue(frontmatter, 'aliases', nonEmptyStringList(note.aliases))
+  addFrontmatterValue(frontmatter, 'tags', nonEmptyStringList(note.tags))
+  addFrontmatterValue(frontmatter, '_favorite', trueFlagValue(note.favorite))
+  addFrontmatterValue(frontmatter, '_archived', trueFlagValue(note.archived))
+  addFrontmatterValue(frontmatter, '_organized', trueFlagValue(note.organized))
   return frontmatter
+}
+
+function fallbackTypeValue(note: MobileNote): string | undefined {
+  return note.type && note.type !== 'Note' ? note.type : undefined
+}
+
+function nonEmptyStringList(values: string[] | undefined): string[] | undefined {
+  return values && values.length > 0 ? values : undefined
+}
+
+function trueFlagValue(value: boolean | undefined): true | undefined {
+  return value ? true : undefined
 }
 
 function fallbackPropertyFrontmatter(note: MobileNote): LocalVaultFrontmatter {
@@ -1039,6 +1053,7 @@ function resolveRelationshipTarget(notes: MobileNote[], target: WikilinkTarget):
   return notes.find((note) => {
     const pathStem = note.path?.replace(/\.[^.]+$/, '') ?? note.id.replace(/\.[^.]+$/, '')
     return normalizeTarget(note.title) === normalizedTarget
+      || (note.aliases ?? []).some((alias) => normalizeTarget(alias) === normalizedTarget)
       || normalizeTarget(note.id.replace(/\.[^.]+$/, '')) === normalizedTarget
       || normalizeTarget(pathStem) === normalizedTarget
   }) ?? null
@@ -1110,7 +1125,7 @@ const typeToneFallbacks: Record<string, MobileTone> = {
 }
 
 function wikilinkSearchText(note: MobileNote): string {
-  return [note.title, note.type, note.path ?? '', note.tags.join(' ')].join(' ').toLowerCase()
+  return [note.title, note.type, note.path ?? '', ...(note.aliases ?? []), note.tags.join(' ')].join(' ').toLowerCase()
 }
 
 function noteListSubtitle(notes: MobileNote[]): string {
