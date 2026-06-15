@@ -17,7 +17,6 @@ import { MobilePanel, MobileToolbar, MobileToolbarTitle } from '../ui/MobilePane
 import { MobileTextInput } from '../ui/MobileTextInput'
 import { desktopEditorParity, desktopToolbarActionParity } from '../ui/desktopParity'
 import { mobileColors, mobileSpace, mobileType } from '../ui/tokens'
-import { parseLocalVaultDocument } from '../workspace/localVaultFrontmatter'
 import {
   activeMobileWikilinkQuery,
   activeMobilePersonMentionQuery,
@@ -200,7 +199,7 @@ function MarkdownEditor({
   onUpdateContent: (noteId: string, content: string) => void
   onUpdateTitle: (noteId: string, title: string) => void
 }) {
-  const content = parseLocalVaultDocument(note.rawContent ?? `# ${note.title}\n\n`).body
+  const content = note.rawContent ?? `# ${note.title}\n\n`
   const autocomplete = useMarkdownInlineAutocomplete({
     content,
     noteId: note.id,

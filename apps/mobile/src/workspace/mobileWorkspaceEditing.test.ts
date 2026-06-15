@@ -84,7 +84,7 @@ describe('applyMobileWorkspaceEdit', () => {
 
   it('updates note content and re-derives title, snippet, links, and editor blocks', () => {
     const snapshot = applyMobileWorkspaceEdit(workspaceScenarioForId('default'), {
-      content: '# Revised Mobile Essay\n\nA body with [[open-source-project]].\n\n## Details\n\n- One\n',
+      content: '---\ntype: Essay\nStatus: Draft\n_favorite: true\ntags:\n  - Design\n---\n# Revised Mobile Essay\n\nA body with [[open-source-project]].\n\n## Details\n\n- One\n',
       noteId: 'workflow-orchestration',
       type: 'updateNoteContent',
     })

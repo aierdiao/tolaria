@@ -40,6 +40,13 @@ test.describe('mobile UI lab interactions', () => {
     await expect(page.getByTestId('editor-title')).toHaveText('How I Run an Open Source Project')
   })
 
+  test('derives tablet metadata from raw frontmatter edits', async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== 'tablet-landscape', 'Raw frontmatter parity uses the full-width tablet layout.')
+
+    await page.goto('/')
+    await editRawFrontmatterContract(page)
+  })
+
   test('navigates fixture saved views', async ({ page }, testInfo) => {
     test.skip(testInfo.project.name !== 'tablet-landscape', 'Saved-view navigation is exercised in the full-width tablet layout.')
 
@@ -630,6 +637,37 @@ async function editMarkdownWithWikilink(page: PageLike) {
   await page.getByTestId('note-row-mobile-qa-draft.md').click()
   await expect(page.getByTestId('editor-title')).toHaveText('Mobile QA Draft Revised')
   await expect(page.getByText('Draft body referencing').first()).toBeVisible()
+}
+
+async function editRawFrontmatterContract(page: PageLike) {
+  await page.getByTestId('editor-edit-action').click()
+  await expect(page.getByTestId('editor-title-input')).toBeVisible()
+  await page.getByTestId('editor-markdown-input').fill([
+    '---',
+    'type: Procedure',
+    'Status: Active',
+    'tags:',
+    '  - Mobile',
+    '  - Parity',
+    'Priority: High',
+    'related_to:',
+    '  - [[Tolaria/Mobile UI/How I Run an Open Source Project]]',
+    '---',
+    '# Raw Frontmatter Contract',
+    '',
+    'Body with [[Release Notes]].',
+    '',
+  ].join('\n'))
+  await page.getByTestId('editor-edit-action').click()
+
+  await expect(page.getByTestId('editor-title')).toHaveText('Raw Frontmatter Contract')
+  await expect(page.getByTestId('note-row-workflow-orchestration')).toContainText('Raw Frontmatter Contract')
+  await expect(page.getByTestId('note-row-workflow-orchestration')).toContainText('Mobile')
+  await expect(page.getByTestId('property-row-type')).toContainText('Procedure')
+  await expect(page.getByTestId('property-row-status')).toContainText('Active')
+  await expect(page.getByTestId('property-tags-wrap')).toContainText('Parity')
+  await expect(page.getByTestId('property-row-priority')).toContainText('High')
+  await expect(page.getByTestId('relationship-row-how-i-run-an-open-source-project-text')).toHaveText('How I Run an Open Source Project')
 }
 
 async function archiveAndUnarchiveSelectedNote(page: PageLike) {

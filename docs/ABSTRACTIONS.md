@@ -79,7 +79,7 @@ Workspace surfaces now sit one level above those primitives:
 | Surface | Purpose |
 |---|---|
 | `MobileWorkspaceSnapshot` | Production-shaped data contract for mobile workspace UI |
-| `mobileWorkspaceEditing.ts` | Pure in-process reducer for note creation, markdown body/title edits, frontmatter scalar properties, favorite/archive flags, relationship add/remove, folder edits, saved View edits, Type definition metadata/schema edits, and write planning |
+| `mobileWorkspaceEditing.ts` | Pure in-process reducer for note creation, full raw markdown/frontmatter edits, title edits, frontmatter scalar properties, favorite/archive flags, relationship add/remove, folder edits, saved View edits, Type definition metadata/schema edits, and write planning |
 | `mobileWorkspaceFolders.ts` | Shared mobile folder path normalization, portable folder-name validation, subtree matching, and sidebar tree derivation |
 | `mobileWorkspaceTypeEditing.ts` | Type document create/delete/update/reorder write planning for the mobile reducer |
 | `mobileTypeDefinitionSchema.ts` | Mobile form conversion for Type document instance schema/default fields |
@@ -89,7 +89,7 @@ Workspace surfaces now sit one level above those primitives:
 | `MobileWorkspaceSidebar` | Sidebar groups, counts, and folder tree |
 | `MobileNoteListPanel` | Note-list toolbar, rows, chips, and empty state |
 | `MobileWorkspaceActionSheet` | Search, create, property, relationship, and more-action sheets |
-| `TabletEditorPanel` | Editor rendering plus body-only markdown editing with wikilink suggestions |
+| `TabletEditorPanel` | Editor rendering plus full raw markdown/frontmatter editing with wikilink suggestions |
 | `MobilePropertiesPanel` | Scalar properties, tags, and typed relationship display/removal |
 | `MobileSyncStatusBar` | Bottom sync/status footer |
 

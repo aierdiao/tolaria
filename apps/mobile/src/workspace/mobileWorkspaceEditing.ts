@@ -183,7 +183,7 @@ const mobileNoteEditHandlers: Record<MobileNoteEdit['type'], MobileNoteEditHandl
   },
   updateNoteContent: ({ editableNote, typeDefinitions }, edit) => {
     if (edit.type !== 'updateNoteContent') return editableNote
-    return deriveEditedNote(editableNote, contentEditWithPreservedFrontmatter(editableNote.rawContent, edit.content), typeDefinitions)
+    return deriveEditedNote(editableNote, edit.content, typeDefinitions)
   },
   updateProperty: ({ editableNote, typeDefinitions }, edit) => {
     if (edit.type !== 'updateProperty') return editableNote
@@ -1025,14 +1025,6 @@ function shouldRemoveFrontmatterValue(
   return value === undefined || value === null || isEmptyArray(value)
 }
 
-function contentEditWithPreservedFrontmatter(
-  previousContent: MarkdownContent,
-  nextContent: MarkdownContent,
-): MarkdownContent {
-  if (hasFrontmatter(nextContent)) return nextContent
-  return serializeDocument(parseLocalVaultDocument(previousContent).frontmatter, nextContent)
-}
-
 function serializeDocument(frontmatter: LocalVaultFrontmatter, body: MarkdownContent): MarkdownContent {
   const entries = Object.entries(frontmatter).filter(([, value]) => value !== null && value !== undefined)
   if (entries.length === 0) return body
@@ -1231,8 +1223,4 @@ function absoluteDate(timestamp: number): string {
 
 function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-}
-
-function hasFrontmatter(content: MarkdownContent): boolean {
-  return /^---\r?\n[\s\S]*?\r?\n---(?:\r?\n|$)/.test(content)
 }
