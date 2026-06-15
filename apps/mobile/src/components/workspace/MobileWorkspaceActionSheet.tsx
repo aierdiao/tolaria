@@ -133,6 +133,7 @@ type MobileWorkspaceActionSheetProps = {
   typeSchemaRelationshipTarget: string
   typeSectionLabel: string
   typeSort: string
+  typeTemplate: string
   typeTone: MobileTone
   typeVisible: boolean
   viewDisplayProperties: string[]
@@ -152,6 +153,7 @@ type MobileWorkspaceActionSheetProps = {
   onTypeSchemaRelationshipTargetChange: (value: string) => void
   onTypeSectionLabelChange: (value: string) => void
   onTypeSortChange: (value: string) => void
+  onTypeTemplateChange: (value: string) => void
   onTypeToneChange: (value: MobileTone) => void
   onTypeVisibleChange: (value: boolean) => void
 }
@@ -478,6 +480,7 @@ function TypeSectionContent(props: MobileWorkspaceActionSheetProps) {
         schemaRelationshipTarget={props.typeSchemaRelationshipTarget}
         sectionLabel={props.typeSectionLabel}
         sort={props.typeSort}
+        template={props.typeTemplate}
         tone={props.typeTone}
         typeName={props.typeName}
         visible={props.typeVisible}
@@ -493,6 +496,7 @@ function TypeSectionContent(props: MobileWorkspaceActionSheetProps) {
         onSchemaRelationshipTargetChange={props.onTypeSchemaRelationshipTargetChange}
         onSectionLabelChange={props.onTypeSectionLabelChange}
         onSortChange={props.onTypeSortChange}
+        onTemplateChange={props.onTypeTemplateChange}
         onToneChange={props.onTypeToneChange}
         onVisibleChange={props.onTypeVisibleChange}
       />

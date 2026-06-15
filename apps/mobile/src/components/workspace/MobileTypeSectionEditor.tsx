@@ -30,6 +30,7 @@ type MobileTypeSectionEditorProps = {
   schemaRelationshipTarget: string
   sectionLabel: string
   sort: string
+  template: string
   tone: MobileTone
   typeName: string
   visible: boolean
@@ -45,6 +46,7 @@ type MobileTypeSectionEditorProps = {
   onSchemaRelationshipTargetChange: (value: string) => void
   onSectionLabelChange: (value: string) => void
   onSortChange: (value: string) => void
+  onTemplateChange: (value: string) => void
   onToneChange: (value: MobileTone) => void
   onVisibleChange: (value: boolean) => void
 }
@@ -74,6 +76,16 @@ export function MobileTypeSectionEditor(props: MobileTypeSectionEditorProps) {
       <VisibilityToggle visible={props.visible} onChange={props.onVisibleChange} />
       <TonePicker selectedTone={props.tone} onSelect={props.onToneChange} />
       <SortPicker selectedSort={props.sort} onSelect={props.onSortChange} />
+      <MobileTextInput
+        label={mobileText('customize.template')}
+        multiline
+        placeholder={mobileText('customize.templatePlaceholder')}
+        style={styles.templateInput}
+        testID="workspace-type-template-input"
+        textAlignVertical="top"
+        value={props.template}
+        onChangeText={props.onTemplateChange}
+      />
       <MobileViewDisplayPropertiesPicker
         options={props.propertyOptions}
         query={props.propertyQuery}
@@ -340,6 +352,13 @@ const styles = StyleSheet.create({
   },
   sortRowSelected: {
     backgroundColor: mobileColors.primarySoft,
+  },
+  templateInput: {
+    minHeight: 92,
+    fontFamily: 'Menlo',
+    fontSize: mobileType.caption,
+    lineHeight: 18,
+    paddingTop: mobileSpace.sm,
   },
   swatch: {
     alignItems: 'center',

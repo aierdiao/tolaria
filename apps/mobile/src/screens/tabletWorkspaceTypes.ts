@@ -50,6 +50,7 @@ export type TabletReadOnlyForm = {
   typeSchemaRelationshipTarget: ReadOnlyFormValue
   typeSectionLabel: ReadOnlyFormValue
   typeSort: ReadOnlyFormValue
+  typeTemplate: ReadOnlyFormValue
   typeTone: MobileTone
   typeVisible: boolean
   viewDisplayProperties: string[]
@@ -126,6 +127,7 @@ export type TabletWorkspaceChromeProps = {
   onTypePropertyQueryChange: (value: ReadOnlyFormValue) => void
   onTypeSectionLabelChange: (value: ReadOnlyFormValue) => void
   onTypeSortChange: (value: ReadOnlyFormValue) => void
+  onTypeTemplateChange: (value: ReadOnlyFormValue) => void
   onTypeToneChange: (value: MobileTone) => void
   onTypeVisibleChange: (value: boolean) => void
   onViewFiltersChange: (value: MobileViewFilterGroup) => void

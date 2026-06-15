@@ -288,6 +288,7 @@ async function customizeProcedureTypeSection(page: PageLike) {
   await page.getByTestId('workspace-type-section-label-input').fill('Runbooks')
   await page.getByTestId('workspace-type-tone-green').click()
   await page.getByTestId('workspace-type-sort-title-asc').click()
+  await page.getByTestId('workspace-type-template-input').fill('## Checklist\n\nTemplate body from the Procedure type.')
   await page.getByTestId('workspace-type-property-search-input').fill('bel')
   await page.getByTestId('workspace-type-property-option-belongs-to').click()
   await page.getByTestId('workspace-type-schema-property-name-input').scrollIntoViewIfNeeded()
@@ -312,6 +313,8 @@ async function customizeProcedureTypeSection(page: PageLike) {
   await expect(page.getByTestId('note-row-runbook-from-type-defaults.md')).toBeVisible()
   await expect(page.getByTestId('property-row-priority')).toContainText('High')
   await expect(page.getByTestId('relationship-row-workflow-orchestration-essay')).toBeVisible()
+  await expect(page.getByTestId('editor-heading-2')).toContainText('Checklist')
+  await expect(page.getByTestId('editor-paragraph')).toContainText('Template body from the Procedure type.')
 }
 
 async function longPress(page: PageLike, testId: string) {

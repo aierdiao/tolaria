@@ -86,6 +86,7 @@ const emptyReadOnlyForm: TabletReadOnlyForm = {
   typeSchemaRelationshipTarget: '',
   typeSectionLabel: '',
   typeSort: '',
+  typeTemplate: '',
   typeTone: 'gray',
   typeVisible: true,
   viewDisplayProperties: [],
@@ -466,6 +467,7 @@ function typeSectionWorkspaceActions({
     onTypeSchemaRelationshipTargetChange: (value: string) => updateReadOnlyForm('typeSchemaRelationshipTarget', value),
     onTypeSectionLabelChange: (value: string) => updateReadOnlyForm('typeSectionLabel', value),
     onTypeSortChange: (value: string) => updateReadOnlyForm('typeSort', value),
+    onTypeTemplateChange: (value: string) => updateReadOnlyForm('typeTemplate', value),
     onTypeToneChange: (value: MobileTone) => updateReadOnlyForm('typeTone', value),
     onTypeVisibleChange: (value: boolean) => updateReadOnlyForm('typeVisible', value),
     typePropertyOptions: mobileListPropertySuggestions(
@@ -791,6 +793,7 @@ function typeDefinitionFields({
     { key: 'typeSchemaRelationshipTarget', value: '' },
     { key: 'typeSectionLabel', value: definition?.label ?? label },
     { key: 'typeSort', value: definition?.sort ?? '' },
+    { key: 'typeTemplate', value: definition?.template ?? '' },
     { key: 'typeTone', value: definition?.tone ?? 'gray' },
     { key: 'typeVisible', value: definition?.visible !== false },
   ]
@@ -920,6 +923,7 @@ function updateTypeDefinition({
       listPropertiesDisplay: normalizedListPropertiesDisplay(form.typeDisplayProperties),
       ...typeDefinitionSchemaPatch(form.typeSchemaProperties, form.typeSchemaRelationships),
       sort: form.typeSort,
+      template: form.typeTemplate,
       tone: form.typeTone,
       visible: form.typeVisible ? null : false,
     },
