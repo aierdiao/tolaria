@@ -40,15 +40,17 @@ import {
   type MobileViewMoveDirection,
 } from './mobileSavedViews'
 import { buildMobileSidebarSections } from './mobileSidebarSections'
-import {
-  mobileFolderParentPath,
-  normalizedMobileFilenameStem,
-  normalizedMobileFolderPath,
-} from './mobileWorkspaceFolders'
+import { normalizedMobileFolderPath } from './mobileWorkspaceFolders'
 import { applyMobileFolderEdit } from './mobileWorkspaceFolderEditing'
 import {
+  movedMobileNoteFilePath,
+  renamedMobileNoteFilePath,
+  uniqueMobileNotePath,
+  validateMobileMoveNoteFolderPath,
+  validateMobileRenameNoteFilePath,
+} from './mobileNotePaths'
+import {
   movedNoteWikilinkRewrite,
-  noteFilename,
   noteWithWritePath,
   noteWritePath,
   rewriteMovedNoteWikilinks,
@@ -293,7 +295,7 @@ function createMobileNote(
   if (!trimmedTitle) return snapshot
 
   const notePool = workspaceNotePool(snapshot)
-  const id = uniqueNoteId(notePool, createNotePath(trimmedTitle, defaults.folderPath))
+  const id = uniqueMobileNotePath(notePool, createNotePath(trimmedTitle, defaults.folderPath))
   const now = Date.now()
   const type = cleanTypeName(defaults.type ?? 'Note') || 'Note'
   const rawContent = createNoteRawContent(trimmedTitle, defaults)
@@ -434,10 +436,15 @@ function moveNoteToFolder(
   edit: Extract<MobileWorkspaceEdit, { type: 'moveNoteToFolder' }>,
 ): MobileWorkspaceEditResult {
   const previousNote = workspaceNoteById(snapshot, edit.noteId)
-  const folderPath = normalizedMobileFolderPath(edit.folderPath)
-  if (!previousNote || !folderPath) return { snapshot, writes: [] }
+  if (!previousNote) return { snapshot, writes: [] }
+  if (validateMobileMoveNoteFolderPath({
+    folderPath: edit.folderPath,
+    folderPaths: snapshot.folderPaths,
+    note: previousNote,
+    notes: workspaceNotePool(snapshot),
+  }) !== 'ok') return { snapshot, writes: [] }
 
-  return moveNoteToPath(snapshot, previousNote, movedNote(previousNote, folderPath))
+  return moveNoteToPath(snapshot, previousNote, movedNote(previousNote, edit.folderPath))
 }
 
 function renameNoteFile(
@@ -445,10 +452,14 @@ function renameNoteFile(
   edit: Extract<MobileWorkspaceEdit, { type: 'renameNoteFile' }>,
 ): MobileWorkspaceEditResult {
   const previousNote = workspaceNoteById(snapshot, edit.noteId)
-  const stem = normalizedMobileFilenameStem(edit.filenameStem)
-  if (!previousNote || !stem) return { snapshot, writes: [] }
+  if (!previousNote) return { snapshot, writes: [] }
+  if (validateMobileRenameNoteFilePath({
+    filenameStem: edit.filenameStem,
+    note: previousNote,
+    notes: workspaceNotePool(snapshot),
+  }) !== 'ok') return { snapshot, writes: [] }
 
-  return moveNoteToPath(snapshot, previousNote, renamedNoteFile(previousNote, stem))
+  return moveNoteToPath(snapshot, previousNote, renamedNoteFile(previousNote, edit.filenameStem))
 }
 
 function moveNoteToPath(
@@ -459,7 +470,6 @@ function moveNoteToPath(
   const previousPool = workspaceNotePool(snapshot)
   const nextPath = noteWritePath(nextNote)
   if (noteWritePath(previousNote) === nextPath) return { snapshot, writes: [] }
-  if (notePathExists(previousPool, previousNote, nextPath)) return { snapshot, writes: [] }
 
   const nextPool = moveWorkspaceNotes(previousPool, previousNote, nextNote)
   const nextNotes = moveWorkspaceNotes(snapshot.notes, previousNote, nextNote)
@@ -477,14 +487,6 @@ function moveNoteToPath(
   }
 }
 
-function notePathExists(
-  notes: MobileNote[],
-  previousNote: MobileNote,
-  nextPath: string,
-): boolean {
-  return notes.some((note) => note.id !== previousNote.id && noteWritePath(note) === nextPath)
-}
-
 function moveWorkspaceNotes(
   notes: MobileNote[],
   previousNote: MobileNote,
@@ -498,17 +500,12 @@ function moveWorkspaceNotes(
 }
 
 function movedNote(note: MobileNote, folderPath: FolderPath): MobileNote {
-  const previousPath = noteWritePath(note)
-  const filename = noteFilename(previousPath)
-  const nextPath = `${folderPath}/${filename}`
+  const nextPath = movedMobileNoteFilePath(note, folderPath) ?? noteWritePath(note)
   return noteWithWritePath(note, nextPath)
 }
 
 function renamedNoteFile(note: MobileNote, filenameStem: FilenameStem): MobileNote {
-  const previousPath = noteWritePath(note)
-  const folderPath = mobileFolderParentPath(previousPath)
-  const nextFilename = `${filenameStem}.md`
-  const nextPath = folderPath ? `${folderPath}/${nextFilename}` : nextFilename
+  const nextPath = renamedMobileNoteFilePath(note, filenameStem) ?? noteWritePath(note)
   return noteWithWritePath(note, nextPath)
 }
 
@@ -1115,16 +1112,6 @@ function noteListSubtitle(notes: MobileNote[]): string {
   const inbox = active.filter((note) => !note.organized)
   const count = inbox.length > 0 ? inbox.length : active.length
   return `${count.toLocaleString()} open notes`
-}
-
-function uniqueNoteId(notes: MobileNote[], baseId: NoteId): NoteId {
-  const existing = new Set(notes.flatMap((note) => [note.id, note.path ?? '']).filter(Boolean))
-  if (!existing.has(baseId)) return baseId
-
-  const stem = baseId.replace(/\.md$/, '')
-  let index = 2
-  while (existing.has(`${stem}-${index}.md`)) index += 1
-  return `${stem}-${index}.md`
 }
 
 function slugifyTitle(title: NoteTitle): string {

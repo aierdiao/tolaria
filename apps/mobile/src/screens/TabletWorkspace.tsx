@@ -203,24 +203,32 @@ function actionSheetValues(props: ActionSheetHostProps) {
   return {
     canMoveViewDown,
     canMoveViewUp,
+    folderPaths: props.snapshot.folderPaths,
+    notes: suggestionNotes,
+    searchQuery,
+    selectedNote,
+    ...actionSheetFormValues(readOnlyForm),
+    typePropertyOptions,
+    typeRelationshipTargetOptions,
+    viewPropertyOptions,
+  }
+}
+
+function actionSheetFormValues(readOnlyForm: ActionSheetHostProps['readOnlyForm']) {
+  return {
     createTitle: readOnlyForm.createTitle,
     filenameStem: readOnlyForm.filenameStem,
     folderName: readOnlyForm.folderName,
     folderPath: readOnlyForm.folderPath,
-    notes: suggestionNotes,
     noteType: readOnlyForm.noteType,
     propertyName: readOnlyForm.propertyName,
     propertyValue: readOnlyForm.propertyValue,
     propertyValueKind: readOnlyForm.propertyValueKind,
     relationshipName: readOnlyForm.relationshipName,
     relationshipNoteTitle: readOnlyForm.relationshipNoteTitle,
-    searchQuery,
-    selectedNote,
     typeDisplayProperties: readOnlyForm.typeDisplayProperties,
     typeName: readOnlyForm.typeName,
-    typePropertyOptions,
     typePropertyQuery: readOnlyForm.typePropertyQuery,
-    typeRelationshipTargetOptions,
     typeSchemaProperties: readOnlyForm.typeSchemaProperties,
     typeSchemaPropertyName: readOnlyForm.typeSchemaPropertyName,
     typeSchemaPropertyValue: readOnlyForm.typeSchemaPropertyValue,
@@ -234,7 +242,6 @@ function actionSheetValues(props: ActionSheetHostProps) {
     viewDisplayProperties: readOnlyForm.viewDisplayProperties,
     viewFilters: readOnlyForm.viewFilters,
     viewName: readOnlyForm.viewName,
-    viewPropertyOptions,
     viewPropertyQuery: readOnlyForm.viewPropertyQuery,
   }
 }

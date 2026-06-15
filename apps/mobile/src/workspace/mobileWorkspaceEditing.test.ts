@@ -232,7 +232,11 @@ describe('applyMobileWorkspaceEdit', () => {
       ...base.notes[0],
       rawContent: '# Workflow Orchestration Essay\n\nMove me.\n',
     }
-    const result = applyMobileWorkspaceEditWithWrites({ ...base, notes: [editableNote, ...base.notes.slice(1)] }, {
+    const result = applyMobileWorkspaceEditWithWrites({
+      ...base,
+      folderPaths: ['Writing/Essays'],
+      notes: [editableNote, ...base.notes.slice(1)],
+    }, {
       folderPath: 'Writing/Essays',
       noteId: 'workflow-orchestration',
       type: 'moveNoteToFolder',
@@ -381,6 +385,7 @@ describe('applyMobileWorkspaceEdit', () => {
     }
     const result = applyMobileWorkspaceEditWithWrites({
       ...base,
+      folderPaths: ['Writing/Essays'],
       notes: [pathBackedNote, ...base.notes.slice(1)],
       selectedNoteId: pathBackedNote.id,
     }, edit(pathBackedNote.id))
@@ -868,6 +873,7 @@ function workspaceMoveLinkScenario() {
     snapshot: {
       ...base,
       allNotes: [movedSource, referringNote],
+      folderPaths: ['Writing/Essays'],
       notes: [movedSource, referringNote],
     },
   }

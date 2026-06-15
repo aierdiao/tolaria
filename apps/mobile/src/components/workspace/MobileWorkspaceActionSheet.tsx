@@ -26,6 +26,11 @@ import {
   type MobilePropertyValueKind,
 } from '../../workspace/mobilePropertyValues'
 import {
+  validateMobileMoveNoteFolderPath,
+  validateMobileRenameNoteFilePath,
+  type MobileNotePathValidationStatus,
+} from '../../workspace/mobileNotePaths'
+import {
   mobilePropertyKeySuggestions,
   mobilePropertyValueSuggestions,
   mobileFolderSuggestions,
@@ -62,6 +67,7 @@ type MobileWorkspaceActionSheetProps = {
   canMoveViewUp: boolean
   createTitle: string
   filenameStem: string
+  folderPaths?: string[]
   folderName: string
   folderPath: string
   notes: MobileNote[]
@@ -161,6 +167,7 @@ type SingleTextFieldConfig = {
   onSubmit: () => void
   submitLabel: string
   secondaryAction?: ReactNode
+  submitDisabled?: boolean
 }
 
 type SuggestionInputActionConfig = {
@@ -172,6 +179,7 @@ type SuggestionInputActionConfig = {
   onChangeText: (value: string) => void
   onSubmit: () => void
   submitLabel: string
+  submitDisabled?: boolean
   suggestionTestId: string
   suggestionTestIdPrefix: string
   suggestions: string[]
@@ -299,7 +307,19 @@ function SearchContent({
 }
 
 function SingleTextFieldContent({ config }: { config: SingleTextFieldConfig }) {
-  const { extraContent, inputLabel, inputPlaceholder, inputTestId, inputValue, onCancel, onChangeText, onSubmit, secondaryAction, submitLabel } = config
+  const {
+    extraContent,
+    inputLabel,
+    inputPlaceholder,
+    inputTestId,
+    inputValue,
+    onCancel,
+    onChangeText,
+    onSubmit,
+    secondaryAction,
+    submitDisabled = false,
+    submitLabel,
+  } = config
 
   return (
     <View style={styles.content}>
@@ -315,7 +335,7 @@ function SingleTextFieldContent({ config }: { config: SingleTextFieldConfig }) {
       <SheetFooter>
         {secondaryAction}
         <MobileButton label={mobileText('common.cancel')} variant="ghost" onPress={onCancel} />
-        <MobileButton disabled={inputValue.trim().length === 0} label={submitLabel} variant="primary" onPress={onSubmit} />
+        <MobileButton disabled={submitDisabled || inputValue.trim().length === 0} label={submitLabel} variant="primary" onPress={onSubmit} />
       </SheetFooter>
     </View>
   )
@@ -373,6 +393,7 @@ function singleTextFieldConfig(props: MobileWorkspaceActionSheetProps) {
       onCancel: props.onClose,
       onChangeText: props.onFilenameStemChange,
       onSubmit: props.onRenameNoteFile,
+      submitDisabled: notePathValidationBlocksSubmit(renameNoteFileValidation(props)),
       submitLabel: mobileText('common.save'),
     }
   }
@@ -761,6 +782,7 @@ function retargetNoteInputConfig(props: MobileWorkspaceActionSheetProps & { reta
     onChangeText: props.onFolderPathChange,
     onSubmit: props.onMoveNoteToFolder,
     submitLabel: mobileText('common.save'),
+    submitDisabled: notePathValidationBlocksSubmit(moveNoteToFolderValidation(props)),
     suggestionTestId: 'workspace-move-folder-suggestions',
     suggestionTestIdPrefix: 'workspace-move-folder-suggestion',
     suggestions: mobileFolderSuggestions(props.notes, props.selectedNote, props.folderPath),
@@ -786,10 +808,31 @@ function SuggestionInputActionContent({ config }: { config: SuggestionInputActio
       />
       <SheetFooter>
         <MobileButton label={mobileText('common.cancel')} variant="ghost" onPress={config.onCancel} />
-        <MobileButton disabled={config.inputValue.trim().length === 0} label={config.submitLabel} variant="primary" onPress={config.onSubmit} />
+        <MobileButton disabled={config.submitDisabled || config.inputValue.trim().length === 0} label={config.submitLabel} variant="primary" onPress={config.onSubmit} />
       </SheetFooter>
     </View>
   )
+}
+
+function renameNoteFileValidation(props: MobileWorkspaceActionSheetProps): MobileNotePathValidationStatus {
+  return validateMobileRenameNoteFilePath({
+    filenameStem: props.filenameStem,
+    note: props.selectedNote,
+    notes: props.notes,
+  })
+}
+
+function moveNoteToFolderValidation(props: MobileWorkspaceActionSheetProps): MobileNotePathValidationStatus {
+  return validateMobileMoveNoteFolderPath({
+    folderPath: props.folderPath,
+    folderPaths: props.folderPaths,
+    note: props.selectedNote,
+    notes: props.notes,
+  })
+}
+
+function notePathValidationBlocksSubmit(status: MobileNotePathValidationStatus) {
+  return status !== 'ok'
 }
 
 function MoreActionsContent(props: {
