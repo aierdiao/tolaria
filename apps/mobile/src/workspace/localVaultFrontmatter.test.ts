@@ -46,4 +46,19 @@ Body.
     expect(frontmatterList(document.frontmatter, ['tags'])).toEqual(['AI, UX', 'Design'])
     expect(document.frontmatter.score).toEqual([1, true, 'Needs, Review'])
   })
+
+  it('ignores desktop block-scalar frontmatter placeholders instead of exposing bogus properties', () => {
+    const document = parseLocalVaultDocument(`---
+summary: |
+  Mobile should not surface the YAML pipe marker.
+notes: >
+  Folded text is not parsed by the lightweight desktop parser.
+status: Active
+---
+Body.
+`)
+
+    expect(frontmatterScalar(document.frontmatter, ['status'])).toBe('Active')
+    expect(frontmatterProperties(document.frontmatter)).toEqual({})
+  })
 })

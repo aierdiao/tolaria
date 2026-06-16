@@ -121,7 +121,8 @@ function parseFrontmatterLines(lines: FrontmatterLine[]): LocalVaultFrontmatter 
       continue
     }
 
-    frontmatter[key] = parseValue(value)
+    const parsedValue = parseValue(value)
+    if (parsedValue !== undefined) frontmatter[key] = parsedValue
   }
 
   flushList(frontmatter, listKey, listItems)
@@ -153,9 +154,14 @@ function flushList(
   if (key && items.length > 0) frontmatter[key] = items
 }
 
-function parseValue(value: FrontmatterText): LocalVaultFrontmatterValue {
+function parseValue(value: FrontmatterText): LocalVaultFrontmatterValue | undefined {
+  if (isBlockScalar(value)) return undefined
   if (isInlineArrayLiteral(value)) return parseInlineArray(value)
   return parseScalar(value)
+}
+
+function isBlockScalar(value: FrontmatterText): boolean {
+  return value === '|' || value === '>'
 }
 
 function isInlineArrayLiteral(value: FrontmatterText): boolean {
