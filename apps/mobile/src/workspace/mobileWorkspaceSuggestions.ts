@@ -1,4 +1,4 @@
-import type { MobileNote, MobileRelationship, MobileTypeDefinitions } from './mobileWorkspaceModel'
+import type { MobileNote, MobilePropertyValue, MobileRelationship, MobileTypeDefinition, MobileTypeDefinitions } from './mobileWorkspaceModel'
 import { mobileNoteIdentityMatchesQuery, normalizedMobileSearchQuery } from './mobileNoteSearch'
 import { mobilePropertyValueKindForKey, type MobilePropertyValueKind } from './mobilePropertyValues'
 
@@ -22,6 +22,7 @@ type FolderPath = string
 const DESKTOP_SUGGESTED_PROPERTY_KEYS = ['Status', 'Date', 'URL'] as const
 const DESKTOP_SUGGESTED_RELATIONSHIP_KEYS = ['belongs_to', 'related_to', 'has'] as const
 const DESKTOP_VIEW_BUILT_IN_FIELDS = ['type', 'status', 'title', 'favorite', 'body'] as const
+const RELATIONSHIP_SCHEMA_KEYS = new Set(['belongs_to', 'has', 'related_to'])
 const BUILT_IN_VIEW_VALUE_RESOLVERS: Record<string, ViewValueResolver> = {
   archived: (note) => [String(note.archived === true)],
   body: (note) => note.snippet ? [note.snippet] : [],
@@ -47,9 +48,10 @@ export function mobilePropertyKeySuggestions(
   notes: MobileNote[],
   selectedNote: MobileNote | null,
   query: SuggestionQuery,
+  typeDefinitions?: MobileTypeDefinitions,
 ): PropertyKey[] {
   const selectedKeys = selectedPropertyKeys(selectedNote)
-  return visibleSuggestions(propertyKeyCandidates(notes), query)
+  return visibleSuggestions(propertyKeyCandidates(notes, selectedNote, typeDefinitions), query)
     .filter((key) => !selectedKeys.has(canonicalSuggestionKey(key)))
 }
 
@@ -69,8 +71,10 @@ export function mobilePropertyValueSuggestions(
 export function mobileRelationshipKeySuggestions(
   notes: MobileNote[],
   query: SuggestionQuery,
+  selectedNote?: MobileNote | null,
+  typeDefinitions?: MobileTypeDefinitions,
 ): RelationshipKey[] {
-  return visibleSuggestions(relationshipKeyCandidates(notes), query)
+  return visibleSuggestions(relationshipKeyCandidates(notes, selectedNote ?? null, typeDefinitions), query)
 }
 
 export function mobileRelationshipTargetSuggestions(
@@ -171,9 +175,14 @@ export function normalizeRelationshipKey(key: RelationshipKey): RelationshipKey 
   return relationshipKey === undefined ? trimmed : relationshipKey
 }
 
-function propertyKeyCandidates(notes: MobileNote[]): PropertyKey[] {
+function propertyKeyCandidates(
+  notes: MobileNote[],
+  selectedNote: MobileNote | null,
+  typeDefinitions: MobileTypeDefinitions | undefined,
+): PropertyKey[] {
   return [
     ...DESKTOP_SUGGESTED_PROPERTY_KEYS,
+    ...typePropertyCandidates(selectedNote, typeDefinitions),
     ...notes.flatMap((note) => propertiesForNote(note).map((property) => property.key)),
   ]
 }
@@ -185,11 +194,58 @@ function propertyValueCandidates(
   return notes.flatMap((note) => propertyValuesForSuggestion(note, normalizedKey))
 }
 
-function relationshipKeyCandidates(notes: MobileNote[]): RelationshipKey[] {
+function relationshipKeyCandidates(
+  notes: MobileNote[],
+  selectedNote: MobileNote | null,
+  typeDefinitions: MobileTypeDefinitions | undefined,
+): RelationshipKey[] {
   return [
     ...DESKTOP_SUGGESTED_RELATIONSHIP_KEYS,
+    ...typeRelationshipCandidates(selectedNote, typeDefinitions),
     ...notes.flatMap((note) => note.relationships.map(relationshipFrontmatterKey)),
   ]
+}
+
+function typePropertyCandidates(
+  selectedNote: MobileNote | null,
+  typeDefinitions: MobileTypeDefinitions | undefined,
+): PropertyKey[] {
+  return Object.entries(typeDefinitionForNote(selectedNote, typeDefinitions)?.properties ?? {})
+    .filter(([key, value]) => isTypePropertyCandidate(key, value))
+    .map(([key]) => key)
+}
+
+function typeRelationshipCandidates(
+  selectedNote: MobileNote | null,
+  typeDefinitions: MobileTypeDefinitions | undefined,
+): RelationshipKey[] {
+  const definition = typeDefinitionForNote(selectedNote, typeDefinitions)
+  if (!definition) return []
+
+  return [
+    ...Object.entries(definition.relationships ?? {})
+      .filter(([, refs]) => refs.length > 0)
+      .map(([key]) => normalizeRelationshipKey(key)),
+    ...Object.keys(definition.properties ?? {})
+      .filter(isRelationshipSchemaKey)
+      .map(normalizeRelationshipKey),
+  ]
+}
+
+function typeDefinitionForNote(
+  selectedNote: MobileNote | null,
+  typeDefinitions: MobileTypeDefinitions | undefined,
+): MobileTypeDefinition | undefined {
+  if (!selectedNote || selectedNote.type === 'Type') return undefined
+  return typeDefinitions?.[selectedNote.type]
+}
+
+function isTypePropertyCandidate(key: PropertyKey, value: MobilePropertyValue): boolean {
+  return !isRelationshipSchemaKey(key) && !(Array.isArray(value) && value.length === 0)
+}
+
+function isRelationshipSchemaKey(key: RelationshipKey): boolean {
+  return RELATIONSHIP_SCHEMA_KEYS.has(canonicalSuggestionKey(key))
 }
 
 function folderPathForNote(note: MobileNote | null): FolderPath {

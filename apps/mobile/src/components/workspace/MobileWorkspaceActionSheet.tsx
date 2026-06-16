@@ -10,7 +10,7 @@ import { MobilePanel, MobileToolbar, MobileToolbarSpacer, MobileToolbarTitle } f
 import { MobileTextInput } from '../../ui/MobileTextInput'
 import { desktopPanelParity, desktopToolbarActionParity } from '../../ui/desktopParity'
 import { mobileColors, mobileSpace, mobileType } from '../../ui/tokens'
-import type { MobileNote, MobileSidebarIcon, MobileTone, MobileViewFilterGroup } from '../../workspace/mobileWorkspaceModel'
+import type { MobileNote, MobileSidebarIcon, MobileTone, MobileTypeDefinitions, MobileViewFilterGroup } from '../../workspace/mobileWorkspaceModel'
 import type {
   MobileTypeSchemaProperty,
   MobileTypeSchemaRelationship,
@@ -140,6 +140,7 @@ type MobileWorkspaceActionSheetProps = {
   searchQuery: string
   selectedNote: MobileNote | null
   typeDisplayProperties: string[]
+  typeDefinitions?: MobileTypeDefinitions
   typeName: string
   typePropertyOptions: string[]
   typePropertyQuery: string
@@ -616,11 +617,12 @@ function AddPropertyContent({
   propertyValue,
   propertyValueKind,
   selectedNote,
+  typeDefinitions,
 }: MobileWorkspaceActionSheetProps) {
   const editingProperty = action === 'editProperty'
   const lockedListKind = isMobileListPropertyKey(propertyName)
   const selectedValueKind = mobilePropertyValueKindForKey(propertyName, propertyValueKind)
-  const keySuggestions = editingProperty ? [] : mobilePropertyKeySuggestions(notes, selectedNote, propertyName)
+  const keySuggestions = editingProperty ? [] : mobilePropertyKeySuggestions(notes, selectedNote, propertyName, typeDefinitions)
   const valueSuggestions = mobilePropertyValueSuggestions(notes, propertyName, propertyValue, selectedValueKind)
 
   return (
@@ -687,8 +689,10 @@ function AddRelationshipContent({
   onSaveRelationship,
   relationshipName,
   relationshipNoteTitle,
+  selectedNote,
+  typeDefinitions,
 }: MobileWorkspaceActionSheetProps) {
-  const keySuggestions = mobileRelationshipKeySuggestions(notes, relationshipName)
+  const keySuggestions = mobileRelationshipKeySuggestions(notes, relationshipName, selectedNote, typeDefinitions)
   const suggestions = mobileRelationshipTargetSuggestions(notes, relationshipNoteTitle)
   const createTargetTitle = relationshipNoteTitle.trim()
   const showCreateTarget = shouldShowRelationshipCreateTarget(notes, createTargetTitle)

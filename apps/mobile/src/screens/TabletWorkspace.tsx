@@ -220,6 +220,7 @@ function actionSheetValues(props: ActionSheetHostProps) {
     searchQuery,
     selectedNote,
     ...actionSheetFormValues(readOnlyForm),
+    typeDefinitions: props.snapshot.typeDefinitions,
     typePropertyOptions,
     typeRelationshipTargetOptions,
     typeSortPropertyOptions,

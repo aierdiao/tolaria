@@ -33,6 +33,30 @@ describe('mobile workspace suggestions', () => {
     expect(mobilePropertyKeySuggestions(withPriority.notes, selectedNote, '')).not.toContain('Status')
   })
 
+  it('suggests Type-defined properties before they exist on note instances', () => {
+    const scenario = workspaceScenarioForId('default')
+    const selectedNote = scenario.notes.find((note) => note.id === 'workflow-orchestration') ?? null
+
+    expect(mobilePropertyKeySuggestions(scenario.notes, selectedNote, '', {
+      Essay: {
+        properties: {
+          EmptyList: [],
+          has: 'Milestone',
+          Priority: 'High',
+        },
+      },
+    })).toEqual(expect.arrayContaining(['Priority']))
+    expect(mobilePropertyKeySuggestions(scenario.notes, selectedNote, '', {
+      Essay: {
+        properties: {
+          EmptyList: [],
+          has: 'Milestone',
+          Priority: 'High',
+        },
+      },
+    })).not.toEqual(expect.arrayContaining(['EmptyList', 'has']))
+  })
+
   it('suggests existing property values for the selected key', () => {
     const withPriority = applyMobileWorkspaceEdit(workspaceScenarioForId('default'), {
       key: 'Priority',
@@ -63,6 +87,22 @@ describe('mobile workspace suggestions', () => {
 
     expect(suggestions.slice(0, 3)).toEqual(['belongs_to', 'related_to', 'has'])
     expect(mobileRelationshipKeySuggestions(workspaceScenarioForId('default').notes, 'ment')).toEqual(['Mentions'])
+  })
+
+  it('suggests Type-defined relationship keys before they exist on note instances', () => {
+    const scenario = workspaceScenarioForId('default')
+    const selectedNote = scenario.notes.find((note) => note.id === 'workflow-orchestration') ?? null
+
+    expect(mobileRelationshipKeySuggestions(scenario.notes, '', selectedNote, {
+      Essay: {
+        properties: {
+          has: 'Milestone',
+        },
+        relationships: {
+          depends_on: ['[[Mobile UI]]'],
+        },
+      },
+    })).toEqual(expect.arrayContaining(['depends_on', 'has']))
   })
 
   it('suggests relationship targets by desktop note identity fields', () => {
