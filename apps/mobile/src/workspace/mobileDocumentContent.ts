@@ -451,6 +451,13 @@ function linkifyInlineMarkdown(markdown: MarkdownLine): string {
     .replace(/\[([^\]]+)]\(([^)]+)\)/g, (_match, label: LinkLabel, href: UrlText) => (
       `<a href="${escapeAttribute(markdownLinkHref(href))}">${label}</a>`
     ))
+    .replace(/&lt;((?:https?|mailto):(?:(?!&gt;)\S)+)&gt;/g, (_match, href: UrlText) => (
+      externalAutolinkHtml(href, href)
+    ))
+    .replace(/&lt;([A-Za-z0-9.!#$%&*+/=?^_`{|}~-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,})&gt;/g, (
+      _match,
+      email: LinkLabel,
+    ) => emailAutolinkHtml(email))
 }
 
 function markdownLinkHref(href: UrlText): UrlText {
@@ -463,6 +470,14 @@ function markdownLinkHref(href: UrlText): UrlText {
 function wikilinkHtml(target: WikilinkTarget, display: LinkLabel): string {
   const href = `${WIKILINK_HREF_PREFIX}${encodeURIComponent(unescapeHtml(target))}`
   return `<a href="${href}">${display}</a>`
+}
+
+function externalAutolinkHtml(href: UrlText, display: LinkLabel): string {
+  return `<a href="${escapeAttribute(unescapeHtml(href))}">${display}</a>`
+}
+
+function emailAutolinkHtml(email: LinkLabel): string {
+  return `<a href="mailto:${escapeAttribute(unescapeHtml(email))}">${email}</a>`
 }
 
 function serializeBlockChildren(nodes: TiptapJsonNode[]): MarkdownBody {
@@ -640,7 +655,23 @@ function linkMarkdown(text: LinkLabel, attrs: Record<string, unknown> | undefine
     const target = decodeURIComponent(href.slice(WIKILINK_HREF_PREFIX.length))
     return target === text ? `[[${target}]]` : `[[${target}|${text}]]`
   }
+  const autolink = markdownAutolink(text, href)
+  if (autolink) return autolink
   return `[${escapeMarkdownLinkLabel(text)}](${escapeMarkdownLinkDestination(href)})`
+}
+
+function markdownAutolink(text: LinkLabel, href: UrlText): string | null {
+  if (href === text && isMarkdownUriAutolink(href)) return `<${href}>`
+  if (href === `mailto:${text}` && isMarkdownEmailAutolink(text)) return `<${text}>`
+  return null
+}
+
+function isMarkdownUriAutolink(value: UrlText): boolean {
+  return /^(?:https?|mailto):\S+$/u.test(value) && !/[<>]/u.test(value)
+}
+
+function isMarkdownEmailAutolink(value: LinkLabel): boolean {
+  return /^[A-Za-z0-9.!#$%&*+/=?^_`{|}~-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/u.test(value)
 }
 
 function escapeMarkdownLinkLabel(text: LinkLabel): LinkLabel {

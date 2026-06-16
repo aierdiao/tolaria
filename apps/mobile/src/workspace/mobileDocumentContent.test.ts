@@ -117,6 +117,16 @@ Updated body.
     expect(html).toBe('<p><a href="attachments/project brief.pdf">project brief.pdf</a></p>')
   })
 
+  it('hydrates markdown autolinks as editable TenTap links', () => {
+    const html = mobileMarkdownBodyToTentapHtml(
+      'Location: <https://example.com/room?id=42> and <luca@example.com>\n',
+    )
+
+    expect(html).toBe(
+      '<p>Location: <a href="https://example.com/room?id=42">https://example.com/room?id=42</a> and <a href="mailto:luca@example.com">luca@example.com</a></p>',
+    )
+  })
+
   it('preserves desktop highlight markdown while leaving code spans literal', () => {
     const html = mobileMarkdownBodyToTentapHtml('Use ==highlight== but keep `==literal==` as code.\n')
 
@@ -388,6 +398,35 @@ Updated body.
     }
 
     expect(tiptapJsonToMobileMarkdown(document)).toBe('[project brief.pdf](<attachments/project brief.pdf>)')
+  })
+
+  it('serializes url and email autolinks back to durable markdown autolink syntax', () => {
+    const document: TiptapJsonNode = {
+      type: 'doc',
+      content: [
+        {
+          type: 'paragraph',
+          content: [
+            { text: 'Location: ', type: 'text' },
+            {
+              marks: [{ attrs: { href: 'https://example.com/room?id=42' }, type: 'link' }],
+              text: 'https://example.com/room?id=42',
+              type: 'text',
+            },
+            { text: ' and ', type: 'text' },
+            {
+              marks: [{ attrs: { href: 'mailto:luca@example.com' }, type: 'link' }],
+              text: 'luca@example.com',
+              type: 'text',
+            },
+          ],
+        },
+      ],
+    }
+
+    expect(tiptapJsonToMobileMarkdown(document)).toBe(
+      'Location: <https://example.com/room?id=42> and <luca@example.com>',
+    )
   })
 
   it('serializes display math hard breaks back to durable markdown source', () => {
