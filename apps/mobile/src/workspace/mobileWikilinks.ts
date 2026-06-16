@@ -33,7 +33,7 @@ function mobileNoteTargetCandidates(note: MobileNote): string[] {
   ]
 }
 
-function normalizeWikilinkTarget(value: string): string {
+export function normalizeMobileWikilinkTarget(value: string): string {
   return normalizedMobileSearchQuery(value).replace(/\.md$/iu, '')
 }
 
@@ -41,11 +41,11 @@ export function mobileNoteForWikilinkTarget(
   notes: MobileNote[],
   target: WikilinkTarget,
 ): MobileNote | null {
-  const normalizedTarget = normalizeWikilinkTarget(target)
+  const normalizedTarget = normalizeMobileWikilinkTarget(target)
   if (!normalizedTarget) return null
 
   return notes.find((note) => mobileNoteTargetCandidates(note).some((candidate) => {
-    return normalizeWikilinkTarget(candidate) === normalizedTarget
+    return normalizeMobileWikilinkTarget(candidate) === normalizedTarget
   })) ?? null
 }
 

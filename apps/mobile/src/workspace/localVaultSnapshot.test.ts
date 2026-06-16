@@ -32,13 +32,15 @@ describe('buildLocalVaultWorkspaceSnapshot', () => {
     expect(snapshot.allNotes?.map((note) => note.title)).toContain('Workflow Orchestration')
   })
 
-  it('resolves relationship refs through target aliases like desktop wikilinks', () => {
+  it('resolves relationship refs through target aliases and folded title targets like desktop wikilinks', () => {
     const snapshot = buildLocalVaultWorkspaceSnapshot({
       files: [
         vaultFile('relationships/source.md', `---
 type: Note
 related_to:
   - "[[Newsletter]]"
+has:
+  - "[[Cafe Notes.md]]"
 ---
 # Source
 `),
@@ -48,6 +50,11 @@ aliases:
   - Newsletter
 ---
 # Longform Launch Plan
+`),
+        vaultFile('journal/cafe-notes.md', `---
+type: Journal
+---
+# Café Notes
 `),
       ],
       vaultLabel: 'Laputa',
@@ -59,6 +66,12 @@ aliases:
       ref: '[[Newsletter]]',
       title: 'Longform Launch Plan',
       type: 'Project',
+    })
+    expect(snapshot.notes[0]?.relationships[1]?.values[0]).toMatchObject({
+      id: 'journal/cafe-notes.md',
+      ref: '[[Cafe Notes.md]]',
+      title: 'Café Notes',
+      type: 'Journal',
     })
   })
 

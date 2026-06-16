@@ -127,7 +127,7 @@ export const mobileParityInventory = [
     surface: 'Property value kind picker',
   },
   {
-    assertions: ['property and relationship suggestion user-flow checks'],
+    assertions: ['property and relationship suggestion user-flow checks', 'relationship target resolution parity'],
     contracts: ['desktopPropertyParity'],
     desktopSource: 'RelationshipsPanel note search dropdown and inspector property forms',
     mobileFile: 'src/components/workspace/MobileWorkspaceSuggestionList.tsx',

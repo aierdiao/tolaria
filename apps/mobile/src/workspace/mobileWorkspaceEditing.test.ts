@@ -124,11 +124,17 @@ describe('applyMobileWorkspaceEdit', () => {
     expect(refs ?? []).not.toContain(ref)
   })
 
-  it('resolves typed relationships through desktop wikilink aliases and path stems', () => {
+  it('resolves typed relationships through desktop wikilink aliases, path stems, and folded title targets', () => {
     const base = workspaceScenarioForId('default')
     const notes = base.notes.map((note) => note.id === 'open-source-project'
       ? { ...note, aliases: ['OSS Project'] }
       : note)
+      .concat({
+        ...base.notes[1],
+        id: 'journal/cafe-notes.md',
+        path: 'journal/cafe-notes.md',
+        title: 'Café Notes',
+      })
     const aliasedSnapshot = { ...base, allNotes: notes, notes }
 
     const withAliasRelationship = applyMobileWorkspaceEdit(aliasedSnapshot, {
@@ -143,8 +149,14 @@ describe('applyMobileWorkspaceEdit', () => {
       targetTitle: 'Tolaria/Mobile UI/How I Run an Open Source Project',
       type: 'addRelationship',
     })
+    const withFoldedTitleRelationship = applyMobileWorkspaceEdit(withPathRelationship, {
+      key: 'has',
+      noteId: 'workflow-orchestration',
+      targetTitle: 'Cafe Notes.md',
+      type: 'addRelationship',
+    })
 
-    const note = withPathRelationship.notes.find((candidate) => candidate.id === 'workflow-orchestration')
+    const note = withFoldedTitleRelationship.notes.find((candidate) => candidate.id === 'workflow-orchestration')
     expect(note?.relationships.find((relationship) => relationship.key === 'belongs_to')?.values).toContainEqual(
       expect.objectContaining({
         ref: '[[Tolaria/Mobile UI/How I Run an Open Source Project]]',
@@ -155,6 +167,12 @@ describe('applyMobileWorkspaceEdit', () => {
       expect.objectContaining({
         ref: '[[Tolaria/Mobile UI/How I Run an Open Source Project]]',
         title: 'How I Run an Open Source Project',
+      }),
+    )
+    expect(note?.relationships.find((relationship) => relationship.key === 'has')?.values).toContainEqual(
+      expect.objectContaining({
+        ref: '[[journal/cafe-notes]]',
+        title: 'Café Notes',
       }),
     )
   })

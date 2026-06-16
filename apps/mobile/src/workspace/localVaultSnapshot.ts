@@ -18,6 +18,7 @@ import {
   parseMobileSavedViewFile,
 } from './mobileSavedViews'
 import { buildMobileSidebarSections } from './mobileSidebarSections'
+import { normalizeMobileWikilinkTarget } from './mobileWikilinks'
 import type {
   MobileNote,
   MobileProperty,
@@ -367,7 +368,7 @@ function relationshipResolver(entries: LocalVaultEntry[]): RelationshipResolver 
     }
   }
 
-  return (target) => index.get(normalizedTarget(target)) ?? null
+  return (target) => index.get(normalizeMobileWikilinkTarget(target)) ?? null
 }
 
 function relationshipResolverTargets(entry: LocalVaultEntry): string[] {
@@ -385,12 +386,8 @@ function addRelationshipResolverTarget(
   target: string,
   entry: LocalVaultEntry,
 ) {
-  const normalized = normalizedTarget(target)
+  const normalized = normalizeMobileWikilinkTarget(target)
   if (normalized && !index.has(normalized)) index.set(normalized, entry)
-}
-
-function normalizedTarget(target: WikilinkTarget): WikilinkTarget {
-  return target.trim().toLowerCase()
 }
 
 function wikilinkTarget(value: string): WikilinkTarget {

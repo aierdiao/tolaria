@@ -57,6 +57,7 @@ import {
   rewriteMovedNoteWikilinks,
 } from './mobileWorkspacePathRewrites'
 import { writeMobileFrontmatterValue } from './mobileFrontmatterWrites'
+import { normalizeMobileWikilinkTarget } from './mobileWikilinks'
 import type { MobileTypeDefinitionPatch } from './mobileTypeDefinitions'
 import { applyMobileTypeEdit } from './mobileWorkspaceTypeEditing'
 import { normalizeRelationshipKey } from './mobileWorkspaceSuggestions'
@@ -1124,13 +1125,13 @@ function unresolvedRelationshipValue(rawValue: WikilinkRef, target: WikilinkTarg
 }
 
 function resolveRelationshipTarget(notes: MobileNote[], target: WikilinkTarget): MobileNote | null {
-  const normalizedTarget = normalizeTarget(target)
+  const normalizedTarget = normalizeMobileWikilinkTarget(target)
   return notes.find((note) => {
     const pathStem = note.path?.replace(/\.[^.]+$/, '') ?? note.id.replace(/\.[^.]+$/, '')
-    return normalizeTarget(note.title) === normalizedTarget
-      || (note.aliases ?? []).some((alias) => normalizeTarget(alias) === normalizedTarget)
-      || normalizeTarget(note.id.replace(/\.[^.]+$/, '')) === normalizedTarget
-      || normalizeTarget(pathStem) === normalizedTarget
+    return normalizeMobileWikilinkTarget(note.title) === normalizedTarget
+      || (note.aliases ?? []).some((alias) => normalizeMobileWikilinkTarget(alias) === normalizedTarget)
+      || normalizeMobileWikilinkTarget(note.id.replace(/\.[^.]+$/, '')) === normalizedTarget
+      || normalizeMobileWikilinkTarget(pathStem) === normalizedTarget
   }) ?? null
 }
 
@@ -1224,10 +1225,6 @@ function slugifyTitle(title: NoteTitle): string {
     .replace(/['"]/g, '')
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-|-$/g, '') || 'untitled'
-}
-
-function normalizeTarget(value: string): string {
-  return value.trim().toLowerCase()
 }
 
 function humanizeKey(key: FrontmatterKey): string {
