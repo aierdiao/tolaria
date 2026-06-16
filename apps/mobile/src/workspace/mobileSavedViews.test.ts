@@ -51,6 +51,27 @@ filters:
     ]).map((candidate) => candidate.id)).toEqual(['active-project', 'draft-project'])
   })
 
+  it('parses quoted commas inside desktop saved-view inline YAML lists', () => {
+    const view = parseMobileSavedViewFile({
+      relativePath: 'views/tagged.yml',
+      content: `name: Tagged
+listPropertiesDisplay: ["AI, UX", Status]
+filters:
+  all:
+    - field: tags
+      op: any_of
+      value: ["AI, UX", Design]
+`,
+    }, 0)
+
+    expect(view?.definition.listPropertiesDisplay).toEqual(['AI, UX', 'Status'])
+    expect(evaluateMobileSavedView(view!, [
+      note({ id: 'quoted-comma', tags: ['AI, UX'] }),
+      note({ id: 'plain', tags: ['Design'] }),
+      note({ id: 'split-would-be-wrong', tags: ['AI'] }),
+    ]).map((candidate) => candidate.id)).toEqual(['quoted-comma', 'plain'])
+  })
+
   it('sorts saved views with desktop custom-property sort strings', () => {
     const rankedView = parseMobileSavedViewFile({
       relativePath: 'views/ranked.yml',
@@ -240,6 +261,30 @@ filters:
         ])],
       }),
     ]).map((candidate) => candidate.id)).toEqual(['single', 'aliased'])
+  })
+
+  it('keeps quoted desktop wikilink filter values as scalar strings', () => {
+    const view = parseMobileSavedViewFile({
+      relativePath: 'views/tolaria-links.yml',
+      content: `name: Tolaria Links
+filters:
+  all:
+    - field: related_to
+      op: contains
+      value: "[[tolaria]]"
+`,
+    }, 0)
+
+    expect(evaluateMobileSavedView(view!, [
+      note({
+        id: 'match',
+        relationships: [relationship('related_to', [{ ref: '[[tolaria]]', title: 'Tolaria' }])],
+      }),
+      note({
+        id: 'miss',
+        relationships: [relationship('related_to', [{ ref: '[[other]]', title: 'Other' }])],
+      }),
+    ]).map((candidate) => candidate.id)).toEqual(['match'])
   })
 
   it('uses exact desktop matching for property-array view filters', () => {

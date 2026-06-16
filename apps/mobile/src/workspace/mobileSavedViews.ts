@@ -642,6 +642,9 @@ function topLevelNumber(lines: YamlLine[], key: FieldKey) {
 }
 
 function topLevelList(lines: YamlLine[], key: FieldKey) {
+  const inlineValue = topLevelValue(lines, key)
+  if (Array.isArray(inlineValue)) return inlineValue.map(String)
+
   const index = lines.findIndex((line) => line.indent === 0 && line.text === `${key}:`)
   if (index === -1) return undefined
 
@@ -686,24 +689,79 @@ function keyValueText(text: YamlText) {
 }
 
 function parseYamlValue(value: YamlText): unknown {
-  const unquoted = unquote(value)
-  const lower = unquoted.toLowerCase()
+  const scalar = yamlScalarToken(value)
+  return scalar.quoted ? scalar.text : parseUnquotedYamlValue(scalar.text)
+}
+
+function yamlScalarToken(value: YamlText) {
+  return {
+    quoted: isQuotedScalar(value),
+    text: unquote(value),
+  }
+}
+
+function parseUnquotedYamlValue(value: YamlText): unknown {
+  const literal = yamlLiteralValue(value)
+  if (literal !== undefined) return literal
+  return isInlineListLiteral(value) ? parseInlineList(value) : value
+}
+
+function yamlLiteralValue(value: YamlText): unknown {
+  const lower = value.toLowerCase()
   if (lower === 'true') return true
   if (lower === 'false') return false
   if (lower === 'null') return null
-  if (/^-?\d+(?:\.\d+)?$/u.test(unquoted)) return Number(unquoted)
-  if (unquoted.startsWith('[') && unquoted.endsWith(']')) return parseInlineList(unquoted)
-  return unquoted
+  return /^-?\d+(?:\.\d+)?$/u.test(value) ? Number(value) : undefined
+}
+
+function isInlineListLiteral(value: YamlText) {
+  if (value.startsWith('[[')) return false
+  return value.startsWith('[') && value.endsWith(']')
 }
 
 function parseInlineList(value: YamlText) {
-  return value.slice(1, -1).split(',').map((item) => parseYamlValue(item.trim()))
+  const inner = value.slice(1, -1)
+  if (!inner.trim()) return []
+  return splitInlineListItems(inner).map((item) => parseYamlValue(item.trim()))
+}
+
+function splitInlineListItems(value: YamlText): YamlText[] {
+  const items: YamlText[] = []
+  let quote: '"' | '\'' | null = null
+  let startIndex = 0
+
+  for (let index = 0; index < value.length; index += 1) {
+    const char = value[index]
+    if (char === '\\' && quote === '"') {
+      index += 1
+      continue
+    }
+    if (isQuote(char)) {
+      quote = quote === char ? null : quote ?? char
+      continue
+    }
+    if (char === ',' && quote === null) {
+      items.push(value.slice(startIndex, index))
+      startIndex = index + 1
+    }
+  }
+
+  items.push(value.slice(startIndex))
+  return items
 }
 
 function unquote(value: YamlText) {
   const quote = value.at(0)
-  if ((quote === '"' || quote === '\'') && value.at(-1) === quote) return value.slice(1, -1)
+  if (isQuote(quote) && value.at(-1) === quote) return value.slice(1, -1)
   return value
+}
+
+function isQuotedScalar(value: YamlText) {
+  return isQuote(value.at(0)) && value.at(-1) === value.at(0)
+}
+
+function isQuote(value: string | undefined): value is '"' | '\'' {
+  return value === '"' || value === '\''
 }
 
 function groupKind(text: YamlText): FilterGroupKind | null {
