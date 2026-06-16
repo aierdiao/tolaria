@@ -5,6 +5,7 @@ import {
 } from './mobileDisplayMath'
 import { mobileEditorBlocksToMarkdown, mobileFallbackBulletsToMarkdown } from './mobileEditorBlockMarkdown'
 import { isMobileMarkdownCodeFenceClose, readMobileMarkdownCodeFence } from './mobileMarkdownCodeFence'
+import { mobileMarkdownListHtml, type MobileMarkdownListItem } from './mobileMarkdownListHtml'
 import { mobileImageNodeMarkdown, mobileMarkdownImageHtml } from './mobileMarkdownImage'
 import type { MobileNote } from './mobileWorkspaceModel'
 
@@ -212,27 +213,19 @@ function readList(lines: MarkdownLines, startIndex: number): ReadHtmlBlockResult
   const first = listLine(lines[startIndex] ?? '')
   if (!first) return null
 
-  const items: Array<{ checked?: boolean; text: string }> = []
+  const items: MobileMarkdownListItem[] = []
   let index = startIndex
   const kind: ListKind = first.kind
 
   while (index < lines.length) {
     const current = listLine(lines[index] ?? '')
     if (!current || current.kind !== kind) break
-    items.push({ checked: current.checked, text: current.text })
+    items.push(current)
     index += 1
   }
 
-  if (kind === 'task') {
-    return {
-      html: `<ul data-type="taskList">${items.map((item) => taskListItemHtml(item.text, item.checked === true)).join('')}</ul>`,
-      nextIndex: index,
-    }
-  }
-
-  const tag = kind === 'ordered' ? 'ol' : 'ul'
   return {
-    html: `<${tag}>${items.map((item) => `<li><p>${inlineMarkdownToHtml(item.text)}</p></li>`).join('')}</${tag}>`,
+    html: mobileMarkdownListHtml(kind, items, inlineMarkdownToHtml),
     nextIndex: index,
   }
 }
@@ -275,28 +268,24 @@ function isBlockStart(lines: MarkdownLines, index: number): boolean {
   return readHtmlBlock(lines, index) !== null
 }
 
-function taskListItemHtml(text: PlainText, checked: boolean): string {
-  const checkedAttr = checked ? 'true' : 'false'
-  const inputChecked = checked ? ' checked="checked"' : ''
-  return [
-    `<li data-type="taskItem" data-checked="${checkedAttr}">`,
-    `<label><input type="checkbox"${inputChecked}><span></span></label>`,
-    `<div><p>${inlineMarkdownToHtml(text)}</p></div>`,
-    '</li>',
-  ].join('')
-}
+function listLine(line: MarkdownLine): (MobileMarkdownListItem & { kind: ListKind }) | null {
+  const task = line.match(/^(\s*)[-*+]\s+\[([ xX])]\s+(.+)$/)
+  if (task) {
+    return { checked: task[2].toLowerCase() === 'x', depth: listDepth(task[1]), kind: 'task', text: task[3] }
+  }
 
-function listLine(line: MarkdownLine): { checked?: boolean; kind: ListKind; text: PlainText } | null {
-  const task = line.match(/^\s*[-*+]\s+\[([ xX])]\s+(.+)$/)
-  if (task) return { checked: task[1].toLowerCase() === 'x', kind: 'task', text: task[2] }
+  const bullet = line.match(/^(\s*)[-*+]\s+(.+)$/)
+  if (bullet) return { depth: listDepth(bullet[1]), kind: 'bullet', text: bullet[2] }
 
-  const bullet = line.match(/^\s*[-*+]\s+(.+)$/)
-  if (bullet) return { kind: 'bullet', text: bullet[1] }
-
-  const ordered = line.match(/^\s*\d+[.)]\s+(.+)$/)
-  if (ordered) return { kind: 'ordered', text: ordered[1] }
+  const ordered = line.match(/^(\s*)\d+[.)]\s+(.+)$/)
+  if (ordered) return { depth: listDepth(ordered[1]), kind: 'ordered', text: ordered[2] }
 
   return null
+}
+
+function listDepth(indent: MarkdownLine): number {
+  const expanded = indent.replace(/\t/g, '  ')
+  return Math.min(Math.floor(expanded.length / 2), 3)
 }
 
 function isHorizontalRule(line: MarkdownLine): boolean {

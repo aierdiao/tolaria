@@ -132,6 +132,18 @@ Updated body.
     expect(html).toBe('<p>Intro</p>\n<p>$$<br>\\int_0^1 x\\,dx<br>$$</p>\n<p>Done</p>')
   })
 
+  it('hydrates nested desktop markdown lists without flattening indentation', () => {
+    const html = mobileMarkdownBodyToTentapHtml('- Parent\n  - Child with **bold**\n- Sibling\n')
+    const taskHtml = mobileMarkdownBodyToTentapHtml('- [x] Parent\n  - [ ] Child\n')
+
+    expect(html).toBe(
+      '<ul><li><p>Parent</p><ul><li><p>Child with <strong>bold</strong></p></li></ul></li><li><p>Sibling</p></li></ul>',
+    )
+    expect(taskHtml).toBe(
+      '<ul data-type="taskList"><li data-type="taskItem" data-checked="true"><label><input type="checkbox" checked="checked"><span></span></label><div><p>Parent</p><ul data-type="taskList"><li data-type="taskItem" data-checked="false"><label><input type="checkbox"><span></span></label><div><p>Child</p></div></li></ul></div></li></ul>',
+    )
+  })
+
   it('hydrates fenced code info strings with spaces as one editable code block', () => {
     const html = mobileMarkdownBodyToTentapHtml('```plain text\nprompt: keep [[literal]]\n```\n\nDone\n')
 
