@@ -25,6 +25,8 @@ const scalarDefaultKeys: ScalarDefaultKey[] = ['type', 'status', 'folderPath', '
 const builtInDefaultWriters: Record<string, DefaultWriter> = {
   archived: (defaults, values) => applyBooleanDefault(defaults, 'archived', values[0]),
   favorite: (defaults, values) => applyBooleanDefault(defaults, 'favorite', values[0]),
+  isa: writeTypeDefault,
+  is_a: writeTypeDefault,
   organized: (defaults, values) => applyBooleanDefault(defaults, 'organized', values[0]),
   path: (defaults, values) => {
     defaults.folderPath = stringDefault(values) ?? defaults.folderPath
@@ -35,9 +37,7 @@ const builtInDefaultWriters: Record<string, DefaultWriter> = {
   tags: (defaults, values) => {
     defaults.tags.push(...stringDefaults(values))
   },
-  type: (defaults, values) => {
-    defaults.type = stringDefault(values)
-  },
+  type: writeTypeDefault,
 }
 
 export function createNoteDefaultsForSelection(
@@ -170,6 +170,10 @@ function applyBooleanDefault(
   const parsed = booleanDefault(value)
   if (parsed === null) return
   defaults[key as keyof Pick<MutableCreateDefaults, 'archived' | 'favorite' | 'organized'>] = parsed
+}
+
+function writeTypeDefault(defaults: MutableCreateDefaults, values: unknown[]) {
+  defaults.type = stringDefault(values)
 }
 
 function applyPropertyDefault(

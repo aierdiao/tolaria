@@ -72,6 +72,28 @@ describe('tablet workspace create-note defaults', () => {
     })
   })
 
+  it.each(['isa', 'is_a', 'Is A'])('maps desktop type alias %s into saved-view create defaults', (field) => {
+    const selection: TabletSidebarSelection = {
+      id: 'view-procedures',
+      kind: 'item',
+      label: 'Procedures',
+      sectionId: 'views',
+      viewId: 'view-procedures',
+    }
+
+    expect(createNoteDefaultsForSelection(selection, [{
+      definition: {
+        color: 'green',
+        filters: { all: [{ field, op: 'equals', value: 'Procedure' }] },
+        icon: null,
+        name: 'Procedures',
+        sort: 'modified:desc',
+      },
+      filename: 'procedures.yml',
+      id: 'view-procedures',
+    }])).toEqual({ type: 'Procedure' })
+  })
+
   it('derives tags, properties, relationship refs, and folder filters from saved views', () => {
     const selection: TabletSidebarSelection = {
       id: 'view-launch',
