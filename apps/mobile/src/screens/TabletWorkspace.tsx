@@ -156,6 +156,7 @@ function TabletWorkspaceChrome(props: TabletWorkspaceChromeProps) {
         compact={compactTablet}
         initialEditing={initialEditorEditing}
         initialEditingMode={initialEditorEditingMode}
+        layoutProbe={layoutProbe}
         note={selectedNote}
         notes={suggestionNotes}
         onNavigateWikilink={handleNavigateWikilink}

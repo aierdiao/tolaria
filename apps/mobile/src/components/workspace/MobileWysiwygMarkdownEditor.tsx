@@ -1,5 +1,11 @@
+import type { MobileLayoutProbe } from '../../qa/mobileLayoutProbe'
 import { MobileMarkdownSourceEditor, type MobileMarkdownSourceEditorProps } from './MobileMarkdownSourceEditor'
 
-export function MobileWysiwygMarkdownEditor(props: MobileMarkdownSourceEditorProps) {
+type MobileWysiwygMarkdownEditorProps = MobileMarkdownSourceEditorProps & {
+  layoutProbe?: MobileLayoutProbe
+}
+
+export function MobileWysiwygMarkdownEditor({ layoutProbe, ...props }: MobileWysiwygMarkdownEditorProps) {
+  void layoutProbe
   return <MobileMarkdownSourceEditor {...props} />
 }

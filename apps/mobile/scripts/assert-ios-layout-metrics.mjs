@@ -4,6 +4,7 @@
 import { spawnSync } from 'node:child_process'
 import {
   assertNativeMobileLayoutMetrics,
+  assertNativeWysiwygEditorLayoutMetrics,
   formatNativeLayoutAssertionFailures,
   latestNativeLayoutMetrics,
   parseNativeLayoutMetrics,
@@ -24,6 +25,7 @@ Options:
   --last <duration>     log show window when no URL is opened, such as 90s or 5m. Defaults to ${defaultLogWindow}.
   --open-url <url>      Open a simulator URL before collecting logs. Use Expo deep links with layoutProbe=1.
                        http(s) URLs are rejected because they open Mobile Safari, not the native app.
+  --require-wysiwyg     Also require WYSIWYG editor layout metrics from editorMode=wysiwyg QA URLs.
   --wait <ms>           Delay after opening a URL before collecting logs. Defaults to 3000.
   --help                Show this help.
 `)
@@ -161,6 +163,7 @@ async function main() {
   const device = selectDevice(readOption(args, '--device', process.env.MOBILE_QA_SIMULATOR_UDID))
   const openUrl = readOption(args, '--open-url', undefined)
   const last = readOption(args, '--last', defaultLogWindow)
+  const requireWysiwyg = args.includes('--require-wysiwyg')
   const waitMs = Number(readOption(args, '--wait', '3000'))
   let logStart
 
@@ -172,7 +175,10 @@ async function main() {
 
   const logs = collectSimulatorLogs(device, { last, start: logStart })
   const metrics = latestNativeLayoutMetrics(parseNativeLayoutMetrics(logs))
-  const failures = assertNativeMobileLayoutMetrics(metrics)
+  const failures = [
+    ...assertNativeMobileLayoutMetrics(metrics),
+    ...(requireWysiwyg ? assertNativeWysiwygEditorLayoutMetrics(metrics) : []),
+  ]
 
   if (failures.length > 0) {
     throw new Error(`Native iOS layout metrics failed:\n${formatNativeLayoutAssertionFailures(failures)}`)

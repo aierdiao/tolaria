@@ -1,14 +1,22 @@
 import { describe, expect, it } from 'vitest'
 import {
   assertNativeMobileLayoutMetrics,
+  assertNativeWysiwygEditorLayoutMetrics,
   formatNativeLayoutAssertionFailures,
   latestNativeLayoutMetrics,
   nativeNoteListMetricContract,
   nativeSidebarMetricContract,
+  nativeWysiwygEditorMetricContract,
   parseNativeLayoutMetrics,
   type NativeLayoutMetric,
 } from './nativeLayoutMetrics'
-import { desktopNoteItemParity, desktopPanelParity, desktopSidebarParity } from '../ui/desktopParity'
+import {
+  desktopNoteItemParity,
+  desktopPanelParity,
+  desktopSidebarParity,
+  desktopToolbarActionParity,
+} from '../ui/desktopParity'
+import { mobileSpace } from '../ui/tokens'
 
 describe('native layout metrics', () => {
   it('keeps the native metric contract synced with desktop sidebar parity tokens', () => {
@@ -37,6 +45,14 @@ describe('native layout metrics', () => {
       panelWidth: desktopPanelParity.noteListWidth,
       padding: desktopNoteItemParity.padding,
       titleLineHeight: desktopNoteItemParity.titleLineHeight,
+    })
+    expect(nativeWysiwygEditorMetricContract).toEqual({
+      minFormHeight: 320,
+      toolbarActionCount: 11,
+      toolbarActionGap: mobileSpace.xs,
+      toolbarActionSize: desktopToolbarActionParity.iconButtonSize,
+      toolbarHostPaddingHorizontal: mobileSpace.md,
+      toolbarHostPaddingTop: mobileSpace.xs,
     })
   })
 
@@ -173,7 +189,93 @@ describe('native layout metrics', () => {
     expect(formatted).toContain('noteList.item.workflow-orchestration.header: note row content keeps desktop top padding')
     expect(formatted).toContain('noteList.item.workflow-orchestration.title: note row title keeps desktop line height')
   })
+
+  it('accepts native WYSIWYG editor metrics that match desktop toolbar tokens', () => {
+    const metrics = latestNativeLayoutMetrics(wysiwygEditorMetric())
+
+    expect(assertNativeWysiwygEditorLayoutMetrics(metrics)).toEqual([])
+  })
+
+  it('reports native WYSIWYG editor metrics that lose toolbar spacing', () => {
+    const metrics = latestNativeLayoutMetrics(wysiwygEditorMetric({
+      actionGap: 0,
+      actionSize: 20,
+      toolbarHostBottomGap: 18,
+      toolbarX: 0,
+    }))
+
+    const formatted = formatNativeLayoutAssertionFailures(assertNativeWysiwygEditorLayoutMetrics(metrics))
+
+    expect(formatted).toContain('editor.wysiwyg.toolbarHost: WYSIWYG toolbar stays pinned to the editor bottom')
+    expect(formatted).toContain('editor.wysiwyg.toolbar: WYSIWYG toolbar keeps desktop horizontal inset')
+    expect(formatted).toContain('editor.wysiwyg.toolbar.action.bold: WYSIWYG toolbar action keeps desktop button width')
+    expect(formatted).toContain('editor.wysiwyg.toolbar.action.italic: WYSIWYG toolbar action keeps desktop action gap')
+  })
 })
+
+const wysiwygToolbarActions = [
+  'bold',
+  'italic',
+  'strike',
+  'code',
+  'highlight',
+  'heading2',
+  'heading3',
+  'bulletList',
+  'orderedList',
+  'taskList',
+  'quote',
+] as const
+
+function wysiwygEditorMetric(
+  {
+    actionGap = nativeWysiwygEditorMetricContract.toolbarActionGap,
+    actionSize = nativeWysiwygEditorMetricContract.toolbarActionSize,
+    formHeight = 640,
+    formWidth = 760,
+    toolbarHostBottomGap = 0,
+    toolbarX = nativeWysiwygEditorMetricContract.toolbarHostPaddingHorizontal,
+    toolbarY = nativeWysiwygEditorMetricContract.toolbarHostPaddingTop,
+  }: {
+    actionGap?: number
+    actionSize?: number
+    formHeight?: number
+    formWidth?: number
+    toolbarHostBottomGap?: number
+    toolbarX?: number
+    toolbarY?: number
+  } = {},
+): NativeLayoutMetric[] {
+  const toolbarHostHeight = toolbarY + actionSize + mobileSpace.xs
+
+  return [
+    containerMetric({ height: formHeight, id: 'editor.wysiwyg.form', width: formWidth }),
+    containerMetric({ height: formHeight, id: 'editor.wysiwyg.richText', width: formWidth }),
+    containerMetric({
+      height: toolbarHostHeight,
+      id: 'editor.wysiwyg.toolbarHost',
+      width: formWidth,
+      y: formHeight - toolbarHostHeight - toolbarHostBottomGap,
+    }),
+    containerMetric({
+      height: actionSize,
+      id: 'editor.wysiwyg.toolbar',
+      width: wysiwygToolbarWidth(actionSize, actionGap),
+      x: toolbarX,
+      y: toolbarY,
+    }),
+    ...wysiwygToolbarActions.map((action, index) => containerMetric({
+      height: actionSize,
+      id: `editor.wysiwyg.toolbar.action.${action}`,
+      width: actionSize,
+      x: index * (actionSize + actionGap),
+    })),
+  ]
+}
+
+function wysiwygToolbarWidth(actionSize: number, actionGap: number) {
+  return wysiwygToolbarActions.length * actionSize + (wysiwygToolbarActions.length - 1) * actionGap
+}
 
 function itemMetric(
   id: string,

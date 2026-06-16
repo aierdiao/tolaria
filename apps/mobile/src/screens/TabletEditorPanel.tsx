@@ -18,6 +18,8 @@ import { MobileIconButton } from '../ui/MobileIconButton'
 import { MobilePanel, MobileToolbar, MobileToolbarTitle } from '../ui/MobilePanel'
 import { desktopEditorParity, desktopToolbarActionParity } from '../ui/desktopParity'
 import { mobileColors, mobileSpace, mobileType } from '../ui/tokens'
+import { MobileLayoutProbeReadout } from '../qa/MobileLayoutProbeReadout'
+import { useMobileLayoutProbe, type MobileLayoutProbe } from '../qa/mobileLayoutProbe'
 import type { MobileEditorBlock, MobileNote } from '../workspace/mobileWorkspaceModel'
 
 type TabletEditorPanelProps = {
@@ -26,6 +28,7 @@ type TabletEditorPanelProps = {
   compact: boolean
   initialEditing?: boolean
   initialEditingMode?: EditorEditingMode
+  layoutProbe?: boolean
   note: MobileNote | null
   notes: MobileNote[]
   onNavigateWikilink: (target: string) => void
@@ -52,6 +55,7 @@ type EditorContentProps = {
   editingMode: EditorEditingMode
   note: MobileNote
   notes: MobileNote[]
+  layoutProbe: MobileLayoutProbe
   onNavigateWikilink: (target: string) => void
   onUpdateContent: (noteId: string, content: string) => void
 }
@@ -65,6 +69,7 @@ export function TabletEditorPanel(props: TabletEditorPanelProps) {
     compact,
     initialEditing = false,
     initialEditingMode = 'wysiwyg',
+    layoutProbe: layoutProbeEnabled = false,
     note,
     notes,
     onNavigateWikilink,
@@ -74,6 +79,7 @@ export function TabletEditorPanel(props: TabletEditorPanelProps) {
   } = props
   const [editing, setEditing] = useState(initialEditing)
   const [editingMode, setEditingMode] = useState<EditorEditingMode>(initialEditingMode)
+  const layoutProbe = useMobileLayoutProbe(layoutProbeEnabled)
   const toggleEditing = useCallback(() => {
     setEditing((current) => {
       if (!current) setEditingMode('wysiwyg')
@@ -94,7 +100,7 @@ export function TabletEditorPanel(props: TabletEditorPanelProps) {
   }
 
   return (
-    <MobilePanel style={panelStyles.panel} testID="editor-panel">
+    <MobilePanel {...layoutProbe.probe('editor.panel')} style={panelStyles.panel} testID="editor-panel">
       <EditorToolbar
         editingMode={editingMode}
         editing={editing}
@@ -112,6 +118,7 @@ export function TabletEditorPanel(props: TabletEditorPanelProps) {
             compact={compact}
             editingMode={editingMode}
             editing={editing}
+            layoutProbe={layoutProbe.probe}
             note={note}
             notes={notes}
             onNavigateWikilink={onNavigateWikilink}
@@ -126,6 +133,7 @@ export function TabletEditorPanel(props: TabletEditorPanelProps) {
             compact={compact}
             editingMode={editingMode}
             editing={editing}
+            layoutProbe={layoutProbe.probe}
             note={note}
             notes={notes}
             onNavigateWikilink={onNavigateWikilink}
@@ -133,6 +141,7 @@ export function TabletEditorPanel(props: TabletEditorPanelProps) {
           />
         </ScrollView>
       )}
+      {layoutProbeEnabled ? <MobileLayoutProbeReadout metrics={layoutProbe.metrics} testID="editor-layout-metrics" /> : null}
     </MobilePanel>
   )
 }
@@ -190,6 +199,7 @@ function EditorContent({
   compact,
   editing,
   editingMode,
+  layoutProbe,
   note,
   notes,
   onNavigateWikilink,
@@ -216,6 +226,7 @@ function EditorContent({
         blocks={blocks}
         bullets={bullets}
         compact={compact}
+        layoutProbe={layoutProbe}
         note={note}
         notes={notes}
         onUpdateContent={onUpdateContent}
