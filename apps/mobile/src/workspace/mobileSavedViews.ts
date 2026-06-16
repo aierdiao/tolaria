@@ -86,6 +86,13 @@ const builtInSortFields = new Set(['created', 'modified', 'status', 'title', 'ty
 const regexFilterOps = new Set<MobileViewFilterOp>(['contains', 'equals', 'not_contains', 'not_equals'])
 const maxUserRegexLength = 256
 const regexRepeatLimit = 25
+const unknownStatusSortOrder = 999
+const statusSortOrder = new Map<string, number>([
+  ['Active', 0],
+  ['Paused', 1],
+  ['Done', 2],
+  ['Finished', 3],
+])
 
 const builtInFieldResolvers: Record<string, BuiltInFieldResolver> = {
   archived: (note) => scalarField(note.archived === true),
@@ -518,6 +525,8 @@ export function sortMobileNotesBySort(notes: MobileNote[], sort: SortValue): Mob
 }
 
 function compareNotes(left: MobileNote, right: MobileNote, field: SortField, direction: SortDirection) {
+  if (field.kind === 'builtIn' && field.key === 'status') return compareStatusNotes(left, right, direction)
+
   const leftValue = sortFieldValue(left, field)
   const rightValue = sortFieldValue(right, field)
   const missingResult = compareMissingValues(leftValue, rightValue)
@@ -529,12 +538,27 @@ function compareNotes(left: MobileNote, right: MobileNote, field: SortField, dir
 
 function sortFieldValue(note: MobileNote, field: SortField): string | number | boolean | null {
   if (field.kind === 'property') return sortPropertyValue(note, field.key)
-  if (field.key === 'modified') return note.modifiedAt ?? 0
-  if (field.key === 'created') return note.createdAt ?? 0
+  if (field.key === 'modified') return displayTimestamp(note)
+  if (field.key === 'created') return note.createdAt ?? note.modifiedAt ?? 0
   if (field.key === 'title') return note.title
   if (field.key === 'type') return note.type
   if (field.key === 'status') return note.status
   return null
+}
+
+function compareStatusNotes(left: MobileNote, right: MobileNote, direction: SortDirection) {
+  const leftOrder = statusSortOrder.get(left.status ?? '') ?? unknownStatusSortOrder
+  const rightOrder = statusSortOrder.get(right.status ?? '') ?? unknownStatusSortOrder
+  if (leftOrder !== rightOrder) {
+    const result = leftOrder - rightOrder
+    return direction === 'asc' ? result : -result
+  }
+
+  return displayTimestamp(right) - displayTimestamp(left)
+}
+
+function displayTimestamp(note: MobileNote) {
+  return note.modifiedAt ?? note.createdAt ?? 0
 }
 
 function sortPropertyValue(note: MobileNote, key: FieldKey): string | number | boolean | null {

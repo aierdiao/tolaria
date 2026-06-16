@@ -119,6 +119,31 @@ filters:
     expect(evaluateMobileSavedView(datedView!, notes).map((candidate) => candidate.id)).toEqual(['high', 'low', 'missing'])
   })
 
+  it('sorts saved views with desktop built-in sort semantics', () => {
+    const createdView = parseMobileSavedViewFile(
+      { content: 'name: Created\nsort: "created:desc"\nfilters:\n  all: []\n', relativePath: 'views/created.yml' },
+      0,
+    )
+    const statusView = parseMobileSavedViewFile(
+      { content: 'name: Status\nsort: "status:asc"\nfilters:\n  all: []\n', relativePath: 'views/status.yml' },
+      1,
+    )
+
+    expect(evaluateMobileSavedView(createdView!, [
+      note({ createdAt: null, id: 'missing-created-newer-modified', modifiedAt: 3000 }),
+      note({ createdAt: 2000, id: 'created-middle', modifiedAt: 1000 }),
+      note({ createdAt: 1000, id: 'created-older', modifiedAt: 5000 }),
+    ]).map((candidate) => candidate.id)).toEqual(['missing-created-newer-modified', 'created-middle', 'created-older'])
+
+    expect(evaluateMobileSavedView(statusView!, [
+      note({ id: 'done', modifiedAt: 1000, status: 'Done' }),
+      note({ id: 'active-older', modifiedAt: 1000, status: 'Active' }),
+      note({ id: 'empty-status', modifiedAt: 4000, status: '' }),
+      note({ id: 'paused', modifiedAt: 1000, status: 'Paused' }),
+      note({ id: 'active-newer', modifiedAt: 3000, status: 'Active' }),
+    ]).map((candidate) => candidate.id)).toEqual(['active-newer', 'active-older', 'paused', 'done', 'empty-status'])
+  })
+
   it('supports relationship and custom-property fields in saved-view filters', () => {
     const view = parseMobileSavedViewFile({
       relativePath: 'views/blocked-mobile.yml',
