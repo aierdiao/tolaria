@@ -14,13 +14,17 @@ export type NativeWysiwygMutationProof = {
   contentLength: number
   favoritePreserved: boolean
   frontmatterPreserved: boolean
+  inlineMarksSaved: boolean
+  listBlocksSaved: boolean
   mutationTextSaved: boolean
   noteId: NoteId
+  quoteSaved: boolean
   statusPreserved: boolean
   tagsPreserved: boolean
   tableLinesPreserved: boolean
   titleSaved: boolean
   typePreserved: boolean
+  wikilinkSaved: boolean
 }
 
 export type NativeWysiwygMutationAssertionFailure = {
@@ -39,23 +43,75 @@ type NativeWysiwygMutationBooleanField = Exclude<keyof NativeWysiwygMutationProo
 const mutationLogPrefix = 'TOLARIA_MOBILE_WYSIWYG_MUTATION_PROBE'
 const mutationTitle = 'Native WYSIWYG Mutation Probe'
 const mutationText = 'Native bridge mutation saved through TenTap.'
+const mutationInlineSamples = ['**bold**', '*italic*', '~~strike~~', '`code`', '==highlight=='] as const
+const mutationListSamples = ['- Bullet item', '1. Ordered item', '- [x] Task item'] as const
+const mutationQuote = '> Quoted desktop parity'
 const mutationTableLines = ['| Surface | Target |', '| --- | --- |', '| Editor | Native WYSIWYG |'] as const
+const mutationWikilink = '[[AI Ops Guide]]'
 const mutationProofBooleanFields: readonly NativeWysiwygMutationBooleanField[] = [
   'favoritePreserved',
   'frontmatterPreserved',
+  'inlineMarksSaved',
+  'listBlocksSaved',
   'mutationTextSaved',
+  'quoteSaved',
   'statusPreserved',
   'tagsPreserved',
   'tableLinesPreserved',
   'titleSaved',
   'typePreserved',
+  'wikilinkSaved',
 ]
+const mutationRichInlineParagraphNode: TiptapJsonNode = {
+  content: [
+    { text: 'Formatting: ', type: 'text' },
+    { marks: [{ type: 'bold' }], text: 'bold', type: 'text' },
+    { text: ', ', type: 'text' },
+    { marks: [{ type: 'italic' }], text: 'italic', type: 'text' },
+    { text: ', ', type: 'text' },
+    { marks: [{ type: 'strike' }], text: 'strike', type: 'text' },
+    { text: ', ', type: 'text' },
+    { marks: [{ type: 'code' }], text: 'code', type: 'text' },
+    { text: ', ', type: 'text' },
+    { marks: [{ type: 'highlight' }], text: 'highlight', type: 'text' },
+    { text: ', ', type: 'text' },
+    {
+      marks: [{ attrs: { href: 'tolaria://wikilink/AI%20Ops%20Guide' }, type: 'link' }],
+      text: 'AI Ops Guide',
+      type: 'text',
+    },
+    { text: '.', type: 'text' },
+  ],
+  type: 'paragraph',
+}
+const mutationBulletListNode: TiptapJsonNode = {
+  content: [{ content: [paragraphNode('Bullet item')], type: 'listItem' }],
+  type: 'bulletList',
+}
+const mutationOrderedListNode: TiptapJsonNode = {
+  attrs: { start: 1 },
+  content: [{ content: [paragraphNode('Ordered item')], type: 'listItem' }],
+  type: 'orderedList',
+}
+const mutationTaskListNode: TiptapJsonNode = {
+  content: [{ attrs: { checked: true }, content: [paragraphNode('Task item')], type: 'taskItem' }],
+  type: 'taskList',
+}
+const mutationQuoteNode: TiptapJsonNode = {
+  content: [paragraphNode('Quoted desktop parity')],
+  type: 'blockquote',
+}
 
 export function nativeWysiwygMutationProbeContent(): TiptapJsonNode {
   return {
     content: [
       headingNode(mutationTitle),
       paragraphNode(mutationText),
+      mutationRichInlineParagraphNode,
+      mutationBulletListNode,
+      mutationOrderedListNode,
+      mutationTaskListNode,
+      mutationQuoteNode,
       paragraphNode(...mutationTableLines),
     ],
     type: 'doc',
@@ -77,13 +133,17 @@ export function nativeWysiwygMutationProof({
     contentLength: content.length,
     favoritePreserved: content.includes('\n_favorite: true\n'),
     frontmatterPreserved: content.startsWith('---\n'),
+    inlineMarksSaved: mutationInlineSamples.every((sample) => content.includes(sample)),
+    listBlocksSaved: mutationListSamples.every((sample) => content.includes(sample)),
     mutationTextSaved: content.includes(mutationText),
     noteId,
+    quoteSaved: content.includes(mutationQuote),
     statusPreserved: content.includes('\nStatus: Draft\n'),
     tagsPreserved: content.includes('\ntags:\n  - Design\n  - AI\n'),
     tableLinesPreserved: mutationTableLines.every((line) => content.includes(line)),
     titleSaved: content.includes(`# ${mutationTitle}\n`),
     typePreserved: content.includes('\ntype: Essay\n'),
+    wikilinkSaved: content.includes(mutationWikilink),
   }
 }
 
@@ -99,7 +159,7 @@ export function parseNativeWysiwygMutationProofs(logText: MutationLogText): Nati
 }
 
 export function nativeWysiwygMutationPreProofLogText(logText: MutationLogText): MutationLogText {
-  const proofIndex = logText.indexOf(mutationLogPrefix)
+  const proofIndex = logText.lastIndexOf(mutationLogPrefix)
   return proofIndex === -1 ? logText : logText.slice(0, proofIndex)
 }
 
@@ -119,6 +179,10 @@ export function assertNativeWysiwygMutationProofs(
     proofFailure(latest.favoritePreserved, 'editor.wysiwyg.mutation.favorite', 'Desktop boolean frontmatter survives native WYSIWYG saves'),
     proofFailure(latest.titleSaved, 'editor.wysiwyg.mutation.title', 'Optional H1 title is saved as document content'),
     proofFailure(latest.mutationTextSaved, 'editor.wysiwyg.mutation.body', 'TenTap body mutation reaches the markdown save pipeline'),
+    proofFailure(latest.inlineMarksSaved, 'editor.wysiwyg.mutation.inline', 'Native WYSIWYG inline marks serialize to desktop markdown syntax'),
+    proofFailure(latest.wikilinkSaved, 'editor.wysiwyg.mutation.wikilink', 'Native WYSIWYG links can preserve Tolaria wikilink markdown'),
+    proofFailure(latest.listBlocksSaved, 'editor.wysiwyg.mutation.lists', 'Native WYSIWYG list blocks serialize to desktop markdown syntax'),
+    proofFailure(latest.quoteSaved, 'editor.wysiwyg.mutation.quote', 'Native WYSIWYG quote blocks serialize to desktop markdown syntax'),
     proofFailure(latest.tableLinesPreserved, 'editor.wysiwyg.mutation.table', 'Unsupported table content remains editable markdown lines'),
   ].filter((failure): failure is NativeWysiwygMutationAssertionFailure => failure !== null)
 }

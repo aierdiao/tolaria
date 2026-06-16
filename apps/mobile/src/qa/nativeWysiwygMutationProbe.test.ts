@@ -35,24 +35,7 @@ describe('native WYSIWYG mutation probe', () => {
 
   it('builds a passing proof from the saved markdown content', () => {
     const proof = nativeWysiwygMutationProof({
-      content: [
-        '---',
-        'type: Essay',
-        'Status: Draft',
-        'tags:',
-        '  - Design',
-        '  - AI',
-        '_favorite: true',
-        '---',
-        '# Native WYSIWYG Mutation Probe',
-        '',
-        'Native bridge mutation saved through TenTap.',
-        '',
-        '| Surface | Target |',
-        '| --- | --- |',
-        '| Editor | Native WYSIWYG |',
-        '',
-      ].join('\n'),
+      content: savedMutationContent(),
       noteId: 'workflow-orchestration',
     })
 
@@ -73,30 +56,17 @@ describe('native WYSIWYG mutation probe', () => {
       'editor.wysiwyg.mutation.status',
       'editor.wysiwyg.mutation.tags',
       'editor.wysiwyg.mutation.favorite',
+      'editor.wysiwyg.mutation.inline',
+      'editor.wysiwyg.mutation.wikilink',
+      'editor.wysiwyg.mutation.lists',
+      'editor.wysiwyg.mutation.quote',
       'editor.wysiwyg.mutation.table',
     ])
   })
 
   it('keeps layout assertions on pre-mutation logs while still parsing the proof', () => {
     const proof = nativeWysiwygMutationProof({
-      content: [
-        '---',
-        'type: Essay',
-        'Status: Draft',
-        'tags:',
-        '  - Design',
-        '  - AI',
-        '_favorite: true',
-        '---',
-        '# Native WYSIWYG Mutation Probe',
-        '',
-        'Native bridge mutation saved through TenTap.',
-        '',
-        '| Surface | Target |',
-        '| --- | --- |',
-        '| Editor | Native WYSIWYG |',
-        '',
-      ].join('\n'),
+      content: savedMutationContent(),
       noteId: 'workflow-orchestration',
     })
     const logText = [
@@ -108,4 +78,53 @@ describe('native WYSIWYG mutation probe', () => {
     expect(nativeWysiwygMutationPreProofLogText(logText)).toBe('TOLARIA_MOBILE_LAYOUT_METRIC {"id":"before"}\n')
     expect(assertNativeWysiwygMutationProofs(parseNativeWysiwygMutationProofs(logText))).toEqual([])
   })
+
+  it('keeps current layout logs when a stale native proof is inside the log window', () => {
+    const proof = nativeWysiwygMutationProof({
+      content: savedMutationContent(),
+      noteId: 'workflow-orchestration',
+    })
+    const staleProof = nativeWysiwygMutationLogLine(proof)
+    const currentProof = nativeWysiwygMutationLogLine({ ...proof, noteId: 'current-run' })
+    const logText = [
+      staleProof,
+      'TOLARIA_MOBILE_LAYOUT_METRIC {"id":"current"}',
+      currentProof,
+      'TOLARIA_MOBILE_LAYOUT_METRIC {"id":"late"}',
+    ].join('\n')
+
+    expect(nativeWysiwygMutationPreProofLogText(logText)).toBe(`${staleProof}\nTOLARIA_MOBILE_LAYOUT_METRIC {"id":"current"}\n`)
+    expect(assertNativeWysiwygMutationProofs(parseNativeWysiwygMutationProofs(logText))).toEqual([])
+  })
 })
+
+function savedMutationContent(): string {
+  return [
+    '---',
+    'type: Essay',
+    'Status: Draft',
+    'tags:',
+    '  - Design',
+    '  - AI',
+    '_favorite: true',
+    '---',
+    '# Native WYSIWYG Mutation Probe',
+    '',
+    'Native bridge mutation saved through TenTap.',
+    '',
+    'Formatting: **bold**, *italic*, ~~strike~~, `code`, ==highlight==, [[AI Ops Guide]].',
+    '',
+    '- Bullet item',
+    '',
+    '1. Ordered item',
+    '',
+    '- [x] Task item',
+    '',
+    '> Quoted desktop parity',
+    '',
+    '| Surface | Target |',
+    '| --- | --- |',
+    '| Editor | Native WYSIWYG |',
+    '',
+  ].join('\n')
+}
