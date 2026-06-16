@@ -1,25 +1,34 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Linking, useWindowDimensions } from 'react-native'
 import { PhoneWorkspace, type PhoneWorkspaceState } from './PhoneWorkspace'
 import { TabletWorkspace } from './TabletWorkspace'
 import { readOnlyWorkspaceRepository, type ReadOnlyWorkspaceRequest } from '../workspace/readOnlyWorkspaceRepository'
+import {
+  pickNativeWorkspaceDirectory,
+  type NativeWorkspaceSelection,
+} from '../workspace/nativeWorkspacePicker'
 
 export function MobileUiLab() {
   const { width } = useWindowDimensions()
   const isWideEnoughForTablet = width >= 900
   const searchParams = useMobileUiSearchParams()
+  const [nativeWorkspace, setNativeWorkspace] = useState<NativeWorkspaceSelection | null>(null)
   const scenarioId = currentScenarioId(searchParams)
-  const source = currentSnapshotSource(searchParams)
+  const source = currentSnapshotSource(searchParams, nativeWorkspace)
   const repositoryRequest = {
     scenarioId,
     source,
-    vaultLabel: currentVaultLabel(searchParams),
-    vaultRootUri: currentVaultRootUri(searchParams),
+    vaultLabel: currentVaultLabel(searchParams, nativeWorkspace),
+    vaultRootUri: currentVaultRootUri(searchParams, nativeWorkspace),
   }
   const initialEditorEditing = editorMode(searchParams) === 'raw'
   const layoutProbe = layoutProbeEnabled(searchParams)
   const snapshot = readOnlyWorkspaceRepository.readSnapshot(repositoryRequest)
   const workspaceKey = mobileWorkspaceKey({ initialEditorEditing, layoutProbe, scenarioId, snapshot, source })
+  const handleOpenNativeVault = useCallback(async () => {
+    const selection = await pickNativeWorkspaceDirectory(repositoryRequest.vaultRootUri)
+    if (selection) setNativeWorkspace(selection)
+  }, [repositoryRequest.vaultRootUri])
 
   if (isWideEnoughForTablet) {
     return (
@@ -27,6 +36,7 @@ export function MobileUiLab() {
         key={workspaceKey}
         initialEditorEditing={initialEditorEditing}
         layoutProbe={layoutProbe}
+        onOpenNativeVault={handleOpenNativeVault}
         repository={readOnlyWorkspaceRepository}
         repositoryRequest={repositoryRequest}
         snapshot={snapshot}
@@ -39,6 +49,7 @@ export function MobileUiLab() {
       key={workspaceKey}
       initialEditorEditing={initialEditorEditing}
       initialState={currentPhoneState(searchParams)}
+      onOpenNativeVault={handleOpenNativeVault}
       repository={readOnlyWorkspaceRepository}
       repositoryRequest={repositoryRequest}
       snapshot={snapshot}
@@ -58,7 +69,11 @@ function currentPhoneState(searchParams: URLSearchParams): PhoneWorkspaceState {
   return 'list'
 }
 
-function currentSnapshotSource(searchParams: URLSearchParams): NonNullable<ReadOnlyWorkspaceRequest['source']> {
+function currentSnapshotSource(
+  searchParams: URLSearchParams,
+  nativeWorkspace: NativeWorkspaceSelection | null,
+): NonNullable<ReadOnlyWorkspaceRequest['source']> {
+  if (nativeWorkspace) return 'native'
   if (searchParams.get('source') === 'native-vault') return 'native'
   return searchParams.get('source') === 'host-vault' ? 'host' : 'fixture'
 }
@@ -67,11 +82,19 @@ function editorMode(searchParams: URLSearchParams) {
   return searchParams.get('editorMode')
 }
 
-function currentVaultRootUri(searchParams: URLSearchParams): string | null {
+function currentVaultRootUri(
+  searchParams: URLSearchParams,
+  nativeWorkspace: NativeWorkspaceSelection | null,
+): string | null {
+  if (nativeWorkspace) return nativeWorkspace.vaultRootUri
   return searchParams.get('vaultUri') || envValue('EXPO_PUBLIC_TOLARIA_NATIVE_VAULT_URI')
 }
 
-function currentVaultLabel(searchParams: URLSearchParams): string | null {
+function currentVaultLabel(
+  searchParams: URLSearchParams,
+  nativeWorkspace: NativeWorkspaceSelection | null,
+): string | null {
+  if (nativeWorkspace) return nativeWorkspace.vaultLabel
   return searchParams.get('vaultLabel') || envValue('EXPO_PUBLIC_TOLARIA_NATIVE_VAULT_LABEL')
 }
 

@@ -30,12 +30,14 @@ export type PhoneWorkspaceState = 'editor' | 'list' | 'properties' | 'sidebar'
 export function PhoneWorkspace({
   initialEditorEditing = false,
   initialState = 'list',
+  onOpenNativeVault,
   repository = fixtureReadOnlyWorkspaceRepository,
   repositoryRequest,
   snapshot,
 }: {
   initialEditorEditing?: boolean
   initialState?: PhoneWorkspaceState
+  onOpenNativeVault?: () => void
   repository?: ReadOnlyWorkspaceRepository
   repositoryRequest?: ReadOnlyWorkspaceRequest
   snapshot: MobileWorkspaceSnapshot
@@ -71,7 +73,7 @@ export function PhoneWorkspace({
         layoutProbe={false}
         suggestionNotes={suggestionNotes}
       />
-      <MobileSyncStatusBar sync={controller.snapshot.sync} />
+      <MobileSyncStatusBar sync={controller.snapshot.sync} onOpenLocalVault={onOpenNativeVault} />
     </View>
   )
 }

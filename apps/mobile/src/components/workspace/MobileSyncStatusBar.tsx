@@ -1,4 +1,4 @@
-import { Tray } from 'phosphor-react-native'
+import { FolderOpen, Tray } from 'phosphor-react-native'
 import { StyleSheet, View } from 'react-native'
 import { Text } from '../ui/text'
 import { mobileText } from '../../i18n/mobileText'
@@ -7,7 +7,15 @@ import { desktopStatusBarParity } from '../../ui/desktopParity'
 import { mobileColors } from '../../ui/tokens'
 import type { MobileSyncStatus } from '../../workspace/mobileWorkspaceModel'
 
-export function MobileSyncStatusBar({ sync }: { sync: MobileSyncStatus }) {
+export function MobileSyncStatusBar({
+  onOpenLocalVault,
+  sync,
+}: {
+  onOpenLocalVault?: () => void
+  sync: MobileSyncStatus
+}) {
+  const action = statusBarAction(onOpenLocalVault)
+
   return (
     <View style={styles.syncBar} testID="sync-status-bar">
       <View style={styles.syncStatusGroup}>
@@ -17,12 +25,29 @@ export function MobileSyncStatusBar({ sync }: { sync: MobileSyncStatus }) {
       </View>
       <MobileButton
         density="status"
-        icon={<Tray color={mobileColors.textMuted} size={desktopStatusBarParity.iconSize} />}
-        label={mobileText('status.sync.now')}
+        icon={action.icon}
+        label={action.label}
+        onPress={action.onPress}
         variant="ghost"
       />
     </View>
   )
+}
+
+function statusBarAction(onOpenLocalVault: (() => void) | undefined) {
+  if (!onOpenLocalVault) {
+    return {
+      icon: <Tray color={mobileColors.textMuted} size={desktopStatusBarParity.iconSize} />,
+      label: mobileText('status.sync.now'),
+      onPress: undefined,
+    }
+  }
+
+  return {
+    icon: <FolderOpen color={mobileColors.textMuted} size={desktopStatusBarParity.iconSize} />,
+    label: mobileText('status.vault.openLocal'),
+    onPress: onOpenLocalVault,
+  }
 }
 
 function syncStatusColor(sync: MobileSyncStatus) {

@@ -21,12 +21,14 @@ import { useTabletWorkspaceController } from './useTabletWorkspaceController'
 export function TabletWorkspace({
   initialEditorEditing = false,
   layoutProbe = false,
+  onOpenNativeVault,
   repository = fixtureReadOnlyWorkspaceRepository,
   repositoryRequest,
   snapshot,
 }: {
   initialEditorEditing?: boolean
   layoutProbe?: boolean
+  onOpenNativeVault?: () => void
   repository?: ReadOnlyWorkspaceRepository
   repositoryRequest?: ReadOnlyWorkspaceRequest
   snapshot: MobileWorkspaceSnapshot
@@ -43,7 +45,7 @@ export function TabletWorkspace({
         layoutProbe={layoutProbe}
         {...controller}
       />
-      <MobileSyncStatusBar sync={controller.snapshot.sync} />
+      <MobileSyncStatusBar sync={controller.snapshot.sync} onOpenLocalVault={onOpenNativeVault} />
     </View>
   )
 }
