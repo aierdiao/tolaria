@@ -8,12 +8,16 @@ import {
   mobileNoteEditableContent,
   tiptapJsonToMobileMarkdown,
 } from '../../workspace/mobileDocumentContent'
-import type { MobileMarkdownFormatAction } from '../../workspace/mobileMarkdownFormatting'
 import type { MobileEditorBlock, MobileNote } from '../../workspace/mobileWorkspaceModel'
 import { probeProps, type MobileLayoutProbe } from '../../qa/mobileLayoutProbe'
 import { mobileColors, mobileSpace } from '../../ui/tokens'
 import { MobileMarkdownFormattingToolbar } from './MobileMarkdownFormattingToolbar'
 import { mobileTentapEditorCss } from './MobileWysiwygMarkdownEditorCss'
+import {
+  applyNativeWysiwygFormat,
+  nativeWysiwygFormattingActions,
+  type NativeWysiwygCommandBridge,
+} from './MobileWysiwygFormatCommands'
 
 type MobileWysiwygMarkdownEditorProps = {
   blocks: MobileEditorBlock[]
@@ -31,23 +35,6 @@ type JsonReadableEditorBridge = EditorBridge & {
 
 type CssInjectableEditorBridge = EditorBridge & {
   injectCSS: (css: string, tag?: string) => void
-}
-type NativeWysiwygCommandBridge = EditorBridge & {
-  toggleBlockquote?: () => void
-  toggleBold?: () => void
-  toggleBulletList?: () => void
-  toggleCode?: () => void
-  toggleHeading?: (level: 1 | 2 | 3 | 4 | 5 | 6) => void
-  toggleHighlight?: (color: string) => void
-  toggleItalic?: () => void
-  toggleOrderedList?: () => void
-  toggleStrike?: () => void
-  toggleTaskList?: () => void
-}
-type NativeWysiwygFormatCommand = (editor: NativeWysiwygCommandBridge) => void
-type NativeWysiwygFormatCommandSpec = {
-  action: MobileMarkdownFormatAction
-  run: NativeWysiwygFormatCommand
 }
 
 type TimerHandle = ReturnType<typeof setTimeout>
@@ -68,34 +55,6 @@ type NativeTentapEditorRefs = {
   hasAcceptedEditorChangeRef: MutableRefObject<boolean>
   saveTimerRef: MutableRefObject<TimerHandle | null>
 }
-
-const wysiwygFormattingActions = [
-  'bold',
-  'italic',
-  'strike',
-  'code',
-  'highlight',
-  'heading2',
-  'heading3',
-  'bulletList',
-  'orderedList',
-  'taskList',
-  'quote',
-] as const satisfies readonly MobileMarkdownFormatAction[]
-
-const wysiwygFormatCommands = [
-  { action: 'bold', run: (editor) => editor.toggleBold?.() },
-  { action: 'bulletList', run: (editor) => editor.toggleBulletList?.() },
-  { action: 'code', run: (editor) => editor.toggleCode?.() },
-  { action: 'heading2', run: (editor) => editor.toggleHeading?.(2) },
-  { action: 'heading3', run: (editor) => editor.toggleHeading?.(3) },
-  { action: 'highlight', run: (editor) => editor.toggleHighlight?.(mobileColors.yellowSoft) },
-  { action: 'italic', run: (editor) => editor.toggleItalic?.() },
-  { action: 'orderedList', run: (editor) => editor.toggleOrderedList?.() },
-  { action: 'quote', run: (editor) => editor.toggleBlockquote?.() },
-  { action: 'strike', run: (editor) => editor.toggleStrike?.() },
-  { action: 'taskList', run: (editor) => editor.toggleTaskList?.() },
-] as const satisfies readonly NativeWysiwygFormatCommandSpec[]
 
 export function MobileWysiwygMarkdownEditor({
   blocks,
@@ -133,19 +92,14 @@ function NativeTentapEditorSurface({ editor, injectEditorCss, layoutProbe }: Nat
         style={nativeEditorStyles.toolbarHost}
       >
         <MobileMarkdownFormattingToolbar
-          actions={wysiwygFormattingActions}
+          actions={nativeWysiwygFormattingActions}
           layoutProbe={layoutProbe}
           metricId="editor.wysiwyg.toolbar"
-          onFormat={(action) => applyNativeWysiwygFormat(editor, action)}
+          onFormat={(action) => applyNativeWysiwygFormat(editor as NativeWysiwygCommandBridge, action)}
         />
       </KeyboardAvoidingView>
     </View>
   )
-}
-
-function applyNativeWysiwygFormat(editor: EditorBridge, action: MobileMarkdownFormatAction): void {
-  const command = wysiwygFormatCommands.find((candidate) => candidate.action === action)
-  command?.run(editor as NativeWysiwygCommandBridge)
 }
 
 function initialNativeEditorContent(
