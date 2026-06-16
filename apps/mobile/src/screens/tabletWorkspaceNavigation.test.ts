@@ -72,6 +72,7 @@ describe('tablet workspace navigation', () => {
     const snapshot = workspaceSnapshot([
       note({ id: 'writing-root', path: 'Writing/Root.md', title: 'Root' }),
       note({ id: 'writing-project', path: 'Writing/Projects/Alpha.md', title: 'Alpha' }),
+      note({ archived: true, id: 'writing-archived', path: 'Writing/Archived.md', title: 'Archived' }),
       note({ id: 'other-project', path: 'Other/Projects/Beta.md', title: 'Beta' }),
       note({ id: 'other-root', path: 'Other/Root.md', title: 'Other root' }),
     ])

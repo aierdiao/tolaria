@@ -145,7 +145,7 @@ function activeSidebarItem(item: MobileSidebarItem) {
 
 export function notesForSidebarSelection(snapshot: MobileWorkspaceSnapshot, selection: TabletSidebarSelection) {
   const notes = workspaceNotes(snapshot)
-  if (selection.kind === 'folder') return notes.filter((note) => noteBelongsToFolder(note, selection))
+  if (selection.kind === 'folder') return notes.filter((note) => !note.archived && noteBelongsToFolder(note, selection))
 
   const sectionResolver = sidebarSectionResolvers[selection.sectionId]
   return sectionResolver?.(snapshot, notes, selection) ?? primaryNotesForSelection(notes, selection)

@@ -48,6 +48,7 @@ Saved-view custom-property sort parity covers desktop numeric, boolean, date-lik
 Saved-view filter fields named `created`, `modified`, `path`, or `organized` resolve as custom frontmatter properties like desktop; built-in created/modified/status/title handling is limited to sort strings. Mobile-created views that originate from folder/inbox navigation carry a transient internal evaluation mode for path/organized filters, and that marker is not serialized into desktop saved-view YAML.
 Type-section navigation defaults to the desktop active/open sub-filter: archived notes stay out of the normal type note list and remain reachable through Archive-specific surfaces.
 Favorite navigation follows the desktop note-identity behavior: a favorite sidebar item opens that active favorite note only, not every favorite or title match.
+Folder navigation defaults to the desktop active/open sub-filter while preserving descendant matching by stable folder path.
 
 ## Tablet Screens
 
