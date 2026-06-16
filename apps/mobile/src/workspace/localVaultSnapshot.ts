@@ -87,6 +87,7 @@ type RelationshipResolver = (target: WikilinkTarget) => LocalVaultEntry | null
 type MobileNoteDetailLevel = 'editable' | 'summary'
 
 const DEFAULT_MAX_NOTES = 80
+const absoluteDateFormatter = new Intl.DateTimeFormat('en', { day: 'numeric', month: 'short', year: 'numeric' })
 
 export function buildLocalVaultWorkspaceSnapshot({
   folderPaths = [],
@@ -441,7 +442,7 @@ function relativeDate(timestamp: TimestampMs | null): string {
 
 function absoluteDate(timestamp: TimestampMs | null): string {
   if (!timestamp) return '-'
-  return new Intl.DateTimeFormat('en', { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(timestamp))
+  return absoluteDateFormatter.format(new Date(timestamp))
 }
 
 function linkCount(body: string): number {
