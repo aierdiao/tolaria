@@ -141,6 +141,7 @@ const htmlBlockReaders = [
   readCodeBlock,
   readDisplayMathBlock,
   readUnsupportedHtmlSourceBlock,
+  readIndentedImageSourceBlock,
   readImageBlock,
   readTable,
   readHorizontalRule,
@@ -169,6 +170,13 @@ function readUnsupportedHtmlSourceBlock(lines: MarkdownLines, startIndex: number
   const block = readUnsupportedHtmlBlock(lines, startIndex)
   return block
     ? { html: unsupportedHtmlBlockToParagraphHtml(block.lines, escapeHtml), nextIndex: block.nextIndex }
+    : null
+}
+
+function readIndentedImageSourceBlock(lines: MarkdownLines, startIndex: number): ReadHtmlBlockResult | null {
+  const line = lines[startIndex] ?? ''
+  return /^\s+!\[/u.test(line) && mobileMarkdownImageHtml(line)
+    ? { html: `<p>${escapeHtml(line)}</p>`, nextIndex: startIndex + 1 }
     : null
 }
 

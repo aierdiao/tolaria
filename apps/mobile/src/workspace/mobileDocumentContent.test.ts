@@ -183,6 +183,13 @@ Updated body.
     expect(html).not.toContain('<a ')
   })
 
+  it('keeps indented markdown images editable as source until nested image editing is supported', () => {
+    const html = mobileMarkdownBodyToTentapHtml('  ![](https://example.com/agent.png)\n\nDone\n')
+
+    expect(html).toBe('<p>  ![](https://example.com/agent.png)</p>\n<p>Done</p>')
+    expect(html).not.toContain('<img')
+  })
+
   it('serializes TenTap JSON back to Tolaria markdown', () => {
     const document: TiptapJsonNode = {
       type: 'doc',
