@@ -15,7 +15,7 @@ import type {
 } from '../../workspace/mobileWorkspaceModel'
 import {
   mobileViewFieldSuggestions,
-  mobileViewValueSuggestions,
+  mobileViewValueSuggestionItems,
 } from '../../workspace/mobileWorkspaceSuggestions'
 import { MobileWorkspaceSuggestionList } from './MobileWorkspaceSuggestionList'
 
@@ -170,7 +170,7 @@ function FilterConditionEditor({
   const pathId = testPath(path)
   const fieldSuggestions = mobileViewFieldSuggestions(notes, condition.field)
   const valueText = String(condition.value ?? '')
-  const valueSuggestions = mobileViewValueSuggestions(notes, condition.field, valueText)
+  const valueSuggestions = mobileViewValueSuggestionItems(notes, condition.field, valueText)
 
   return (
     <View style={styles.condition} testID={`workspace-view-filter-row-${pathId}`}>
@@ -202,7 +202,7 @@ function FilterConditionEditor({
             onChangeText={(value) => onChange({ ...condition, value })}
           />
           <MobileWorkspaceSuggestionList
-            labels={valueSuggestions}
+            items={valueSuggestions}
             testID={`workspace-view-filter-value-suggestions-${pathId}`}
             testIDPrefix={`workspace-view-filter-value-suggestion-${pathId}`}
             onSelect={(value) => onChange({ ...condition, value })}

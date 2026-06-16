@@ -9,6 +9,12 @@ type SuggestionText = string
 type NormalizedSuggestionKey = string
 type ViewField = string
 type ViewFieldValue = string
+export type MobileViewValueSuggestion = {
+  label: SuggestionText
+  meta?: SuggestionText
+  testId?: SuggestionText
+  value: SuggestionText
+}
 type ViewValueResolver = (note: MobileNote) => ViewFieldValue[]
 type FolderPath = string
 
@@ -110,9 +116,17 @@ export function mobileViewValueSuggestions(
   field: ViewField,
   query: SuggestionQuery,
 ): ViewFieldValue[] {
+  return uniqueSuggestedKeys(mobileViewValueSuggestionItems(notes, field, query).map((item) => item.label))
+}
+
+export function mobileViewValueSuggestionItems(
+  notes: MobileNote[],
+  field: ViewField,
+  query: SuggestionQuery,
+): MobileViewValueSuggestion[] {
   const normalizedKey = canonicalSuggestionKey(field)
   if (!normalizedKey) return []
-  return visibleSuggestions(viewValueCandidates(notes, normalizedKey), query)
+  return visibleSuggestionItems(viewValueSuggestionCandidates(notes, normalizedKey), query)
 }
 
 export function mobileListPropertySuggestions(
@@ -202,13 +216,6 @@ function listPropertyCandidates(notes: MobileNote[]): PropertyKey[] {
   ]
 }
 
-function viewValueCandidates(
-  notes: MobileNote[],
-  normalizedKey: NormalizedSuggestionKey,
-): ViewFieldValue[] {
-  return notes.flatMap((note) => viewValuesForSuggestion(note, normalizedKey))
-}
-
 function visibleSuggestions(
   values: readonly SuggestionText[],
   query: SuggestionQuery,
@@ -225,16 +232,32 @@ function sortedVisibleSuggestions(
   return visibleSuggestions([...uniqueSuggestedKeys(values)].sort((left, right) => left.localeCompare(right)), query)
 }
 
-function viewValuesForSuggestion(
+function visibleSuggestionItems(
+  items: readonly MobileViewValueSuggestion[],
+  query: SuggestionQuery,
+): MobileViewValueSuggestion[] {
+  return uniqueSuggestionItems(items)
+    .filter((item) => matchesValueSuggestionQuery(item, query))
+    .slice(0, 8)
+}
+
+function viewValueSuggestionCandidates(
+  notes: MobileNote[],
+  normalizedKey: NormalizedSuggestionKey,
+): MobileViewValueSuggestion[] {
+  return notes.flatMap((note) => viewValueSuggestionsForNote(note, normalizedKey))
+}
+
+function viewValueSuggestionsForNote(
   note: MobileNote,
   normalizedKey: NormalizedSuggestionKey,
-): ViewFieldValue[] {
+): MobileViewValueSuggestion[] {
   const builtInValues = builtInViewValues(note, normalizedKey)
-  if (builtInValues !== null) return builtInValues
+  if (builtInValues !== null) return textSuggestionItems(builtInValues)
 
   return [
-    ...propertyValuesForSuggestion(note, normalizedKey),
-    ...relationshipValuesForSuggestion(note, normalizedKey),
+    ...textSuggestionItems(propertyValuesForSuggestion(note, normalizedKey)),
+    ...relationshipValueSuggestionItems(note, normalizedKey),
   ]
 }
 
@@ -245,15 +268,34 @@ function builtInViewValues(
   return BUILT_IN_VIEW_VALUE_RESOLVERS[normalizedKey]?.(note) ?? null
 }
 
-function relationshipValuesForSuggestion(
+function relationshipValueSuggestionItems(
   note: MobileNote,
   normalizedKey: NormalizedSuggestionKey,
-): ViewFieldValue[] {
-  const relationship = note.relationships.find((candidate) => {
+): MobileViewValueSuggestion[] {
+  const relationship = relationshipForSuggestion(note, normalizedKey)
+  return relationship?.values.flatMap(relationshipValueSuggestionItem) ?? []
+}
+
+function relationshipForSuggestion(
+  note: MobileNote,
+  normalizedKey: NormalizedSuggestionKey,
+): MobileRelationship | undefined {
+  return note.relationships.find((candidate) => {
     return canonicalSuggestionKey(relationshipFrontmatterKey(candidate)) === normalizedKey
   })
+}
 
-  return relationship?.values.flatMap((value) => [value.title, value.ref ?? value.title]) ?? []
+function relationshipValueSuggestionItem(value: MobileRelationship['values'][number]): MobileViewValueSuggestion[] {
+  const title = value.title.trim()
+  const ref = value.ref?.trim()
+  const label = title || ref
+  if (!label) return []
+
+  return [{
+    label,
+    meta: ref && ref !== label ? ref : undefined,
+    value: ref ?? label,
+  }]
 }
 
 function selectedPropertyKeys(note: MobileNote | null): Set<NormalizedSuggestionKey> {
@@ -334,6 +376,31 @@ function uniqueSuggestedKeys(values: readonly SuggestionText[]): SuggestionText[
   }
 
   return result
+}
+
+function uniqueSuggestionItems(items: readonly MobileViewValueSuggestion[]): MobileViewValueSuggestion[] {
+  const seen = new Set<NormalizedSuggestionKey>()
+  const result: MobileViewValueSuggestion[] = []
+
+  for (const item of items) {
+    const value = item.value.trim()
+    const canonical = canonicalSuggestionKey(value)
+    if (!value || seen.has(canonical)) continue
+    seen.add(canonical)
+    result.push({ ...item, value })
+  }
+
+  return result
+}
+
+function textSuggestionItems(values: readonly SuggestionText[]): MobileViewValueSuggestion[] {
+  return values.map((value) => ({ label: value, value }))
+}
+
+function matchesValueSuggestionQuery(item: MobileViewValueSuggestion, query: SuggestionQuery): boolean {
+  return matchesSuggestionQuery(item.label, query)
+    || matchesSuggestionQuery(item.value, query)
+    || (item.meta ? matchesSuggestionQuery(item.meta, query) : false)
 }
 
 function matchesSuggestionQuery(value: SuggestionText, query: SuggestionQuery): boolean {

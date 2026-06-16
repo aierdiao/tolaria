@@ -11,6 +11,7 @@ import {
   mobileRelationshipTargetSuggestions,
   mobileTypeSuggestions,
   mobileViewFieldSuggestions,
+  mobileViewValueSuggestionItems,
   mobileViewValueSuggestions,
 } from './mobileWorkspaceSuggestions'
 
@@ -123,6 +124,47 @@ describe('mobile workspace suggestions', () => {
     expect(mobileViewValueSuggestions(notes, 'filename', 'workflow')).toEqual(['Workflow Orchestration Essay.md'])
     expect(mobileViewValueSuggestions(notes, 'archived', 'fal')).toEqual(['false'])
     expect(mobileViewValueSuggestions(notes, 'belongs_to', 'mvp')).toContain('Tolaria MVP')
+  })
+
+  it('suggests saved-view relationship values as display titles backed by canonical refs', () => {
+    const notes = workspaceScenarioForId('default').notes.map((note) => note.id === 'workflow-orchestration'
+      ? {
+          ...note,
+          relationships: [{
+            key: 'belongs_to',
+            kind: 'belongsTo' as const,
+            values: [
+              {
+                ref: '[[Projects/Tolaria MVP]]',
+                title: 'Tolaria MVP',
+                type: 'Project',
+                typeTone: 'purple' as const,
+              },
+              {
+                ref: '[[Archive/Tolaria MVP]]',
+                title: 'Tolaria MVP',
+                type: 'Project',
+                typeTone: 'purple' as const,
+              },
+            ],
+          }],
+        }
+      : note)
+
+    expect(mobileViewValueSuggestionItems(notes, 'belongs_to', 'mvp')).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          label: 'Tolaria MVP',
+          meta: '[[Projects/Tolaria MVP]]',
+          value: '[[Projects/Tolaria MVP]]',
+        }),
+        expect.objectContaining({
+          label: 'Tolaria MVP',
+          meta: '[[Archive/Tolaria MVP]]',
+          value: '[[Archive/Tolaria MVP]]',
+        }),
+      ]),
+    )
   })
 
   it('suggests desktop note-list display properties and derives type defaults', () => {
