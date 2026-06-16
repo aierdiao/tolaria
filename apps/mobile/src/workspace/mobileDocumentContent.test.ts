@@ -246,6 +246,20 @@ Updated body.
     expect(html).not.toContain('<a ')
   })
 
+  it('renders standalone markdown images whose URLs contain balanced parentheses', () => {
+    const html = mobileMarkdownBodyToTentapHtml(
+      '![](https://cdn.example.com/Opengraph%20-%20Home%20Page%20(1).jpg)\n',
+    )
+    const escapedHtml = mobileMarkdownBodyToTentapHtml(
+      '![](https://cdn.example.com/Opengraph%20-%20Home%20Page%20\\(1\\).jpg)\n',
+    )
+
+    expect(html).toBe(
+      '<img src="https://cdn.example.com/Opengraph%20-%20Home%20Page%20(1).jpg" alt="">',
+    )
+    expect(escapedHtml).toBe(html)
+  })
+
   it('preserves markdown image titles as native image metadata', () => {
     const html = mobileMarkdownBodyToTentapHtml('![shot](attachments/file.png "starter vault")\n')
 
@@ -564,6 +578,25 @@ Updated body.
     }
 
     expect(tiptapJsonToMobileMarkdown(document)).toBe('![shot](attachments/file.png "starter vault")')
+  })
+
+  it('serializes image URLs with closing parentheses as escaped markdown destinations', () => {
+    const document: TiptapJsonNode = {
+      type: 'doc',
+      content: [
+        {
+          attrs: {
+            alt: '',
+            src: 'https://cdn.example.com/Opengraph%20-%20Home%20Page%20(1).jpg',
+          },
+          type: 'image',
+        },
+      ],
+    }
+
+    expect(tiptapJsonToMobileMarkdown(document)).toBe(
+      '![](https://cdn.example.com/Opengraph%20-%20Home%20Page%20\\(1\\).jpg)',
+    )
   })
 })
 

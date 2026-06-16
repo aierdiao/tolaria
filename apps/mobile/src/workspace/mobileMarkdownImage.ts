@@ -10,7 +10,14 @@ type MobileMarkdownImage = {
   title?: PlainText
 }
 
-const MARKDOWN_IMAGE_LINE_PATTERN = /^\s*!\[((?:\\.|[^\]\\\n])*)\]\((<[^>\n]+>|(?:\\.|[^)\s\n])+)(?:[ \t]+"((?:\\.|[^"\\\n])*)")?\)\s*$/u
+type BareDestinationCursor = {
+  depth: number
+  index: number
+  value: UrlText
+}
+
+const MARKDOWN_IMAGE_PREFIX_PATTERN = /^\s*!\[((?:\\.|[^\]\\\n])*)\]\(/u
+const MARKDOWN_IMAGE_SUFFIX_PATTERN = /^(?:[ \t]+"((?:\\.|[^"\\\n])*)")?\)\s*$/u
 
 export function mobileMarkdownImageHtml(line: MarkdownLine): HtmlSnippet | null {
   const image = readMobileMarkdownImage(line)
@@ -25,14 +32,102 @@ export function mobileImageNodeMarkdown(attrs: Record<string, unknown> | undefin
 }
 
 function readMobileMarkdownImage(line: MarkdownLine): MobileMarkdownImage | null {
-  const match = line.match(MARKDOWN_IMAGE_LINE_PATTERN)
-  if (!match) return null
+  const prefix = line.match(MARKDOWN_IMAGE_PREFIX_PATTERN)
+  if (!prefix) return null
+
+  const destination = readImageDestination(line, prefix[0].length)
+  if (!destination) return null
+
+  const suffix = line.slice(destination.nextIndex).match(MARKDOWN_IMAGE_SUFFIX_PATTERN)
+  if (!suffix) return null
 
   return {
-    alt: unescapeMarkdownText(match[1] ?? ''),
-    src: unescapeMarkdownDestination(match[2] ?? ''),
-    title: match[3] ? unescapeMarkdownText(match[3]) : undefined,
+    alt: unescapeMarkdownText(prefix[1] ?? ''),
+    src: unescapeMarkdownDestination(destination.value),
+    title: suffix[1] ? unescapeMarkdownText(suffix[1]) : undefined,
   }
+}
+
+function readImageDestination(
+  line: MarkdownLine,
+  startIndex: number,
+): { nextIndex: number; value: UrlText } | null {
+  return line[startIndex] === '<'
+    ? readAngledImageDestination(line, startIndex)
+    : readBareImageDestination(line, startIndex)
+}
+
+function readAngledImageDestination(
+  line: MarkdownLine,
+  startIndex: number,
+): { nextIndex: number; value: UrlText } | null {
+  const closeIndex = line.indexOf('>', startIndex + 1)
+  if (closeIndex === -1) return null
+
+  const value = line.slice(startIndex, closeIndex + 1)
+  return value.includes('\n') ? null : { nextIndex: closeIndex + 1, value }
+}
+
+function readBareImageDestination(
+  line: MarkdownLine,
+  startIndex: number,
+): { nextIndex: number; value: UrlText } | null {
+  let cursor: BareDestinationCursor = { depth: 0, index: startIndex, value: '' }
+
+  while (cursor.index < line.length) {
+    const nextCursor = nextBareDestinationCursor(line, cursor)
+    if (!nextCursor) break
+    cursor = nextCursor
+  }
+
+  return cursor.value ? { nextIndex: cursor.index, value: cursor.value } : null
+}
+
+function nextBareDestinationCursor(
+  line: MarkdownLine,
+  cursor: BareDestinationCursor,
+): BareDestinationCursor | null {
+  const char = line[cursor.index] ?? ''
+  if (isEscapedDestinationChar(line, cursor.index)) return appendEscapedDestinationChar(line, cursor)
+  if (isBareDestinationEnd(char, cursor.depth)) return null
+
+  return appendBareDestinationChar(cursor, char)
+}
+
+function isEscapedDestinationChar(line: MarkdownLine, index: number): boolean {
+  return line[index] === '\\' && index + 1 < line.length
+}
+
+function appendEscapedDestinationChar(
+  line: MarkdownLine,
+  cursor: BareDestinationCursor,
+): BareDestinationCursor {
+  return {
+    ...cursor,
+    index: cursor.index + 2,
+    value: cursor.value + line.slice(cursor.index, cursor.index + 2),
+  }
+}
+
+function isBareDestinationEnd(char: PlainText, depth: number): boolean {
+  return /\s/u.test(char) || (char === ')' && depth === 0)
+}
+
+function appendBareDestinationChar(
+  cursor: BareDestinationCursor,
+  char: PlainText,
+): BareDestinationCursor {
+  return {
+    depth: nextBareDestinationDepth(cursor.depth, char),
+    index: cursor.index + 1,
+    value: cursor.value + char,
+  }
+}
+
+function nextBareDestinationDepth(depth: number, char: PlainText): number {
+  if (char === '(') return depth + 1
+  if (char === ')') return Math.max(0, depth - 1)
+  return depth
 }
 
 function imageHtml(image: MobileMarkdownImage): HtmlSnippet {
@@ -46,7 +141,7 @@ function escapeMarkdownLabel(value: PlainText): PlainText {
 
 function escapeMarkdownDestination(value: UrlText): UrlText {
   if (/[\s<>]/u.test(value)) return `<${value.replace(/>/gu, '%3E')}>`
-  return value.replace(/\\/gu, '\\\\').replace(/\)/gu, '\\)')
+  return value.replace(/\\/gu, '\\\\').replace(/[()]/gu, '\\$&')
 }
 
 function imageDestination(src: UrlText, title: PlainText): PlainText {
