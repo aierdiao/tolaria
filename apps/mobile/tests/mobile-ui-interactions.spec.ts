@@ -109,6 +109,13 @@ test.describe('mobile UI lab interactions', () => {
     await insertPersonMention(page)
   })
 
+  test('renames a file to the selected note title from mobile more actions', async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== 'tablet-landscape', 'Filename retargeting checks use the full-width tablet layout.')
+
+    await page.goto('/')
+    await renameSelectedFileToTitle(page)
+  })
+
   test('exercises reducer-backed phone workspace flows', async ({ page }, testInfo) => {
     test.skip(testInfo.project.name !== 'phone-portrait', 'Phone real-workspace checks run on the phone layout.')
 
@@ -271,6 +278,22 @@ async function moveAndRenameSelectedRelease(page: PageLike) {
   await expect(page.getByTestId('workspace-action-sheet')).toBeHidden()
 }
 
+async function renameSelectedFileToTitle(page: PageLike) {
+  await expect(page.getByTestId('editor-title')).toHaveText('Workflow Orchestration Essay')
+  await page.getByTestId('editor-more-action').click()
+  await expect(page.getByTestId('workspace-action-rename-file-to-title')).toBeVisible()
+  await page.getByTestId('workspace-action-rename-file-to-title').click()
+  await expect(page.getByTestId('workspace-action-sheet')).toBeHidden()
+  await expect(page.getByTestId('note-row-workflow-orchestration')).toBeVisible()
+
+  await page.getByTestId('editor-more-action').click()
+  await page.getByTestId('workspace-action-copy-deep-link').click()
+  await expect(page.evaluate((key) => {
+    const attempts = (window as unknown as Record<string, unknown>)[key]
+    return Array.isArray(attempts) ? attempts.at(-1) : null
+  }, mobileClipboardAttemptsGlobalKey)).resolves.toBe('tolaria://tv/Tolaria/Mobile%20UI/workflow-orchestration-essay.md')
+}
+
 async function assertSelectedReleaseDeepLink(page: PageLike) {
   await page.getByTestId('editor-more-action').click()
   await page.getByTestId('workspace-action-copy-deep-link').click()
@@ -305,7 +328,7 @@ async function changeSelectedNoteTypeTo(page: PageLike, type: string) {
 
 async function insertPersonMention(page: PageLike) {
   await page.getByTestId('editor-edit-action').click()
-  await expect(page.getByTestId('editor-title-input')).toBeVisible()
+  await expect(page.getByTestId('editor-markdown-input')).toBeVisible()
   await page.getByTestId('editor-markdown-input').fill('# Mention Draft\n\nFollow up with @mar')
   await expect(page.getByTestId('editor-person-mention-suggestions')).toBeVisible()
   await page.getByTestId('editor-person-mention-suggestion-maria-rossi-md').click()
@@ -675,7 +698,7 @@ async function addRelationshipFromSuggestion(page: PageLike) {
 
 async function editMarkdownWithWikilink(page: PageLike) {
   await page.getByTestId('editor-edit-action').click()
-  await expect(page.getByTestId('editor-title-input')).toBeVisible()
+  await expect(page.getByTestId('editor-markdown-input')).toBeVisible()
   await expect(page.getByTestId('editor-formatting-toolbar')).toBeVisible()
   await page.getByTestId('editor-markdown-input').fill('# Mobile QA Draft Revised\n\nDraft body referencing ')
   await page.getByTestId('editor-format-wikilink').click()
@@ -724,7 +747,7 @@ async function editMarkdownWithWikilink(page: PageLike) {
 
 async function editRawFrontmatterContract(page: PageLike) {
   await page.getByTestId('editor-edit-action').click()
-  await expect(page.getByTestId('editor-title-input')).toBeVisible()
+  await expect(page.getByTestId('editor-markdown-input')).toBeVisible()
   await page.getByTestId('editor-markdown-input').fill([
     '---',
     'type: Procedure',

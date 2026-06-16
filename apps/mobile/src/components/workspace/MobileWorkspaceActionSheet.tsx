@@ -120,6 +120,7 @@ type MobileWorkspaceActionSheetProps = {
   onSaveTypeDefinition: () => void
   onRenameFolder: () => void
   onRenameNoteFile: () => void
+  onRenameNoteFileToTitle: () => void
   onSaveView: () => void
   onSearchQueryChange: (value: string) => void
   onSelectNote: (noteId: string) => void
@@ -257,6 +258,7 @@ const actionContentByAction: Record<MobileWorkspaceAction, (props: MobileWorkspa
       onOpenChangeNoteType={props.onOpenChangeNoteType}
       onOpenMoveNoteToFolder={props.onOpenMoveNoteToFolder}
       onOpenRenameNoteFile={props.onOpenRenameNoteFile}
+      onRenameNoteFileToTitle={props.onRenameNoteFileToTitle}
       onSetArchived={props.onSetArchived}
       onSetOrganized={props.onSetOrganized}
       onDeleteNote={props.onDeleteNote}
@@ -868,6 +870,7 @@ function MoreActionsContent(props: {
   onOpenChangeNoteType: () => void
   onOpenMoveNoteToFolder: () => void
   onOpenRenameNoteFile: () => void
+  onRenameNoteFileToTitle: () => void
   onSetArchived: (archived: boolean) => void
   onSetOrganized: (organized: boolean) => void
   onDeleteNote: () => void
@@ -880,6 +883,7 @@ function MoreActionsContent(props: {
     onOpenChangeNoteType,
     onOpenMoveNoteToFolder,
     onOpenRenameNoteFile,
+    onRenameNoteFileToTitle,
     onSetArchived,
     onSetOrganized,
   } = props
@@ -895,6 +899,7 @@ function MoreActionsContent(props: {
           onOpenChangeNoteType={onOpenChangeNoteType}
           onOpenMoveNoteToFolder={onOpenMoveNoteToFolder}
           onOpenRenameNoteFile={onOpenRenameNoteFile}
+          onRenameNoteFileToTitle={onRenameNoteFileToTitle}
           onSetArchived={onSetArchived}
           onSetOrganized={onSetOrganized}
         />
@@ -920,6 +925,7 @@ function NoteMoreActionRows(props: {
   onOpenChangeNoteType: () => void
   onOpenMoveNoteToFolder: () => void
   onOpenRenameNoteFile: () => void
+  onRenameNoteFileToTitle: () => void
   onSetArchived: (archived: boolean) => void
   onSetOrganized: (organized: boolean) => void
 }) {
@@ -930,6 +936,7 @@ function NoteMoreActionRows(props: {
     onOpenChangeNoteType,
     onOpenMoveNoteToFolder,
     onOpenRenameNoteFile,
+    onRenameNoteFileToTitle,
     onSetArchived,
     onSetOrganized,
   } = props
@@ -969,6 +976,15 @@ function NoteMoreActionRows(props: {
         label={mobileText('editor.filename.rename')}
         testID="workspace-action-rename-file"
         onPress={onOpenRenameNoteFile}
+      />
+      <ActionRow
+        icon={<PencilSimple color={mobileColors.textMuted} size={desktopToolbarActionParity.iconSize} />}
+        label={mobileText('editor.filename.renameToTitle')}
+        testID="workspace-action-rename-file-to-title"
+        onPress={() => {
+          onRenameNoteFileToTitle()
+          onClose()
+        }}
       />
       <ActionRow
         icon={<FolderOpen color={mobileColors.textMuted} size={desktopToolbarActionParity.iconSize} />}

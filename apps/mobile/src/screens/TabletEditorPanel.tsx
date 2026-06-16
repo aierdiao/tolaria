@@ -5,31 +5,17 @@ import {
   PencilSimple,
   Star,
 } from 'phosphor-react-native'
-import { Pressable, ScrollView, StyleSheet, type NativeSyntheticEvent, type TextInputSelectionChangeEventData, View } from 'react-native'
-import { useCallback, useMemo, useState } from 'react'
+import { ScrollView, StyleSheet, View } from 'react-native'
+import { useState } from 'react'
 import { MobileEditorBlocks } from '../components/workspace/MobileEditorBlocks'
-import { MobileMarkdownFormattingToolbar } from '../components/workspace/MobileMarkdownFormattingToolbar'
+import { MobileWysiwygMarkdownEditor } from '../components/workspace/MobileWysiwygMarkdownEditor'
 import { Text } from '../components/ui/text'
 import { mobileText } from '../i18n/mobileText'
 import { MobileChip } from '../ui/MobileChip'
 import { MobileIconButton } from '../ui/MobileIconButton'
 import { MobilePanel, MobileToolbar, MobileToolbarTitle } from '../ui/MobilePanel'
-import { MobileTextInput } from '../ui/MobileTextInput'
 import { desktopEditorParity, desktopToolbarActionParity } from '../ui/desktopParity'
 import { mobileColors, mobileSpace, mobileType } from '../ui/tokens'
-import {
-  activeMobileWikilinkQuery,
-  activeMobilePersonMentionQuery,
-  mobilePersonMentionAutocompleteSuggestions,
-  mobileWikilinkAutocompleteSuggestions,
-  mobileWikilinkAutocompleteTarget,
-  replaceActiveMobilePersonMentionQuery,
-  replaceActiveMobileWikilinkQuery,
-} from '../workspace/mobileWikilinkAutocomplete'
-import {
-  applyMobileMarkdownFormat,
-  type MobileMarkdownFormatAction,
-} from '../workspace/mobileMarkdownFormatting'
 import type { MobileEditorBlock, MobileNote } from '../workspace/mobileWorkspaceModel'
 
 type TabletEditorPanelProps = {
@@ -43,7 +29,6 @@ type TabletEditorPanelProps = {
   onOpenMoreActions: () => void
   onToggleFavorite: () => void
   onUpdateContent: (noteId: string, content: string) => void
-  onUpdateTitle: (noteId: string, title: string) => void
 }
 
 type EditorToolbarProps = {
@@ -63,14 +48,7 @@ type EditorContentProps = {
   notes: MobileNote[]
   onNavigateWikilink: (target: string) => void
   onUpdateContent: (noteId: string, content: string) => void
-  onUpdateTitle: (noteId: string, title: string) => void
 }
-
-type TextSelectionRange = {
-  end: number
-  start: number
-}
-type InlineAutocompleteKind = 'personMention' | 'wikilink'
 
 export function TabletEditorPanel(props: TabletEditorPanelProps) {
   const {
@@ -84,7 +62,6 @@ export function TabletEditorPanel(props: TabletEditorPanelProps) {
     onOpenMoreActions,
     onToggleFavorite,
     onUpdateContent,
-    onUpdateTitle,
   } = props
   const [editing, setEditing] = useState(initialEditing)
 
@@ -101,19 +78,33 @@ export function TabletEditorPanel(props: TabletEditorPanelProps) {
         onToggleEditing={() => setEditing((current) => !current)}
         onToggleFavorite={onToggleFavorite}
       />
-      <ScrollView contentContainerStyle={[panelStyles.content, compact ? panelStyles.contentCompact : null]} testID="editor-scroll">
-        <EditorContent
-          blocks={blocks}
-          bullets={bullets}
-          compact={compact}
-          editing={editing}
-          note={note}
-          notes={notes}
-          onNavigateWikilink={onNavigateWikilink}
-          onUpdateContent={onUpdateContent}
-          onUpdateTitle={onUpdateTitle}
-        />
-      </ScrollView>
+      {editing ? (
+        <View style={panelStyles.editorHost} testID="editor-scroll">
+          <EditorContent
+            blocks={blocks}
+            bullets={bullets}
+            compact={compact}
+            editing={editing}
+            note={note}
+            notes={notes}
+            onNavigateWikilink={onNavigateWikilink}
+            onUpdateContent={onUpdateContent}
+          />
+        </View>
+      ) : (
+        <ScrollView contentContainerStyle={[panelStyles.content, compact ? panelStyles.contentCompact : null]} testID="editor-scroll">
+          <EditorContent
+            blocks={blocks}
+            bullets={bullets}
+            compact={compact}
+            editing={editing}
+            note={note}
+            notes={notes}
+            onNavigateWikilink={onNavigateWikilink}
+            onUpdateContent={onUpdateContent}
+          />
+        </ScrollView>
+      )}
     </MobilePanel>
   )
 }
@@ -138,7 +129,7 @@ function EditorToolbar({
         <Star color={note.favorite ? mobileColors.primary : mobileColors.textMuted} size={desktopToolbarActionParity.iconSize} weight={note.favorite ? 'fill' : 'regular'} />
       </MobileIconButton>
       <MobileIconButton
-        accessibilityLabel={mobileText(editing ? 'common.save' : 'editor.toolbar.rawOpen')}
+        accessibilityLabel={mobileText(editing ? 'common.save' : 'menu.edit')}
         testID="editor-edit-action"
         onPress={onToggleEditing}
       >
@@ -162,16 +153,17 @@ function EditorContent({
   notes,
   onNavigateWikilink,
   onUpdateContent,
-  onUpdateTitle,
 }: EditorContentProps) {
   if (editing) {
     return (
-      <MarkdownEditor
+      <MobileWysiwygMarkdownEditor
+        key={note.id}
+        blocks={blocks}
+        bullets={bullets}
         compact={compact}
         note={note}
         notes={notes}
         onUpdateContent={onUpdateContent}
-        onUpdateTitle={onUpdateTitle}
       />
     )
   }
@@ -184,174 +176,6 @@ function EditorContent({
       <MobileEditorBlocks blocks={blocks} fallbackBullets={bullets} onNavigateWikilink={onNavigateWikilink} />
     </>
   )
-}
-
-function MarkdownEditor({
-  compact,
-  note,
-  notes,
-  onUpdateContent,
-  onUpdateTitle,
-}: {
-  compact: boolean
-  note: MobileNote
-  notes: MobileNote[]
-  onUpdateContent: (noteId: string, content: string) => void
-  onUpdateTitle: (noteId: string, title: string) => void
-}) {
-  const content = note.rawContent ?? `# ${note.title}\n\n`
-  const autocomplete = useMarkdownInlineAutocomplete({
-    content,
-    noteId: note.id,
-    notes,
-    onUpdateContent,
-  })
-
-  return (
-    <View style={editorFormStyles.form} testID="editor-markdown-form">
-      <MobileTextInput
-        label={mobileText('noteList.sort.title')}
-        testID="editor-title-input"
-        value={note.title}
-        onChangeText={(title) => onUpdateTitle(note.id, title)}
-      />
-      <MobileMarkdownFormattingToolbar onFormat={autocomplete.applyFormat} />
-      <MobileTextInput
-        label={mobileText('editor.raw.label')}
-        multiline
-        scrollEnabled={false}
-        style={[editorFormStyles.bodyInput, compact ? editorFormStyles.bodyInputCompact : null]}
-        testID="editor-markdown-input"
-        textAlignVertical="top"
-        value={content}
-        selection={autocomplete.controlledSelection}
-        onChangeText={autocomplete.handleMarkdownChange}
-        onSelectionChange={autocomplete.handleSelectionChange}
-      />
-      {autocomplete.suggestions.length > 0 ? (
-        <View style={editorFormStyles.suggestions} testID={autocomplete.suggestionsTestId}>
-          {autocomplete.suggestions.map((suggestion) => (
-            <Pressable
-              accessibilityLabel={suggestion.title}
-              accessibilityRole="button"
-              key={suggestion.id}
-              style={({ pressed }) => [editorFormStyles.suggestionRow, pressed ? editorFormStyles.suggestionRowPressed : null]}
-              testID={`${autocomplete.rowTestIdPrefix}-${testIdSegment(suggestion.id)}`}
-              onPress={() => autocomplete.insertSuggestion(suggestion)}
-            >
-              <Text numberOfLines={1} style={editorFormStyles.suggestionTitle}>{suggestion.title}</Text>
-              <MobileChip label={suggestion.type} tone="gray" />
-            </Pressable>
-          ))}
-        </View>
-      ) : null}
-    </View>
-  )
-}
-
-function useMarkdownInlineAutocomplete({
-  content,
-  noteId,
-  notes,
-  onUpdateContent,
-}: {
-  content: string
-  noteId: string
-  notes: MobileNote[]
-  onUpdateContent: (noteId: string, content: string) => void
-}) {
-  const [selection, setSelection] = useState<TextSelectionRange>({ end: content.length, start: content.length })
-  const [controlledSelection, setControlledSelection] = useState<TextSelectionRange | undefined>()
-  const state = useMemo(() => markdownInlineAutocompleteState(content, selection.start, notes), [content, notes, selection.start])
-
-  const handleSelectionChange = useCallback((event: NativeSyntheticEvent<TextInputSelectionChangeEventData>) => {
-    setSelection(event.nativeEvent.selection)
-    setControlledSelection(undefined)
-  }, [])
-  const handleMarkdownChange = useCallback((nextContent: string) => {
-    onUpdateContent(noteId, nextContent)
-    const nextSelection = textEndSelection(nextContent)
-    const activeAutocomplete = hasActiveInlineAutocomplete(nextContent, nextSelection.start)
-    setSelection(nextSelection)
-    setControlledSelection(activeAutocomplete ? nextSelection : undefined)
-  }, [noteId, onUpdateContent])
-  const applyFormat = useCallback((action: MobileMarkdownFormatAction) => {
-    const result = applyMobileMarkdownFormat(content, selection, action)
-    onUpdateContent(noteId, result.text)
-    setSelection(result.selection)
-    setControlledSelection(result.selection)
-  }, [content, noteId, onUpdateContent, selection])
-  const insertSuggestion = useCallback((suggestion: MobileNote) => {
-    const replacement = markdownInlineAutocompleteReplacement(content, selection.start, state.kind, suggestion)
-    if (!replacement) return
-
-    const nextSelection = { end: replacement.cursor, start: replacement.cursor }
-    onUpdateContent(noteId, replacement.text)
-    setSelection(nextSelection)
-    setControlledSelection(nextSelection)
-  }, [content, noteId, onUpdateContent, selection.start, state.kind])
-
-  return {
-    applyFormat,
-    controlledSelection,
-    handleMarkdownChange,
-    handleSelectionChange,
-    insertSuggestion,
-    rowTestIdPrefix: inlineAutocompleteRowTestIdPrefix(state.kind),
-    suggestions: state.suggestions,
-    suggestionsTestId: inlineAutocompleteTestId(state.kind),
-  }
-}
-
-function markdownInlineAutocompleteState(
-  content: string,
-  cursor: number,
-  notes: MobileNote[],
-) {
-  const wikilinkMatch = activeMobileWikilinkQuery(content, cursor)
-  if (wikilinkMatch) {
-    return {
-      kind: 'wikilink' as const,
-      suggestions: mobileWikilinkAutocompleteSuggestions(notes, wikilinkMatch.query),
-    }
-  }
-
-  const personMentionMatch = activeMobilePersonMentionQuery(content, cursor)
-  return {
-    kind: personMentionMatch ? 'personMention' as const : null,
-    suggestions: personMentionMatch ? mobilePersonMentionAutocompleteSuggestions(notes, personMentionMatch.query) : [],
-  }
-}
-
-function markdownInlineAutocompleteReplacement(
-  content: string,
-  cursor: number,
-  kind: InlineAutocompleteKind | null,
-  suggestion: MobileNote,
-) {
-  if (kind === null) return null
-
-  const target = mobileWikilinkAutocompleteTarget(suggestion)
-  return kind === 'personMention'
-    ? replaceActiveMobilePersonMentionQuery(content, cursor, target)
-    : replaceActiveMobileWikilinkQuery(content, cursor, target)
-}
-
-function hasActiveInlineAutocomplete(text: string, cursor: number): boolean {
-  if (activeMobileWikilinkQuery(text, cursor)) return true
-  return activeMobilePersonMentionQuery(text, cursor) !== null
-}
-
-function textEndSelection(text: string): TextSelectionRange {
-  return { end: text.length, start: text.length }
-}
-
-function inlineAutocompleteTestId(kind: InlineAutocompleteKind | null): string {
-  return kind === 'personMention' ? 'editor-person-mention-suggestions' : 'editor-wikilink-suggestions'
-}
-
-function inlineAutocompleteRowTestIdPrefix(kind: InlineAutocompleteKind | null): string {
-  return kind === 'personMention' ? 'editor-person-mention-suggestion' : 'editor-wikilink-suggestion'
 }
 
 function EmptyEditorPanel() {
@@ -391,6 +215,9 @@ const panelStyles = StyleSheet.create({
     fontWeight: '600',
     textAlign: 'center',
   },
+  editorHost: {
+    flex: 1,
+  },
   panel: {
     flex: 1,
   },
@@ -409,47 +236,5 @@ const panelStyles = StyleSheet.create({
   titleCompact: {
     fontSize: 30,
     lineHeight: 36,
-  },
-})
-
-function testIdSegment(value: string) {
-  return value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
-}
-
-const editorFormStyles = StyleSheet.create({
-  bodyInput: {
-    minHeight: 420,
-    fontFamily: 'Menlo',
-    fontSize: 14,
-    lineHeight: 21,
-    paddingVertical: mobileSpace.sm,
-  },
-  bodyInputCompact: {
-    minHeight: 360,
-  },
-  form: {
-    gap: mobileSpace.md,
-  },
-  suggestionRow: {
-    minHeight: 32,
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: mobileSpace.sm,
-    borderRadius: 6,
-    paddingHorizontal: mobileSpace.sm,
-    paddingVertical: mobileSpace.xs,
-  },
-  suggestionRowPressed: {
-    backgroundColor: mobileColors.graySoft,
-  },
-  suggestions: {
-    gap: mobileSpace.xs,
-  },
-  suggestionTitle: {
-    minWidth: 0,
-    flex: 1,
-    color: mobileColors.text,
-    fontSize: mobileType.body,
-    fontWeight: '500',
   },
 })

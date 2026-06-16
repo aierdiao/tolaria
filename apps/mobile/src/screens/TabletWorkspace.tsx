@@ -96,7 +96,6 @@ function TabletWorkspaceChrome(props: TabletWorkspaceChromeProps) {
     onSelectSidebarItem,
     onToggleFavorite,
     onUpdateNoteContent,
-    onUpdateNoteTitle,
     searchQuery,
     selectedNote,
     selectedNoteId,
@@ -158,7 +157,6 @@ function TabletWorkspaceChrome(props: TabletWorkspaceChromeProps) {
         onOpenMoreActions={onOpenMoreActions}
         onToggleFavorite={onToggleFavorite}
         onUpdateContent={onUpdateNoteContent}
-        onUpdateTitle={onUpdateNoteTitle}
       />
       {gestures.propertiesVisible ? (
         <View {...gestures.propertiesSwipe} style={styles.panelHost}>
@@ -304,6 +302,7 @@ function actionSheetHandlers(props: ActionSheetHostProps) {
     onRelationshipNoteTitleChange: props.onRelationshipNoteTitleChange,
     onRenameFolder: props.onRenameFolder,
     onRenameNoteFile: props.onRenameNoteFile,
+    onRenameNoteFileToTitle: props.onRenameNoteFileToTitle,
     onSaveProperty: props.onSaveProperty,
     onSaveRelationship: props.onSaveRelationship,
     onSaveTypeDefinition: props.onSaveTypeDefinition,

@@ -50,6 +50,7 @@ import {
   parseMobilePropertyValue,
   type MobilePropertyValueKind,
 } from '../workspace/mobilePropertyValues'
+import { mobileFilenameStemForTitle } from '../workspace/mobileNotePaths'
 import {
   mobileSidebarIconFromValue,
   mobileToneFromValue,
@@ -174,7 +175,12 @@ export function useTabletWorkspaceController({
     selectedNote,
     updateReadOnlyForm,
   })
-  const retargetActions = retargetWorkspaceActions({ readOnlyForm, saveSelectedEdit, updateReadOnlyForm })
+  const retargetActions = retargetWorkspaceActions({
+    readOnlyForm,
+    saveSelectedEdit,
+    selectedNote,
+    updateReadOnlyForm,
+  })
   const editorActions = editorWorkspaceActions({
     applyEdit,
     repositoryRequest,
@@ -618,10 +624,12 @@ function relationshipWorkspaceActions({
 function retargetWorkspaceActions({
   readOnlyForm,
   saveSelectedEdit,
+  selectedNote,
   updateReadOnlyForm,
 }: {
   readOnlyForm: TabletReadOnlyForm
   saveSelectedEdit: SaveSelectedEdit
+  selectedNote: MobileNote | null
   updateReadOnlyForm: ReadOnlyFormUpdater
 }) {
   return {
@@ -643,6 +651,14 @@ function retargetWorkspaceActions({
       noteId,
       type: 'renameNoteFile',
     })),
+    onRenameNoteFileToTitle: () => {
+      if (!selectedNote) return
+      saveSelectedEdit((noteId) => ({
+        filenameStem: mobileFilenameStemForTitle(selectedNote.title),
+        noteId,
+        type: 'renameNoteFile',
+      }))
+    },
   }
 }
 
@@ -683,7 +699,6 @@ function editorWorkspaceActions({
       if (selectedNote) applyEdit({ noteId: selectedNote.id, type: 'toggleFavorite' })
     },
     onUpdateNoteContent: (noteId: string, content: string) => applyEdit({ content, noteId, type: 'updateNoteContent' }),
-    onUpdateNoteTitle: (noteId: string, title: string) => applyEdit({ noteId, title, type: 'renameNoteTitle' }),
   }
 }
 

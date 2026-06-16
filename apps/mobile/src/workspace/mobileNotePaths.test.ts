@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { workspaceScenarioForId } from '../fixtures/workspaceFixtures'
 import {
+  mobileFilenameStemForTitle,
   movedMobileNoteFilePath,
   renamedMobileNoteFilePath,
   uniqueMobileNotePath,
@@ -36,6 +37,12 @@ describe('mobile note paths', () => {
     expect(validateMobileRenameNoteFilePath({ filenameStem: 'quarterly:plan', note: selectedNote, notes })).toBe('invalid')
     expect(validateMobileRenameNoteFilePath({ filenameStem: 'Workflow Orchestration Essay', note: selectedNote, notes })).toBe('same')
     expect(validateMobileRenameNoteFilePath({ filenameStem: 'workflow-cleanup', note: selectedNote, notes })).toBe('ok')
+  })
+
+  it('derives desktop-style filename stems from titles for rename-to-title actions', () => {
+    expect(mobileFilenameStemForTitle('Weekly Review')).toBe('weekly-review')
+    expect(mobileFilenameStemForTitle('My Note 你好')).toBe('my-note-你好')
+    expect(mobileFilenameStemForTitle('+++')).toBe('untitled')
   })
 
   it('validates move destinations against existing note and explicit folder paths', () => {

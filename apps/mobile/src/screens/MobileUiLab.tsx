@@ -24,7 +24,14 @@ export function MobileUiLab() {
   const initialEditorEditing = editorMode(searchParams) === 'raw'
   const layoutProbe = layoutProbeEnabled(searchParams)
   const snapshot = readOnlyWorkspaceRepository.readSnapshot(repositoryRequest)
-  const workspaceKey = mobileWorkspaceKey({ initialEditorEditing, layoutProbe, scenarioId, snapshot, source })
+  const workspaceKey = mobileWorkspaceKey({
+    initialEditorEditing,
+    layoutProbe,
+    qaRun: searchParams.get('qaRun'),
+    scenarioId,
+    snapshot,
+    source,
+  })
   const handleOpenNativeVault = useCallback(async () => {
     const selection = await pickNativeWorkspaceDirectory(repositoryRequest.vaultRootUri)
     if (selection) setNativeWorkspace(selection)
@@ -105,12 +112,14 @@ function layoutProbeEnabled(searchParams: URLSearchParams) {
 function mobileWorkspaceKey({
   initialEditorEditing,
   layoutProbe,
+  qaRun,
   scenarioId,
   snapshot,
   source,
 }: {
   initialEditorEditing: boolean
   layoutProbe: boolean
+  qaRun: string | null
   scenarioId: string | null
   snapshot: ReturnType<typeof readOnlyWorkspaceRepository.readSnapshot>
   source: ReturnType<typeof currentSnapshotSource>
@@ -120,6 +129,7 @@ function mobileWorkspaceKey({
   return [
     source,
     scenarioIdOrDefault(scenarioId),
+    qaRun ?? 'interactive',
     initialEditorEditing ? 'raw-editor' : 'read-editor',
     layoutProbeMode(layoutProbe),
     sourceInfo ? sourceInfo.kind : 'fixture',

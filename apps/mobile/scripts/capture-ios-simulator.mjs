@@ -235,8 +235,21 @@ async function openSimulatorUrl(device, url, waitMs) {
   }
 
   assertNativeQaOpenUrl(url, 'Native iOS simulator capture')
-  run('xcrun', ['simctl', 'openurl', device, url])
+  const runId = Date.now().toString()
+  run('xcrun', ['simctl', 'openurl', device, appendQueryParam(url, 'qaRun', `${runId}-reset`)])
+  await new Promise((resolveDelay) => setTimeout(resolveDelay, Math.min(waitMs, 750)))
+  run('xcrun', ['simctl', 'openurl', device, appendQueryParam(url, 'qaRun', runId)])
   await new Promise((resolveDelay) => setTimeout(resolveDelay, waitMs))
+}
+
+function appendQueryParam(url, key, value) {
+  const encodedKey = encodeURIComponent(key)
+  const encodedValue = encodeURIComponent(value)
+  const existing = new RegExp(`([?&])${encodedKey}=[^&]*`, 'u')
+  if (existing.test(url)) return url.replace(existing, `$1${encodedKey}=${encodedValue}`)
+
+  const separator = url.includes('?') ? '&' : '?'
+  return `${url}${separator}${encodedKey}=${encodedValue}`
 }
 
 function captureSelectedDevice(options, deviceName) {

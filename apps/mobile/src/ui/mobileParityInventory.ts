@@ -176,6 +176,20 @@ export const mobileParityInventory = [
     surface: 'Markdown formatting toolbar',
   },
   {
+    assertions: ['TenTap native simulator rendering', 'document-content serialization regression checks'],
+    contracts: ['desktopEditorParity'],
+    desktopSource: 'EditorTheme.css, theme.json, BlockNote/Tiptap document editing, and desktop markdown serialization',
+    mobileFile: 'src/components/workspace/MobileWysiwygMarkdownEditor.native.tsx',
+    surface: 'Native WYSIWYG document editor',
+  },
+  {
+    assertions: ['single document edit user-flow checks', 'wikilink and person autocomplete user-flow checks'],
+    contracts: ['desktopEditorParity', 'desktopToolbarActionParity'],
+    desktopSource: 'RawEditorView, BlockNote markdown commands, and editor wikilink/person suggestion menus',
+    mobileFile: 'src/components/workspace/MobileWysiwygMarkdownEditor.tsx',
+    surface: 'Web fallback document editor',
+  },
+  {
     assertions: ['editor computed styles', 'markdown block parser regression checks'],
     contracts: ['desktopEditorParity'],
     desktopSource: 'EditorTheme.css, theme.json, BlockNote markdown block rendering',

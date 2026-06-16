@@ -6,6 +6,7 @@ import {
 } from './mobileWorkspaceFolders'
 import type { MobileNote } from './mobileWorkspaceModel'
 import { noteFilename, noteWritePath } from './mobileWorkspacePathRewrites'
+import { slugifyNoteStem } from '../../../../src/utils/noteSlug'
 
 type FolderPath = string
 type NotePath = string
@@ -73,6 +74,10 @@ export function renamedMobileNoteFilePath(note: MobileNote | null, filenameStem:
   const folderPath = mobileFolderParentPath(noteWritePath(note))
   const filename = `${stem}.md`
   return folderPath ? `${folderPath}/${filename}` : filename
+}
+
+export function mobileFilenameStemForTitle(title: string): string {
+  return slugifyNoteStem(title)
 }
 
 export function movedMobileNoteFilePath(note: MobileNote | null, folderPath: string): NotePath | null {
