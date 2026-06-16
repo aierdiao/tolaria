@@ -1,4 +1,17 @@
 import type { MobilePropertyValue } from './mobileWorkspaceModel'
+import {
+  isMobileColorProperty,
+  isMobileColorPropertyKey,
+  isMobileDatePropertyKey,
+  isMobileDatePropertyValue,
+  isMobileListPropertyKey,
+  isMobileStatusProperty,
+  isMobileStatusPropertyKey,
+  isMobileUrlPropertyKey,
+  isMobileUrlPropertyValue,
+} from './mobilePropertyValueDetectors'
+
+export { isMobileListPropertyKey } from './mobilePropertyValueDetectors'
 
 type MobilePropertyKey = string
 type MobilePropertyValueText = string
@@ -66,33 +79,8 @@ export function mobilePropertySuggestionValue(input: MobilePropertySuggestionVal
   return listPropertySuggestionValue(input.valueText, input.suggestion)
 }
 
-export function isMobileListPropertyKey(key: MobilePropertyKey): boolean {
-  return keyMatchesPatterns(key, listPropertyKeyPatterns)
-}
-
 function mobileStringPropertyValueKind(key: MobilePropertyKey, value: string): MobilePropertyValueKind {
   return stringPropertyValueKindDetectors.find((detector) => detector.matches(key, value))?.kind ?? 'string'
-}
-
-function isMobileStatusPropertyKey(key: MobilePropertyKey): boolean {
-  return keyMatchesPatterns(key, statusPropertyKeyPatterns)
-}
-
-function isMobileDatePropertyKey(key: MobilePropertyKey): boolean {
-  return keyMatchesPatterns(key, datePropertyKeyPatterns)
-}
-
-function isMobileUrlPropertyKey(key: MobilePropertyKey): boolean {
-  return keyMatchesPatterns(key, urlPropertyKeyPatterns)
-}
-
-function isMobileColorPropertyKey(key: MobilePropertyKey): boolean {
-  return keyMatchesPatterns(key, colorPropertyKeyPatterns)
-}
-
-function keyMatchesPatterns(key: MobilePropertyKey, patterns: readonly string[]): boolean {
-  const lower = key.trim().toLowerCase()
-  return patterns.some((pattern) => lower === pattern || lower.includes(pattern))
 }
 
 function listPropertyValue(value: MobilePropertyValueText): string[] {
@@ -119,52 +107,12 @@ function numberPropertyValue(value: MobilePropertyValueText): number | string {
   return Number.isFinite(parsed) ? parsed : value.trim()
 }
 
-function isMobileStatusPropertyValue(value: MobilePropertyValueText): boolean {
-  return mobileStatusValues.has(value.trim().toLowerCase())
-}
-
-function isMobileDatePropertyValue(value: MobilePropertyValueText): boolean {
-  return /^\d{4}-\d{2}-\d{2}$/u.test(value.trim())
-}
-
-function isMobileUrlPropertyValue(value: MobilePropertyValueText): boolean {
-  return /^https?:\/\/\S+$/iu.test(value.trim())
-}
-
-function isMobileColorPropertyValue(value: MobilePropertyValueText): boolean {
-  return /^#[0-9a-f]{3}(?:[0-9a-f]{3})?$/iu.test(value.trim())
-}
-
-const colorPropertyKeyPatterns = ['color', 'colour']
-const datePropertyKeyPatterns = ['date', 'deadline', 'due', 'start', 'end', 'scheduled']
-const listPropertyKeyPatterns = ['tags', 'keywords', 'categories', 'labels']
-const statusPropertyKeyPatterns = ['status']
-const urlPropertyKeyPatterns = ['url', 'uri', 'link', 'website']
-
 const stringPropertyValueKindDetectors: readonly {
   kind: MobileStringPropertyValueKind
   matches: (key: MobilePropertyKey, value: MobilePropertyValueText) => boolean
 }[] = [
-  { kind: 'status', matches: (key, value) => isMobileStatusPropertyKey(key) || isMobileStatusPropertyValue(value) },
-  { kind: 'date', matches: (key, value) => isMobileDatePropertyKey(key) || isMobileDatePropertyValue(value) },
+  { kind: 'status', matches: isMobileStatusProperty },
+  { kind: 'date', matches: (_key, value) => isMobileDatePropertyValue(value) },
   { kind: 'url', matches: (key, value) => isMobileUrlPropertyKey(key) || isMobileUrlPropertyValue(value) },
-  { kind: 'color', matches: (key, value) => isMobileColorPropertyKey(key) || isMobileColorPropertyValue(value) },
+  { kind: 'color', matches: isMobileColorProperty },
 ]
-
-const mobileStatusValues = new Set([
-  'active',
-  'archived',
-  'blocked',
-  'cancelled',
-  'closed',
-  'done',
-  'draft',
-  'dropped',
-  'in progress',
-  'mixed',
-  'not started',
-  'open',
-  'paused',
-  'pending',
-  'published',
-])

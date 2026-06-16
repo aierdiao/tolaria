@@ -17,8 +17,18 @@ describe('mobile property values', () => {
     expect(mobilePropertyValueKind('tags', 'Design')).toBe('list')
     expect(mobilePropertyValueKind('Status', 'Shipped')).toBe('status')
     expect(mobilePropertyValueKind('Date', '2026-06-14')).toBe('date')
+    expect(mobilePropertyValueKind('deadline', 'active')).toBe('string')
+    expect(mobilePropertyValueKind('due', '02/25/2026')).toBe('date')
+    expect(mobilePropertyValueKind('due_date', '2026-01-15T10:00')).toBe('date')
+    expect(mobilePropertyValueKind('due', '2026-6-1')).toBe('string')
+    expect(mobilePropertyValueKind('due', '02/30/2026')).toBe('string')
     expect(mobilePropertyValueKind('URL', 'https://example.com')).toBe('url')
     expect(mobilePropertyValueKind('accent_color', '#3b82f6')).toBe('color')
+    expect(mobilePropertyValueKind('custom', '#3b82f699')).toBe('color')
+    expect(mobilePropertyValueKind('fill', 'red')).toBe('color')
+    expect(mobilePropertyValueKind('background', 'blue')).toBe('color')
+    expect(mobilePropertyValueKind('custom_field', 'red')).toBe('string')
+    expect(mobilePropertyValueKind('background', '#zzzzzz')).toBe('string')
   })
 
   it('uses desktop-style key patterns for suggested property kinds', () => {
@@ -28,6 +38,8 @@ describe('mobile property values', () => {
     expect(mobilePropertyValueKindForKey('Due Date', 'string')).toBe('date')
     expect(mobilePropertyValueKindForKey('URL', 'string')).toBe('url')
     expect(mobilePropertyValueKindForKey('Brand color', 'string')).toBe('color')
+    expect(mobilePropertyValueKindForKey('fill', 'string')).toBe('color')
+    expect(mobilePropertyValueKindForKey('accentSurface', 'string')).toBe('color')
     expect(mobilePropertyValueKindForKey('Priority', 'number')).toBe('number')
   })
 
