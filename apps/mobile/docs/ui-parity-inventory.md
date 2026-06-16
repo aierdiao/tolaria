@@ -79,7 +79,7 @@ Property editing is covered through real typed writes: scalar text, tag lists, n
 
 React Native Web screenshots are a fast preflight only. Layout-sensitive mobile UI work must also pass the native iOS simulator metric check and produce a simulator screenshot before it is accepted, because spacing, safe-area, and text layout can diverge between web and the actual Expo app.
 
-Native editor screenshots can open `exp://.../--/?layoutProbe=1&editorMode=raw` to mount the same tablet editor directly in raw-edit mode. This is a QA entry point only; it avoids depending on simulator accessibility taps when the goal is to inspect native rendering of edit-only controls.
+Native editor screenshots can open `exp://.../--/?layoutProbe=1&editorMode=raw` to mount the same tablet editor directly in raw-edit mode, or `exp://.../--/?layoutProbe=1&editorMode=wysiwyg` to mount the native TenTap editor directly in document-edit mode. These are QA entry points only; they avoid depending on simulator accessibility taps when the goal is to inspect native rendering of edit-only controls.
 
 ## Phone Screens
 

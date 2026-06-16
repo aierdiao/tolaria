@@ -7,6 +7,7 @@ import {
   pickNativeWorkspaceDirectory,
   type NativeWorkspaceSelection,
 } from '../workspace/nativeWorkspacePicker'
+import { initialMobileEditorStateFromMode } from './mobileEditorMode'
 
 export function MobileUiLab() {
   const { width } = useWindowDimensions()
@@ -21,9 +22,7 @@ export function MobileUiLab() {
     vaultLabel: currentVaultLabel(searchParams, nativeWorkspace),
     vaultRootUri: currentVaultRootUri(searchParams, nativeWorkspace),
   }
-  const initialEditorMode = editorMode(searchParams)
-  const initialEditorEditing = initialEditorMode === 'raw'
-  const initialEditorEditingMode = initialEditorMode === 'raw' ? 'source' : 'wysiwyg'
+  const { initialEditorEditing, initialEditorEditingMode } = initialMobileEditorStateFromMode(editorMode(searchParams))
   const layoutProbe = layoutProbeEnabled(searchParams)
   const snapshot = readOnlyWorkspaceRepository.readSnapshot(repositoryRequest)
   const workspaceKey = mobileWorkspaceKey({
