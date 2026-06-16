@@ -361,12 +361,31 @@ function mobilePropertyValue(value: unknown): MobilePropertyValue {
 function relationshipResolver(entries: LocalVaultEntry[]): RelationshipResolver {
   const index = new Map<string, LocalVaultEntry>()
   for (const entry of entries) {
-    index.set(normalizedTarget(entry.title), entry)
-    index.set(normalizedTarget(entry.filename.replace(/\.[^.]+$/, '')), entry)
-    index.set(normalizedTarget(entry.path.replace(/\.[^.]+$/, '')), entry)
+    for (const target of relationshipResolverTargets(entry)) {
+      addRelationshipResolverTarget(index, target, entry)
+    }
   }
 
   return (target) => index.get(normalizedTarget(target)) ?? null
+}
+
+function relationshipResolverTargets(entry: LocalVaultEntry): string[] {
+  return [
+    entry.path,
+    entry.path.replace(/\.[^.]+$/, ''),
+    entry.filename.replace(/\.[^.]+$/, ''),
+    ...entry.aliases,
+    entry.title,
+  ]
+}
+
+function addRelationshipResolverTarget(
+  index: Map<string, LocalVaultEntry>,
+  target: string,
+  entry: LocalVaultEntry,
+) {
+  const normalized = normalizedTarget(target)
+  if (normalized && !index.has(normalized)) index.set(normalized, entry)
 }
 
 function normalizedTarget(target: WikilinkTarget): WikilinkTarget {

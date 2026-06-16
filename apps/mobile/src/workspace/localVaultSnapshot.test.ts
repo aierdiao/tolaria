@@ -32,6 +32,36 @@ describe('buildLocalVaultWorkspaceSnapshot', () => {
     expect(snapshot.allNotes?.map((note) => note.title)).toContain('Workflow Orchestration')
   })
 
+  it('resolves relationship refs through target aliases like desktop wikilinks', () => {
+    const snapshot = buildLocalVaultWorkspaceSnapshot({
+      files: [
+        vaultFile('relationships/source.md', `---
+type: Note
+related_to:
+  - "[[Newsletter]]"
+---
+# Source
+`),
+        vaultFile('relationships/launch-plan.md', `---
+type: Project
+aliases:
+  - Newsletter
+---
+# Longform Launch Plan
+`),
+      ],
+      vaultLabel: 'Laputa',
+      vaultPath: '/Users/luca/Laputa',
+    })
+
+    expect(snapshot.notes[0]?.relationships[0]?.values[0]).toMatchObject({
+      id: 'relationships/launch-plan.md',
+      ref: '[[Newsletter]]',
+      title: 'Longform Launch Plan',
+      type: 'Project',
+    })
+  })
+
   it('caps the rendered note list while keeping total vault counts and full navigation notes', () => {
     const files = Array.from({ length: 5 }, (_, index) => vaultFile(`note-${index}.md`, `---
 type: Note
