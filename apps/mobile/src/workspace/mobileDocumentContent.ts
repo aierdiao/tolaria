@@ -5,11 +5,11 @@ import {
   type LocalVaultFrontmatterValue,
 } from './localVaultFrontmatter'
 import {
-  isMobileDisplayMathStart,
   normalizeMobileDisplayMathMarkdown,
   readMobileDisplayMathBlock,
 } from './mobileDisplayMath'
 import { mobileEditorBlocksToMarkdown, mobileFallbackBulletsToMarkdown } from './mobileEditorBlockMarkdown'
+import { mobileImageNodeMarkdown, mobileMarkdownImageHtml } from './mobileMarkdownImage'
 import type { MobileNote } from './mobileWorkspaceModel'
 
 type MarkdownContent = string
@@ -144,6 +144,7 @@ function readCodeBlock(lines: MarkdownLines, startIndex: number): ReadHtmlBlockR
 const htmlBlockReaders = [
   readCodeBlock,
   readDisplayMathBlock,
+  readImageBlock,
   readTable,
   readHorizontalRule,
   readHeading,
@@ -165,6 +166,11 @@ function readDisplayMathBlock(lines: MarkdownLines, startIndex: number): ReadHtm
   return displayMath
     ? { html: `<p>${displayMath.lines.map(escapeHtml).join('<br>')}</p>`, nextIndex: displayMath.nextIndex }
     : null
+}
+
+function readImageBlock(lines: MarkdownLines, startIndex: number): ReadHtmlBlockResult | null {
+  const html = mobileMarkdownImageHtml(lines[startIndex] ?? '')
+  return html ? { html, nextIndex: startIndex + 1 } : null
 }
 
 function readTable(lines: MarkdownLines, startIndex: number): ReadHtmlBlockResult | null {
@@ -261,14 +267,7 @@ function readParagraphHtml(lines: MarkdownLines, startIndex: number): ReadHtmlBl
 }
 
 function isBlockStart(lines: MarkdownLines, index: number): boolean {
-  const line = lines[index] ?? ''
-  if (/^```\s*/.test(line)) return true
-  if (/^(#{1,6})\s+/.test(line)) return true
-  if (/^>\s?/.test(line)) return true
-  if (isHorizontalRule(line)) return true
-  if (isMobileDisplayMathStart(line)) return true
-  if (listLine(line)) return true
-  return Boolean(lines[index + 1] && isMarkdownTableDivider(lines[index + 1] ?? ''))
+  return readHtmlBlock(lines, index) !== null
 }
 
 function taskListItemHtml(text: PlainText, checked: boolean): string {
@@ -415,9 +414,7 @@ function codeBlockMarkdown(node: TiptapJsonNode): MarkdownBody {
 }
 
 function imageMarkdown(node: TiptapJsonNode): MarkdownBody {
-  const src = typeof node.attrs?.src === 'string' ? node.attrs.src : ''
-  const alt = typeof node.attrs?.alt === 'string' ? node.attrs.alt : ''
-  return src ? `![${alt}](${src})` : ''
+  return mobileImageNodeMarkdown(node.attrs)
 }
 
 function applyMarks(text: PlainText, marks: TiptapJsonMark[]): string {

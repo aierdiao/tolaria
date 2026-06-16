@@ -106,6 +106,13 @@ Updated body.
     expect(html).toBe('<p>Intro</p>\n<p>$$<br>\\int_0^1 x\\,dx<br>$$</p>\n<p>Done</p>')
   })
 
+  it('renders standalone markdown images as TenTap image nodes without changing portable attachment refs', () => {
+    const html = mobileMarkdownBodyToTentapHtml('![Architecture diagram](<attachments/mobile diagram.png>)\n')
+
+    expect(html).toBe('<img src="attachments/mobile diagram.png" alt="Architecture diagram">')
+    expect(html).not.toContain('<a ')
+  })
+
   it('serializes TenTap JSON back to Tolaria markdown', () => {
     const document: TiptapJsonNode = {
       type: 'doc',
@@ -228,5 +235,22 @@ Updated body.
     }
 
     expect(tiptapJsonToMobileMarkdown(document)).toBe('Line one  \nLine two')
+  })
+
+  it('serializes TenTap image nodes back to portable markdown images', () => {
+    const document: TiptapJsonNode = {
+      type: 'doc',
+      content: [
+        {
+          attrs: {
+            alt: 'Architecture diagram',
+            src: 'attachments/mobile diagram.png',
+          },
+          type: 'image',
+        },
+      ],
+    }
+
+    expect(tiptapJsonToMobileMarkdown(document)).toBe('![Architecture diagram](<attachments/mobile diagram.png>)')
   })
 })
