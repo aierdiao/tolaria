@@ -360,7 +360,9 @@ function readParagraph(lines: MarkdownLines, startIndex: number): ReadParagraphR
 
 function readParagraphHtml(lines: MarkdownLines, startIndex: number): ReadHtmlBlockResult {
   const paragraph = readParagraph(lines, startIndex)
-  return { html: `<p>${paragraphLinesToHtml(paragraph.lines)}</p>`, nextIndex: paragraph.nextIndex }
+  return hasInlineMarkdownImageSource(paragraph.lines.join('\n'))
+    ? sourceLinesParagraphBlock(paragraph.lines, paragraph.nextIndex)
+    : { html: `<p>${paragraphLinesToHtml(paragraph.lines)}</p>`, nextIndex: paragraph.nextIndex }
 }
 
 function paragraphLinesToHtml(lines: MarkdownLines): HtmlSnippet {
@@ -518,7 +520,7 @@ const blockNodeSerializers: Record<string, (node: TiptapJsonNode) => MarkdownBod
 function serializeParagraph(node: TiptapJsonNode): MarkdownBody {
   const rawMarkdown = serializeInlineChildren(node.content ?? [])
   const normalizedMarkdown = normalizeMobileFallbackParagraphMarkdown(rawMarkdown)
-  return normalizedMarkdown !== rawMarkdown
+  return normalizedMarkdown !== rawMarkdown || hasInlineMarkdownImageSource(rawMarkdown)
     ? normalizedMarkdown
     : serializeInlineChildren(node.content ?? [], { escapePlainText: true })
 }
@@ -526,6 +528,9 @@ function serializeParagraph(node: TiptapJsonNode): MarkdownBody {
 function normalizeMobileFallbackParagraphMarkdown(markdown: MarkdownBody): MarkdownBody {
   const displayMathMarkdown = normalizeMobileDisplayMathMarkdown(markdown)
   if (displayMathMarkdown !== markdown) return displayMathMarkdown
+
+  const inlineImageSourceMarkdown = normalizeInlineImageSourceMarkdown(markdown)
+  if (inlineImageSourceMarkdown !== markdown) return inlineImageSourceMarkdown
 
   const htmlBlockMarkdown = normalizeUnsupportedHtmlBlockMarkdown(markdown)
   if (htmlBlockMarkdown !== markdown) return htmlBlockMarkdown
@@ -540,6 +545,15 @@ function normalizeMobileFallbackParagraphMarkdown(markdown: MarkdownBody): Markd
   if (indentedTextSourceMarkdown !== markdown) return indentedTextSourceMarkdown
 
   return normalizeUnsupportedTableMarkdown(markdown)
+}
+
+function normalizeInlineImageSourceMarkdown(markdown: MarkdownBody): MarkdownBody {
+  const lines = markdown.split('\n').map(stripHardBreakMarker)
+  return lines.some(hasInlineMarkdownImageSource) ? lines.join('\n') : markdown
+}
+
+function hasInlineMarkdownImageSource(markdown: MarkdownBody): boolean {
+  return /(^|[^\\])!\[(?:\\.|[^\]\\\n])*\]\(/u.test(markdown)
 }
 
 function normalizeIndentedCodeFenceSourceMarkdown(markdown: MarkdownBody): MarkdownBody {
