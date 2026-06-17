@@ -9,6 +9,7 @@ describe('mobile type definitions', () => {
       order: 3,
       sort: 'property:Priority:asc',
       tone: 'green',
+      view: 'editor-list',
     })
 
     expect(content).toContain('type: Type')
@@ -16,6 +17,7 @@ describe('mobile type definitions', () => {
     expect(content).toContain('_sidebar_label: Client Projects')
     expect(content).toContain('_order: 3')
     expect(content).toContain('_sort: "property:Priority:asc"')
+    expect(content).toContain('view: editor-list')
     expect(content).toContain('color: green')
     expect(content).not.toContain('\nicon:')
     expect(content).not.toContain('\nsidebar label:')
@@ -33,6 +35,7 @@ sidebar_label: Legacy Projects
 order: 9
 sort: modified:desc
 _sort: title:asc
+View: all
 color: purple
 ---
 # Project
@@ -42,18 +45,21 @@ color: purple
       label: 'Client Projects',
       order: 3,
       sort: 'property:Priority:asc',
+      view: 'editor-list',
     })
 
     expect(content).toContain('_icon: rocket')
     expect(content).toContain('_sidebar_label: Client Projects')
     expect(content).toContain('_order: 3')
     expect(content).toContain('_sort: "property:Priority:asc"')
+    expect(content).toContain('view: editor-list')
     expect(content).toContain('color: purple')
     expect(content).not.toContain('\nicon:')
     expect(content).not.toContain('\nsidebar label:')
     expect(content).not.toContain('\nsidebar_label:')
     expect(content).not.toContain('\norder:')
     expect(content).not.toContain('\nsort:')
+    expect(content).not.toContain('\nView:')
   })
 
   it('removes all aliases when clearing Type system metadata', () => {

@@ -35,6 +35,7 @@ export type MobileTypeDefinitionPatch = {
   sort?: string | null
   template?: string | null
   tone?: MobileTone | null
+  view?: string | null
   visible?: boolean | null
 }
 
@@ -95,6 +96,7 @@ function normalizedTypePatch(patch: MobileTypeDefinitionPatch): MobileTypeDefini
     relationships: normalizedRelationshipsPatch(patch.relationships),
     sort: normalizedTextPatch(patch.sort),
     template: normalizedTextPatch(patch.template),
+    view: normalizedTextPatch(patch.view),
   }
 }
 
@@ -167,6 +169,7 @@ function patchedTypeFrontmatter(
   writeOptionalSystemMetadataValue(nextFrontmatter, systemMetadataAliases.icon, patch.icon)
   writeOptionalFrontmatterValue(nextFrontmatter, 'template', patch.template)
   writeOptionalSystemMetadataValue(nextFrontmatter, systemMetadataAliases.sort, patch.sort)
+  writeOptionalCanonicalFrontmatterValue(nextFrontmatter, 'view', patch.view)
   writeOptionalFrontmatterValue(nextFrontmatter, '_list_properties_display', patch.listPropertiesDisplay)
   writeOptionalSystemMetadataValue(nextFrontmatter, systemMetadataAliases.order, patch.order)
 
@@ -227,6 +230,21 @@ function writeOptionalSystemMetadataValue(
   writeFrontmatterValue(frontmatter, canonicalKey, value)
 }
 
+function writeOptionalCanonicalFrontmatterValue(
+  frontmatter: LocalVaultFrontmatter,
+  canonicalKey: FrontmatterKey,
+  value: LocalVaultFrontmatterValue | undefined,
+) {
+  if (value === undefined) return
+
+  for (const key of Object.keys(frontmatter)) {
+    if (key !== canonicalKey && normalizedFrontmatterKey(key) === normalizedFrontmatterKey(canonicalKey)) {
+      Reflect.deleteProperty(frontmatter, key)
+    }
+  }
+  writeFrontmatterValue(frontmatter, canonicalKey, value)
+}
+
 function writeFrontmatterValue(
   frontmatter: LocalVaultFrontmatter,
   key: string,
@@ -244,6 +262,10 @@ function shouldRemoveFrontmatterValue(
   value: LocalVaultFrontmatterValue | undefined,
 ): value is undefined | null | [] {
   return value === undefined || value === null || (Array.isArray(value) && value.length === 0)
+}
+
+function normalizedFrontmatterKey(key: FrontmatterKey): string {
+  return key.trim().toLowerCase().replace(/\s+/gu, '_')
 }
 
 function defaultTypeDefinitionContent(typeName: TypeName): TypeRawContent {

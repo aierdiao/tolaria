@@ -302,6 +302,7 @@ Icon: folder
 Order: 2
 Sidebar Label: Client Work
 Sort: property:Priority:asc
+View: editor-list
 Visible: false
 ---
 # Project
@@ -316,6 +317,7 @@ Visible: false
       label: 'Client Work',
       order: 2,
       sort: 'property:Priority:asc',
+      view: 'editor-list',
       visible: false,
     })
   })

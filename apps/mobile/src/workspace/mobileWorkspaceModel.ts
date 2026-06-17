@@ -65,6 +65,7 @@ export type MobileTypeDefinition = {
   sort?: string | null
   template?: string | null
   tone?: MobileTone | null
+  view?: string | null
   visible?: boolean | null
 }
 

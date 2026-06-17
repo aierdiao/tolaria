@@ -200,6 +200,7 @@ function typeDefinitionFromFrontmatter(frontmatter: LocalVaultFrontmatter): Mobi
     relationships: frontmatterRelationships(frontmatter),
     sort: frontmatterText(frontmatter, ['_sort', 'sort']),
     template: frontmatterText(frontmatter, ['template']),
+    view: frontmatterText(frontmatter, ['view']),
     visible: frontmatterBoolean(frontmatter, ['visible']),
   }
 }
