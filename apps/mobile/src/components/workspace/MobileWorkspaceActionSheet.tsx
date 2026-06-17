@@ -167,7 +167,7 @@ type MobileWorkspaceActionSheetProps = {
   viewPropertyQuery: string
   viewSortPropertyOptions: string[]
   viewSort: string
-  viewTone: MobileTone
+  viewTone: MobileTone | null
   onTypeDisplayPropertiesChange: (value: string[]) => void
   onTypeNameChange: (value: string) => void
   onTypePropertyQueryChange: (value: string) => void

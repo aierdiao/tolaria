@@ -65,7 +65,7 @@ export type TabletReadOnlyForm = {
   viewName: ReadOnlyFormValue
   viewPropertyQuery: ReadOnlyFormValue
   viewSort: ReadOnlyFormValue
-  viewTone: MobileTone
+  viewTone: MobileTone | null
 }
 
 export type TabletWorkspaceChromeProps = {

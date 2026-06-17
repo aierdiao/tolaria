@@ -9,7 +9,7 @@ import { noteTypeColor, noteTypeSoftColor } from './mobileWorkspaceTone'
 
 type MobileMetadataPickerProps = {
   selectedIcon: string
-  selectedTone: MobileTone
+  selectedTone: MobileTone | null
   testIDPrefix: string
   onIconSelect: (icon: MobileSidebarIcon) => void
   onToneSelect: (tone: MobileTone) => void
@@ -46,7 +46,7 @@ export function MobileMetadataPicker({
       </PickerGroup>
       <PickerGroup
         label={mobileText('customize.color')}
-        selectedLabel={selectedText('viewDialog.selectedColor', selectedTone)}
+        selectedLabel={selectedText('viewDialog.selectedColor', selectedTone ?? mobileText('inspector.properties.none'))}
         testID={`${testIDPrefix}-selected-color`}
       >
         <View style={styles.swatches}>

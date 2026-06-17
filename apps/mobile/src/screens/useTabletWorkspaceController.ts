@@ -57,7 +57,6 @@ import {
 } from '../workspace/mobileWorkspaceMetadata'
 import { useTabletWorkspaceNavigation } from './tabletWorkspaceNavigation'
 import type { TabletReadOnlyForm } from './tabletWorkspaceTypes'
-import type { TabletSidebarSelection } from './tabletWorkspaceNavigation'
 import { createNoteDefaultsForSelection } from './tabletWorkspaceCreateDefaults'
 import { selectAfterWorkspaceEdit } from './tabletWorkspaceEditSelection'
 import { useWorkspaceEditPipeline } from './tabletWorkspacePersistence'
@@ -67,7 +66,7 @@ import {
   folderParentPathForSelection,
   folderWorkspaceActions,
 } from './tabletWorkspaceFolderActions'
-import { viewColorForSelection, viewFiltersForSelection } from './tabletWorkspaceViewHelpers'
+import { createViewInitialFilters } from './tabletWorkspaceViewHelpers'
 
 const emptyReadOnlyForm: TabletReadOnlyForm = {
   createTitle: '',
@@ -102,11 +101,11 @@ const emptyReadOnlyForm: TabletReadOnlyForm = {
   typeVisible: true,
   viewDisplayProperties: [],
   viewFilters: { all: [] },
-  viewIcon: 'view',
+  viewIcon: '',
   viewName: '',
   viewPropertyQuery: '',
-  viewSort: 'modified:desc',
-  viewTone: 'gray',
+  viewSort: '',
+  viewTone: null,
 }
 
 type ApplyWorkspaceEdit = (edit: MobileWorkspaceEdit) => void
@@ -150,7 +149,7 @@ export function useTabletWorkspaceController({
   const applyEdit = useControllerApplyEdit({ applyWorkspaceEdit, navigation, setSelectedNoteId })
   const closeAction = useCloseWorkspaceAction({ resetForm, setOpenAction })
   const saveSelectedEdit = useSaveSelectedEdit({ applyEdit, closeAction, selectedNote })
-  const createActions = createWorkspaceActions({
+  const workspaceActionsContext = {
     applyEdit,
     closeAction,
     navigation,
@@ -159,7 +158,8 @@ export function useTabletWorkspaceController({
     setOpenAction,
     updateReadOnlyForm,
     workspaceSnapshot,
-  })
+  }
+  const createActions = createWorkspaceActions(workspaceActionsContext)
   const propertyActions = propertyWorkspaceActions({
     applyEdit,
     readOnlyForm,
@@ -187,15 +187,7 @@ export function useTabletWorkspaceController({
     selectedNote,
     workspaceSnapshot,
   })
-  const actionSheetActions = actionSheetWorkspaceActions({
-    closeAction,
-    navigation,
-    noteListTitle: navigation.noteListTitle,
-    selectedNote,
-    setOpenAction,
-    updateReadOnlyForm,
-    workspaceSnapshot,
-  })
+  const actionSheetActions = actionSheetWorkspaceActions(workspaceActionsContext)
   useHydrateSelectedNote({ applyEdit, repository, repositoryRequest, selectedNote })
 
   return {
@@ -303,7 +295,6 @@ function useHydrateSelectedNote({
 function actionSheetWorkspaceActions({
   closeAction,
   navigation,
-  noteListTitle,
   selectedNote,
   setOpenAction,
   updateReadOnlyForm,
@@ -311,7 +302,6 @@ function actionSheetWorkspaceActions({
 }: {
   closeAction: () => void
   navigation: TabletWorkspaceNavigation
-  noteListTitle: string
   selectedNote: MobileNote | null
   setOpenAction: SetOpenAction
   updateReadOnlyForm: ReadOnlyFormUpdater
@@ -332,12 +322,7 @@ function actionSheetWorkspaceActions({
     onOpenCreateNote: () => setOpenAction('createNote'),
     onOpenCreateType: () => openAction('createType', [{ key: 'typeName', value: '' }]),
     onOpenCreateView: () => openCreateView({
-      filters: viewFiltersForSelection(navigation.sidebarSelection, navigation.notes, selectedNote, workspaceSnapshot.views ?? []),
-      noteListTitle,
-      selectedNote,
-      selection: navigation.sidebarSelection,
       setOpenAction,
-      typeDefinitions: workspaceSnapshot.typeDefinitions,
       updateReadOnlyForm,
     }),
     onOpenMoreActions: () => setOpenAction('moreActions'),
@@ -421,8 +406,8 @@ function savedViewWorkspaceActions({
     canMoveViewDown: canMoveMobileSavedView(workspaceSnapshot.views ?? [], readOnlyForm.editingViewId, 'down'),
     canMoveViewUp: canMoveMobileSavedView(workspaceSnapshot.views ?? [], readOnlyForm.editingViewId, 'up'),
     onDeleteView: () => deleteView({ applyEdit, closeAction, viewId: readOnlyForm.editingViewId }),
-    onMoveViewDown: () => moveView({ applyEdit, direction: 'down', viewId: readOnlyForm.editingViewId }),
-    onMoveViewUp: () => moveView({ applyEdit, direction: 'up', viewId: readOnlyForm.editingViewId }),
+    onMoveViewDown: () => moveWorkspaceSidebarItem({ applyEdit, direction: 'down', itemId: readOnlyForm.editingViewId, kind: 'view' }),
+    onMoveViewUp: () => moveWorkspaceSidebarItem({ applyEdit, direction: 'up', itemId: readOnlyForm.editingViewId, kind: 'view' }),
     onSaveView: () => updateView({
       applyEdit,
       closeAction,
@@ -474,8 +459,8 @@ function typeSectionWorkspaceActions({
       toEdit: (typeName) => ({ type: 'deleteTypeDefinition', typeName }),
       value: readOnlyForm.typeName,
     }),
-    onMoveTypeDown: () => moveTypeSection({ applyEdit, direction: 'down', typeName: readOnlyForm.typeName }),
-    onMoveTypeUp: () => moveTypeSection({ applyEdit, direction: 'up', typeName: readOnlyForm.typeName }),
+    onMoveTypeDown: () => moveWorkspaceSidebarItem({ applyEdit, direction: 'down', itemId: readOnlyForm.typeName, kind: 'typeSection' }),
+    onMoveTypeUp: () => moveWorkspaceSidebarItem({ applyEdit, direction: 'up', itemId: readOnlyForm.typeName, kind: 'typeSection' }),
     onSaveTypeDefinition: () => updateTypeDefinition({ applyEdit, closeAction, form: readOnlyForm }),
     onTypeDisplayPropertiesChange: (value: string[]) => updateReadOnlyForm('typeDisplayProperties', value),
     onTypePropertyQueryChange: (value: string) => updateReadOnlyForm('typePropertyQuery', value),
@@ -762,30 +747,17 @@ function openWorkspaceAction({
 }
 
 function openCreateView({
-  filters,
-  noteListTitle,
-  selectedNote,
-  selection,
   setOpenAction,
-  typeDefinitions,
   updateReadOnlyForm,
 }: {
-  filters: MobileViewFilterGroup
-  noteListTitle: string
-  selectedNote: MobileNote | null
-  selection: TabletSidebarSelection
   setOpenAction: SetOpenAction
-  typeDefinitions?: MobileTypeDefinitions
   updateReadOnlyForm: ReadOnlyFormUpdater
 }) {
-  updateReadOnlyForm('viewFilters', cloneFilterGroup(filters))
-  updateReadOnlyForm('viewIcon', 'view')
-  updateReadOnlyForm('viewName', defaultViewName(noteListTitle))
-  updateReadOnlyForm('viewSort', 'modified:desc')
-  updateReadOnlyForm('viewTone', mobileToneFromValue(
-    viewColorForSelection(selection, selectedNote, typeDefinitions),
-    'gray',
-  ))
+  updateReadOnlyForm('viewFilters', createViewInitialFilters())
+  updateReadOnlyForm('viewIcon', '')
+  updateReadOnlyForm('viewName', '')
+  updateReadOnlyForm('viewSort', '')
+  updateReadOnlyForm('viewTone', null)
   setOpenAction('createView')
 }
 
@@ -807,11 +779,11 @@ function openViewActions({
   updateReadOnlyForm('editingViewId', selection.viewId ?? selection.id)
   updateReadOnlyForm('viewDisplayProperties', viewDisplayPropertiesForEdit(view, snapshot))
   updateReadOnlyForm('viewFilters', cloneFilterGroup(view.definition.filters))
-  updateReadOnlyForm('viewIcon', mobileSidebarIconFromValue(view.definition.icon, 'view'))
+  updateReadOnlyForm('viewIcon', view.definition.icon ?? '')
   updateReadOnlyForm('viewName', selection.label)
   updateReadOnlyForm('viewPropertyQuery', '')
-  updateReadOnlyForm('viewSort', view.definition.sort ?? 'modified:desc')
-  updateReadOnlyForm('viewTone', mobileToneFromValue(view.definition.color, 'gray'))
+  updateReadOnlyForm('viewSort', view.definition.sort ?? '')
+  updateReadOnlyForm('viewTone', view.definition.color ? mobileToneFromValue(view.definition.color, 'gray') : null)
   setOpenAction('editView')
 }
 
@@ -925,7 +897,7 @@ function createView({
   icon: string
   name: string
   sort: string
-  tone: MobileTone
+  tone: MobileTone | null
 }) {
   const trimmedName = name.trim()
   if (!trimmedName) return
@@ -934,9 +906,9 @@ function createView({
     definition: {
       color: tone,
       filters,
-      icon: normalizedIcon(icon, 'view'),
+      icon: normalizedOptionalIcon(icon),
       name: trimmedName,
-      sort: normalizedSort(sort),
+      sort: normalizedOptionalSort(sort),
     },
     type: 'createView',
   })
@@ -962,7 +934,7 @@ function updateView({
   icon: string
   name: string
   sort: string
-  tone: MobileTone
+  tone: MobileTone | null
   viewId: string
   views: NonNullable<MobileWorkspaceSnapshot['views']>
 }) {
@@ -974,10 +946,10 @@ function updateView({
     definition: {
       ...view.definition,
       filters,
-      icon: normalizedIcon(icon, 'view'),
+      icon: normalizedOptionalIcon(icon),
       listPropertiesDisplay: normalizedListPropertiesDisplay(displayProperties),
       name: trimmedName,
-      sort: normalizedSort(sort),
+      sort: normalizedOptionalSort(sort),
       color: tone,
     },
     type: 'updateView',
@@ -1062,12 +1034,16 @@ function normalizedListPropertiesDisplay(displayProperties: string[]) {
     })
 }
 
-function normalizedSort(sort: string) {
-  return sort.trim() || 'modified:desc'
+function normalizedOptionalSort(sort: string) {
+  return sort.trim() || null
 }
 
 function normalizedIcon(icon: string, fallback: MobileSidebarIcon) {
   return mobileSidebarIconFromValue(icon, fallback)
+}
+
+function normalizedOptionalIcon(icon: string) {
+  return icon.trim() ? mobileSidebarIconFromValue(icon, 'view') : null
 }
 
 function workspaceNotes(snapshot: MobileWorkspaceSnapshot) {
@@ -1089,36 +1065,32 @@ function normalizedLabel(value: string) {
   return value.trim().toLowerCase().replace(/[^a-z0-9]+/g, '')
 }
 
-function moveView({
+function moveWorkspaceSidebarItem({
   applyEdit,
   direction,
-  viewId,
+  itemId,
+  kind,
 }: {
   applyEdit: (edit: MobileWorkspaceEdit) => void
   direction: 'down' | 'up'
-  viewId: string
+  itemId: string
+  kind: 'typeSection' | 'view'
 }) {
   applyNonEmptyStringEdit({
     applyEdit,
-    toEdit: (trimmedViewId) => ({ direction, type: 'moveView', viewId: trimmedViewId }),
-    value: viewId,
+    toEdit: (trimmedId) => moveSidebarItemEdit(kind, trimmedId, direction),
+    value: itemId,
   })
 }
 
-function moveTypeSection({
-  applyEdit,
-  direction,
-  typeName,
-}: {
-  applyEdit: (edit: MobileWorkspaceEdit) => void
-  direction: 'down' | 'up'
-  typeName: string
-}) {
-  applyNonEmptyStringEdit({
-    applyEdit,
-    toEdit: (trimmedTypeName) => ({ direction, type: 'moveTypeSection', typeName: trimmedTypeName }),
-    value: typeName,
-  })
+function moveSidebarItemEdit(
+  kind: 'typeSection' | 'view',
+  itemId: string,
+  direction: 'down' | 'up',
+): MobileWorkspaceEdit {
+  return kind === 'view'
+    ? { direction, type: 'moveView', viewId: itemId }
+    : { direction, type: 'moveTypeSection', typeName: itemId }
 }
 
 function canMoveTypeSection(
@@ -1166,10 +1138,6 @@ function applyNonEmptyStringEdit({
 
   applyEdit(toEdit(trimmedValue))
   closeAction?.()
-}
-
-function defaultViewName(title: string) {
-  return title.trim() || 'New View'
 }
 
 function cloneFilterGroup(group: MobileViewFilterGroup): MobileViewFilterGroup {

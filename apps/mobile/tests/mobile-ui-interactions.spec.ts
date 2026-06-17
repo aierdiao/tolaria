@@ -25,7 +25,7 @@ test.describe('mobile UI lab interactions', () => {
     await toggleFavorite(page)
     await retargetSelectedRelease(page)
     await createMobileQaDraft(page)
-    await createSavedViewFromSidebar(page)
+    await createSavedViewFromSidebar(page, { returnToInbox: true })
     await addDatePropertyFromSuggestion(page)
     await addRelationshipFromSuggestion(page)
     await editMarkdownWithWikilink(page)
@@ -424,15 +424,24 @@ async function navigatePhoneSwipeGestures(page: PageLike) {
   await expect(page.getByTestId('phone-note-list-screen')).toBeVisible()
 }
 
-async function createSavedViewFromSidebar(page: PageLike) {
+async function createSavedViewFromSidebar(
+  page: PageLike,
+  options: { returnToInbox?: boolean } = {},
+) {
   await page.getByTestId('sidebar-section-create-views').click()
   await expect(page.getByTestId('workspace-create-view-name-input')).toBeVisible()
-  await expect(page.getByTestId('workspace-create-view-name-input')).toHaveValue('Inbox')
+  await expect(page.getByTestId('workspace-create-view-name-input')).toHaveValue('')
+  await expect(page.getByTestId('workspace-view-filter-value-input-0')).toHaveValue('')
+  await page.getByTestId('workspace-view-filter-remove-0').click()
   await page.getByTestId('workspace-create-view-name-input').fill('Mobile Inbox View')
   await page.getByTestId('workspace-action-sheet-createView').getByRole('button', { exact: true, name: 'Create' }).click()
   await expect(page.getByTestId('workspace-action-sheet')).toBeHidden()
   await expect(page.getByRole('button', { name: 'Mobile Inbox View' })).toBeVisible()
   await expect(page.getByTestId('note-list-toolbar-title')).toHaveText('Mobile Inbox View')
+  if (options.returnToInbox) {
+    await page.getByTestId('sidebar-item-inbox').click()
+    await expect(page.getByTestId('note-list-toolbar-title')).toHaveText('Inbox')
+  }
 }
 
 async function editAndDeleteSavedView(page: PageLike) {
@@ -479,9 +488,6 @@ async function customizeCreatedSavedViewColumns(page: PageLike) {
   await page.getByTestId('workspace-view-tone-green').click()
   await expect(page.getByTestId('workspace-view-selected-icon')).toContainText('star')
   await expect(page.getByTestId('workspace-view-selected-color')).toContainText('green')
-  await expect(page.getByTestId('workspace-view-filter-operator-0-equals')).toBeVisible()
-  await expect(page.getByTestId('workspace-view-filter-operator-0-any_of')).toHaveCount(0)
-  await expect(page.getByTestId('workspace-view-filter-operator-0-none_of')).toHaveCount(0)
   await page.getByTestId('workspace-view-property-picker').scrollIntoViewIfNeeded()
   await expect(page.getByTestId('workspace-view-property-picker')).toBeVisible()
   await page.getByTestId('workspace-view-sort-custom-field-input').fill('Pri')
@@ -822,6 +828,12 @@ async function archiveAndUnarchiveSelectedNote(page: PageLike) {
 }
 
 async function organizeUnorganizeAndDeleteSelectedDraft(page: PageLike) {
+  await page.getByTestId('sidebar-item-inbox').click()
+  await expect(page.getByTestId('note-list-toolbar-title')).toHaveText('Inbox')
+  await expect(page.getByTestId('note-row-mobile-qa-draft.md')).toBeVisible()
+  await page.getByTestId('note-row-mobile-qa-draft.md').click()
+  await expect(page.getByTestId('editor-title')).toHaveText('Mobile QA Draft Revised')
+
   await page.getByTestId('editor-more-action').click()
   await expect(page.getByText('Mark as Organized')).toBeVisible()
   await page.getByTestId('workspace-action-organize-note').click()
@@ -837,7 +849,7 @@ async function organizeUnorganizeAndDeleteSelectedDraft(page: PageLike) {
   await expect(page.getByText('Mark as Unorganized')).toBeVisible()
   await page.getByTestId('workspace-action-organize-note').click()
   await expect(page.getByTestId('workspace-action-sheet')).toBeHidden()
-  await page.getByRole('button', { name: 'Mobile Inbox View' }).click()
+  await page.getByTestId('sidebar-item-inbox').click()
   await expect(page.getByTestId('note-row-mobile-qa-draft.md')).toBeVisible()
   await page.getByTestId('note-row-mobile-qa-draft.md').click()
   await expect(page.getByTestId('editor-title')).toHaveText('Mobile QA Draft Revised')
