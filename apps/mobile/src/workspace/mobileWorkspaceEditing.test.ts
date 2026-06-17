@@ -341,6 +341,60 @@ describe('applyMobileWorkspaceEdit', () => {
     })
   })
 
+  it('renames note files after desktop title frontmatter edits and rewrites inbound wikilinks', () => {
+    const { movedSource, referringNote, snapshot } = workspaceMoveLinkScenario()
+    const editableSource = {
+      ...movedSource,
+      rawContent: [
+        '---',
+        'title: Workflow Orchestration Essay',
+        'type: Essay',
+        '---',
+        'Body without an H1.',
+        '',
+      ].join('\n'),
+    }
+    const result = applyMobileWorkspaceEditWithWrites({
+      ...snapshot,
+      allNotes: [editableSource, referringNote],
+      notes: [editableSource, referringNote],
+    }, {
+      key: 'title',
+      noteId: movedSource.id,
+      type: 'updateProperty',
+      value: 'Renamed Workflow Essay',
+    })
+    const renamed = noteById(result.snapshot, movedSource.id)
+    const updatedRef = noteById(result.snapshot, referringNote.id)
+
+    expect(renamed).toMatchObject({
+      path: 'Tolaria/Mobile UI/renamed-workflow-essay.md',
+      title: 'Renamed Workflow Essay',
+    })
+    expect(renamed.rawContent).toContain('title: Renamed Workflow Essay')
+    expect(updatedRef.rawContent).toContain('[[Tolaria/Mobile UI/renamed-workflow-essay]]')
+    expect(updatedRef.rawContent).toContain('[[Tolaria/Mobile UI/renamed-workflow-essay|Workflow]]')
+    expect(updatedRef.rawContent).not.toContain('[[Workflow Orchestration Essay]]')
+    expect(updatedRef.rawContent).not.toContain('[[Tolaria/Mobile UI/Workflow Orchestration Essay')
+    expect(result.writes).toEqual([
+      {
+        content: renamed.rawContent,
+        kind: 'saveNote',
+        path: 'Tolaria/Mobile UI/Workflow Orchestration Essay.md',
+      },
+      {
+        kind: 'moveNote',
+        path: 'Tolaria/Mobile UI/Workflow Orchestration Essay.md',
+        toPath: 'Tolaria/Mobile UI/renamed-workflow-essay.md',
+      },
+      {
+        content: updatedRef.rawContent,
+        kind: 'saveNote',
+        path: 'Refs.md',
+      },
+    ])
+  })
+
   it.each([
     {
       edit: {

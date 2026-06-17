@@ -21,23 +21,6 @@ describe('mobile note creation parity', () => {
     })
   })
 
-  it('renames frontmatter-titled notes without adding a duplicate H1 title', () => {
-    const created = applyMobileWorkspaceEdit(workspaceScenarioForId('default'), {
-      title: 'Mobile Editing Contract',
-      type: 'createNote',
-    })
-    const snapshot = applyMobileWorkspaceEdit(created, {
-      noteId: 'mobile-editing-contract.md',
-      title: 'Revised Mobile Contract',
-      type: 'renameNoteTitle',
-    })
-
-    expect(snapshot.notes[0]).toMatchObject({
-      rawContent: '---\ntitle: Revised Mobile Contract\ntype: Note\n---\n',
-      title: 'Revised Mobile Contract',
-    })
-  })
-
   it('creates typed notes with Type template body content', () => {
     const result = applyMobileWorkspaceEditWithWrites(workspaceScenarioForId('default'), {
       defaults: {

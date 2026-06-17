@@ -47,6 +47,7 @@ import { normalizedMobileFolderPath } from './mobileWorkspaceFolders'
 import { applyMobileFolderEdit } from './mobileWorkspaceFolderEditing'
 import {
   movedMobileNoteFilePath,
+  mobileFilenameStemForTitle,
   renamedMobileNoteFilePath,
   uniqueMobileNotePath,
   validateMobileMoveNoteFolderPath,
@@ -76,7 +77,6 @@ type WikilinkTarget = string
 
 export type MobileWorkspaceEdit =
   | { content: MarkdownContent; noteId: NoteId; type: 'updateNoteContent' }
-  | { noteId: NoteId; title: NoteTitle; type: 'renameNoteTitle' }
   | { defaults?: MobileCreateNoteDefaults; title: NoteTitle; type: 'createNote' }
   | { noteId: NoteId; type: 'deleteNote' }
   | { noteId: NoteId; rawContent: MarkdownContent; type: 'hydrateNoteContent' }
@@ -141,6 +141,7 @@ type MobileNoteEditContext = {
   notes: MobileNote[]
   typeDefinitions?: MobileTypeDefinitions
 }
+type TitlePropertyUpdateEdit = Extract<MobileWorkspaceEdit, { type: 'updateProperty' }> & { value: string }
 type RelationshipTargetRefContext = {
   relationshipKey: FrontmatterKey
   sourceNoteId: NoteId
@@ -183,10 +184,6 @@ const mobileNoteEditHandlers: Record<MobileNoteEdit['type'], MobileNoteEditHandl
     if (edit.type !== 'removeRelationship') return editableNote
     return removeRelationship(editableNote, edit.key, edit.ref)
   },
-  renameNoteTitle: ({ editableNote, typeDefinitions }, edit) => {
-    if (edit.type !== 'renameNoteTitle') return editableNote
-    return deriveEditedNote(editableNote, replaceMarkdownTitle(editableNote.rawContent, edit.title), typeDefinitions)
-  },
   setArchived: ({ editableNote, typeDefinitions }, edit) => {
     if (edit.type !== 'setArchived') return editableNote
     return deriveEditedNote(editableNote, writeFrontmatterValue(editableNote.rawContent, '_archived', edit.archived), typeDefinitions)
@@ -225,6 +222,7 @@ const mobileWorkspaceResultHandlers: MobileWorkspaceResultHandlerMap = {
   renameFolder: (snapshot, edit) => applyMobileFolderEdit(snapshot, edit, rebuildSnapshot),
   renameNoteFile: (snapshot, edit) => renameNoteFile(snapshot, edit),
   updateTypeDefinition: (snapshot, edit) => applyMobileTypeEdit(snapshot, edit, rebuildSnapshot),
+  updateProperty: (snapshot, edit) => updateMobileNoteProperty(snapshot, edit),
   updateView: (snapshot, edit) => updateMobileView(snapshot, edit.viewId, edit.definition),
 }
 
@@ -234,7 +232,6 @@ const mobileNoteEditTypes = new Set<MobileWorkspaceEdit['type']>([
   'deleteProperty',
   'hydrateNoteContent',
   'removeRelationship',
-  'renameNoteTitle',
   'setArchived',
   'setOrganized',
   'toggleFavorite',
@@ -257,6 +254,13 @@ export function applyMobileWorkspaceEditWithWrites(
   if (handledResult) return handledResult
   if (!isMobileNoteEdit(edit)) return { snapshot, writes: [] }
 
+  return applyMobileNoteEditResult(snapshot, edit)
+}
+
+function applyMobileNoteEditResult(
+  snapshot: MobileWorkspaceSnapshot,
+  edit: MobileNoteEdit,
+): MobileWorkspaceEditResult {
   const notePool = workspaceNotePool(snapshot)
   const notes = snapshot.notes.map((note) => applyMobileNoteEdit(note, notePool, edit, snapshot.typeDefinitions))
   const allNotes = snapshot.allNotes?.map((note) => applyMobileNoteEdit(note, notePool, edit, snapshot.typeDefinitions))
@@ -266,6 +270,53 @@ export function applyMobileWorkspaceEditWithWrites(
     snapshot: nextSnapshot,
     writes: saveNoteWrites(snapshot, nextSnapshot, edit),
   }
+}
+
+function updateMobileNoteProperty(
+  snapshot: MobileWorkspaceSnapshot,
+  edit: Extract<MobileWorkspaceEdit, { type: 'updateProperty' }>,
+): MobileWorkspaceEditResult {
+  const result = applyMobileNoteEditResult(snapshot, edit)
+  if (!isTitlePropertyUpdate(edit)) return result
+
+  return renameNoteFileAfterTitlePropertyUpdate(snapshot, result, edit)
+}
+
+function renameNoteFileAfterTitlePropertyUpdate(
+  previousSnapshot: MobileWorkspaceSnapshot,
+  result: MobileWorkspaceEditResult,
+  edit: TitlePropertyUpdateEdit,
+): MobileWorkspaceEditResult {
+  const previousNote = workspaceNoteById(previousSnapshot, edit.noteId)
+  const nextNote = workspaceNoteById(result.snapshot, edit.noteId)
+  if (!previousNote || !nextNote?.rawContent) return result
+
+  const filenameStem = mobileFilenameStemForTitle(edit.value)
+  const validation = validateMobileRenameNoteFilePath({
+    filenameStem,
+    note: nextNote,
+    notes: workspaceNotePool(previousSnapshot),
+  })
+  if (validation !== 'ok') return result
+
+  const movedNoteResult = moveNoteToPath(
+    result.snapshot,
+    previousNote,
+    renamedNoteFile(nextNote, filenameStem),
+  )
+
+  return {
+    snapshot: movedNoteResult.snapshot,
+    writes: [...result.writes, ...movedNoteResult.writes],
+  }
+}
+
+function isTitlePropertyUpdate(
+  edit: Extract<MobileWorkspaceEdit, { type: 'updateProperty' }>,
+): edit is TitlePropertyUpdateEdit {
+  return normalizedFrontmatterKey(edit.key) === 'title'
+    && typeof edit.value === 'string'
+    && edit.value.trim().length > 0
 }
 
 function isMobileNoteEdit(edit: MobileWorkspaceEdit): edit is MobileNoteEdit {
@@ -1071,27 +1122,6 @@ function serializeScalar(value: Exclude<LocalVaultFrontmatterValue, LocalVaultFr
   return serializeLocalVaultFrontmatterScalar(value)
 }
 
-function replaceMarkdownTitle(content: MarkdownContent, title: NoteTitle): MarkdownContent {
-  const cleanTitle = title.trim()
-  if (!cleanTitle) return content
-
-  const document = parseLocalVaultDocument(content)
-  if (Object.prototype.hasOwnProperty.call(document.frontmatter, 'title')) {
-    return serializeDocument(writeMobileFrontmatterValue(document.frontmatter, 'title', cleanTitle), document.body)
-  }
-
-  const lines = document.body.split(/\r?\n/)
-  const firstContentIndex = lines.findIndex((line) => line.trim())
-
-  if (firstContentIndex >= 0 && lines[firstContentIndex]?.trim().startsWith('# ')) {
-    lines[firstContentIndex] = `# ${cleanTitle}`
-  } else {
-    lines.unshift(`# ${cleanTitle}`, '')
-  }
-
-  return serializeDocument(document.frontmatter, lines.join('\n'))
-}
-
 function mobileRelationships(
   relationships: Record<FrontmatterKey, WikilinkRef[]>,
   notes: MobileNote[],
@@ -1225,6 +1255,10 @@ function humanizeKey(key: FrontmatterKey): string {
   return key
     .replaceAll('_', ' ')
     .replace(/\b\w/g, (char) => char.toUpperCase())
+}
+
+function normalizedFrontmatterKey(key: FrontmatterKey): string {
+  return key.trim().toLowerCase().replace(/\s+/g, '_')
 }
 
 function linkCount(body: MarkdownContent): number {
