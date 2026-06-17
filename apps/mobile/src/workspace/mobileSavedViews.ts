@@ -407,6 +407,9 @@ function evaluateCondition(
   note: MobileNote,
   mode: ViewEvaluationMode,
 ): boolean {
+  const internalPathResult = evaluateInternalPathCondition(condition, note, mode)
+  if (internalPathResult !== null) return internalPathResult
+
   const field = resolveNoteField(note, condition.field, mode)
   const emptyResult = emptyConditionResult(condition.op, field)
   if (emptyResult !== null) return emptyResult
@@ -532,6 +535,28 @@ function scalarTextComparisonResult(op: MobileViewFilterOp, text: string, target
   if (op === 'contains') return text.includes(target)
   if (op === 'not_contains') return !text.includes(target)
   return null
+}
+
+function evaluateInternalPathCondition(
+  condition: MobileViewFilterCondition,
+  note: MobileNote,
+  mode: ViewEvaluationMode,
+): boolean | null {
+  if (mode !== 'mobileInternal' || condition.field.toLowerCase() !== 'path') return null
+  if (condition.regex === true || (condition.op !== 'contains' && condition.op !== 'not_contains')) return null
+
+  const matched = folderContainsNotePath(textValue(condition.value), note.path ?? note.id)
+  return condition.op === 'contains' ? matched : !matched
+}
+
+function folderContainsNotePath(folderPath: string, notePath: string): boolean {
+  const folder = normalizedPath(folderPath)
+  const noteFolder = normalizedPath(notePath).split('/').slice(0, -1).join('/')
+  return Boolean(folder && noteFolder && (noteFolder === folder || noteFolder.startsWith(`${folder}/`)))
+}
+
+function normalizedPath(path: string): string {
+  return path.toLowerCase().replace(/^\/+|\/+$/g, '').replace(/\/+/g, '/')
 }
 
 function scalarSetConditionResult(condition: MobileViewFilterCondition, text: string): boolean | null {

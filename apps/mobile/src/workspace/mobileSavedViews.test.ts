@@ -235,6 +235,28 @@ filters:
     expect(evaluateMobileSavedView(internalView, notes).map((candidate) => candidate.id)).toEqual(['metadata-only-match'])
   })
 
+  it('evaluates mobile folder-derived path filters with folder boundaries', () => {
+    const view = {
+      definition: {
+        color: null,
+        evaluationMode: 'mobileInternal' as const,
+        filters: { all: [{ field: 'path', op: 'contains' as const, value: 'Writing' }] },
+        icon: null,
+        name: 'Writing',
+        sort: null,
+      },
+      filename: 'writing.yml',
+      id: 'view-writing',
+    }
+
+    expect(evaluateMobileSavedView(view, [
+      note({ id: 'root', path: 'Writing/Root.md' }),
+      note({ id: 'descendant', path: 'Writing/Projects/Alpha.md' }),
+      note({ id: 'substring', path: 'Copywriting/Idea.md' }),
+      note({ id: 'duplicate-label', path: 'Archive/Writing/Old.md' }),
+    ]).map((candidate) => candidate.id)).toEqual(['root', 'descendant'])
+  })
+
   it('evaluates regex-enabled saved-view filters like desktop', () => {
     const view = parseMobileSavedViewFile({
       relativePath: 'views/regex.yml',
