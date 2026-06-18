@@ -118,6 +118,7 @@ function mutationProofFailures(
 ): Array<NativeWysiwygPersistenceAssertionFailure | null> {
   return [
     proofFailure(proof.frontmatterPreserved, 'editor.wysiwyg.persistence.mutation.frontmatter', 'Frontmatter boundary survives native WYSIWYG saves'),
+    proofFailure(proof.attachmentLinkSaved, 'editor.wysiwyg.persistence.mutation.attachment', 'Native file attachment links serialize back to portable desktop markdown'),
     proofFailure(proof.typePreserved, 'editor.wysiwyg.persistence.mutation.type', 'Desktop type frontmatter survives native WYSIWYG saves'),
     proofFailure(proof.statusPreserved, 'editor.wysiwyg.persistence.mutation.status', 'Desktop status frontmatter survives native WYSIWYG saves'),
     proofFailure(proof.tagsPreserved, 'editor.wysiwyg.persistence.mutation.tags', 'Desktop tag frontmatter survives native WYSIWYG saves'),

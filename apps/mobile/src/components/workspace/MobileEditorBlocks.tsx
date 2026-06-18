@@ -1,5 +1,5 @@
 import { CheckSquare, Square } from 'phosphor-react-native'
-import { Linking, StyleSheet, type TextStyle, View } from 'react-native'
+import { StyleSheet, type TextStyle, View } from 'react-native'
 import { Text } from '../ui/text'
 import {
   desktopEditorParity,
@@ -16,22 +16,26 @@ import type {
 type MobileEditorBlocksProps = {
   blocks: MobileEditorBlock[]
   fallbackBullets: string[]
+  onOpenLink?: (href: string) => void
   onNavigateWikilink: (target: string) => void
 }
 
 type EditorListProps =
   | {
     items: MobileEditorListItem[]
+    onOpenLink?: (href: string) => void
     onNavigateWikilink: (target: string) => void
     variant: 'bullet'
   }
   | {
     items: MobileEditorOrderedListItem[]
+    onOpenLink?: (href: string) => void
     onNavigateWikilink: (target: string) => void
     variant: 'ordered'
   }
   | {
     items: MobileEditorTaskItem[]
+    onOpenLink?: (href: string) => void
     onNavigateWikilink: (target: string) => void
     variant: 'task'
   }
@@ -41,6 +45,7 @@ const bulletSymbols = ['•', '◦', '▪'] as const
 export function MobileEditorBlocks({
   blocks,
   fallbackBullets,
+  onOpenLink,
   onNavigateWikilink,
 }: MobileEditorBlocksProps) {
   if (blocks.length === 0) {
@@ -50,7 +55,12 @@ export function MobileEditorBlocks({
   return (
     <>
       {blocks.map((block, index) => (
-        <EditorBlock block={block} key={`${block.kind}-${index}`} onNavigateWikilink={onNavigateWikilink} />
+        <EditorBlock
+          block={block}
+          key={`${block.kind}-${index}`}
+          onOpenLink={onOpenLink}
+          onNavigateWikilink={onNavigateWikilink}
+        />
       ))}
     </>
   )
@@ -71,17 +81,19 @@ function FallbackBullets({ bullets }: { bullets: string[] }) {
 
 function EditorBlock({
   block,
+  onOpenLink,
   onNavigateWikilink,
 }: {
   block: MobileEditorBlock
+  onOpenLink?: (href: string) => void
   onNavigateWikilink: (target: string) => void
 }) {
-  if (block.kind === 'paragraph') return <EditorParagraph block={block} onNavigateWikilink={onNavigateWikilink} />
+  if (block.kind === 'paragraph') return <EditorParagraph block={block} onOpenLink={onOpenLink} onNavigateWikilink={onNavigateWikilink} />
   if (block.kind === 'heading') return <EditorHeading block={block} />
-  if (block.kind === 'bullets') return <EditorList items={block.items} variant="bullet" onNavigateWikilink={onNavigateWikilink} />
-  if (block.kind === 'orderedList') return <EditorList items={block.items} variant="ordered" onNavigateWikilink={onNavigateWikilink} />
-  if (block.kind === 'tasks') return <EditorList items={block.items} variant="task" onNavigateWikilink={onNavigateWikilink} />
-  if (block.kind === 'quote') return <EditorQuote content={block.content} onNavigateWikilink={onNavigateWikilink} />
+  if (block.kind === 'bullets') return <EditorList items={block.items} variant="bullet" onOpenLink={onOpenLink} onNavigateWikilink={onNavigateWikilink} />
+  if (block.kind === 'orderedList') return <EditorList items={block.items} variant="ordered" onOpenLink={onOpenLink} onNavigateWikilink={onNavigateWikilink} />
+  if (block.kind === 'tasks') return <EditorList items={block.items} variant="task" onOpenLink={onOpenLink} onNavigateWikilink={onNavigateWikilink} />
+  if (block.kind === 'quote') return <EditorQuote content={block.content} onOpenLink={onOpenLink} onNavigateWikilink={onNavigateWikilink} />
   if (block.kind === 'codeBlock') return <EditorCodeBlock code={block.code} language={block.language ?? null} />
   if (block.kind === 'divider') return <View style={dividerStyles.divider} testID="editor-divider" />
   return <EditorTable headers={block.headers} rows={block.rows} />
@@ -89,9 +101,11 @@ function EditorBlock({
 
 function EditorParagraph({
   block,
+  onOpenLink,
   onNavigateWikilink,
 }: {
   block: Extract<MobileEditorBlock, { kind: 'paragraph' }>
+  onOpenLink?: (href: string) => void
   onNavigateWikilink: (target: string) => void
 }) {
   return (
@@ -99,6 +113,7 @@ function EditorParagraph({
       content={block.content}
       style={textStyles.paragraph}
       testID="editor-paragraph"
+      onOpenLink={onOpenLink}
       onNavigateWikilink={onNavigateWikilink}
     />
   )
@@ -127,6 +142,7 @@ function editorListRow(props: EditorListProps, item: MobileEditorListItem, index
         item={item as MobileEditorTaskItem}
         key={`task-${index}`}
         testID="editor-task-row"
+        onOpenLink={props.onOpenLink}
         onNavigateWikilink={props.onNavigateWikilink}
       />
     )
@@ -139,6 +155,7 @@ function editorListRow(props: EditorListProps, item: MobileEditorListItem, index
       marker={listMarker(props.variant, item)}
       testID={`editor-${props.variant}-row`}
       textTestID={`editor-${props.variant}-text`}
+      onOpenLink={props.onOpenLink}
       onNavigateWikilink={props.onNavigateWikilink}
     />
   )
@@ -147,12 +164,14 @@ function editorListRow(props: EditorListProps, item: MobileEditorListItem, index
 function ListRow({
   item,
   marker,
+  onOpenLink,
   onNavigateWikilink,
   testID,
   textTestID,
 }: {
   item: MobileEditorListItem
   marker: string
+  onOpenLink?: (href: string) => void
   onNavigateWikilink: (target: string) => void
   testID: string
   textTestID: string
@@ -160,17 +179,25 @@ function ListRow({
   return (
     <View style={[listStyles.row, listDepthStyle(item.depth)]} testID={testID}>
       <Text style={listStyles.marker}>{marker}</Text>
-      <InlineText content={item.content} style={textStyles.body} testID={textTestID} onNavigateWikilink={onNavigateWikilink} />
+      <InlineText
+        content={item.content}
+        style={textStyles.body}
+        testID={textTestID}
+        onOpenLink={onOpenLink}
+        onNavigateWikilink={onNavigateWikilink}
+      />
     </View>
   )
 }
 
 function TaskRow({
   item,
+  onOpenLink,
   onNavigateWikilink,
   testID,
 }: {
   item: MobileEditorTaskItem
+  onOpenLink?: (href: string) => void
   onNavigateWikilink: (target: string) => void
   testID: string
 }) {
@@ -185,21 +212,35 @@ function TaskRow({
           weight={item.checked ? 'fill' : 'regular'}
         />
       </View>
-      <InlineText content={item.content} style={textStyles.body} testID="editor-task-text" onNavigateWikilink={onNavigateWikilink} />
+      <InlineText
+        content={item.content}
+        style={textStyles.body}
+        testID="editor-task-text"
+        onOpenLink={onOpenLink}
+        onNavigateWikilink={onNavigateWikilink}
+      />
     </View>
   )
 }
 
 function EditorQuote({
   content,
+  onOpenLink,
   onNavigateWikilink,
 }: {
   content: MobileEditorInline[]
+  onOpenLink?: (href: string) => void
   onNavigateWikilink: (target: string) => void
 }) {
   return (
     <View style={quoteStyles.container} testID="editor-quote">
-      <InlineText content={content} style={quoteStyles.text} testID="editor-quote-text" onNavigateWikilink={onNavigateWikilink} />
+      <InlineText
+        content={content}
+        style={quoteStyles.text}
+        testID="editor-quote-text"
+        onOpenLink={onOpenLink}
+        onNavigateWikilink={onNavigateWikilink}
+      />
     </View>
   )
 }
@@ -221,11 +262,13 @@ function EditorCodeBlock({
 
 function InlineText({
   content,
+  onOpenLink,
   onNavigateWikilink,
   style,
   testID,
 }: {
   content: MobileEditorInline[]
+  onOpenLink?: (href: string) => void
   onNavigateWikilink: (target: string) => void
   style: TextStyle
   testID?: string
@@ -237,7 +280,7 @@ function InlineText({
           key={`${segment.text}-${index}`}
           style={inlineSegmentStyles(segment)}
           testID={inlineSegmentTestId(segment)}
-          onPress={inlineSegmentPressHandler(segment, onNavigateWikilink)}
+          onPress={inlineSegmentPressHandler(segment, onNavigateWikilink, onOpenLink)}
         >
           {segment.text}
         </Text>
@@ -299,9 +342,10 @@ function inlineSegmentTestId(segment: MobileEditorInline): string | undefined {
 function inlineSegmentPressHandler(
   segment: MobileEditorInline,
   onNavigateWikilink: (target: string) => void,
+  onOpenLink?: (href: string) => void,
 ) {
   if (segment.wikilinkTarget) return () => onNavigateWikilink(segment.wikilinkTarget ?? '')
-  if (segment.linkHref) return () => { void Linking.openURL(segment.linkHref ?? '') }
+  if (segment.linkHref && onOpenLink) return () => onOpenLink(segment.linkHref ?? '')
   return undefined
 }
 

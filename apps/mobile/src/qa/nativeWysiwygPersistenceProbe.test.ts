@@ -44,6 +44,7 @@ describe('native WYSIWYG persistence probe', () => {
     expect(parseNativeWysiwygPersistenceProofs(nativeWysiwygPersistenceLogLine(proof))).toEqual([proof])
     expect(assertNativeWysiwygPersistenceProofs([proof]).map((failure) => failure.id)).toEqual([
       'editor.wysiwyg.persistence.mutation.frontmatter',
+      'editor.wysiwyg.persistence.mutation.attachment',
       'editor.wysiwyg.persistence.mutation.type',
       'editor.wysiwyg.persistence.mutation.status',
       'editor.wysiwyg.persistence.mutation.tags',
@@ -76,6 +77,8 @@ function passingPersistenceProof(): NativeWysiwygPersistenceProof {
         'Native bridge mutation saved through TenTap.',
         '',
         'Formatting: **bold**, *italic*, ~~strike~~, `code`, ==highlight==, [[AI Ops Guide]].',
+        '',
+        '[project brief.pdf](<attachments/project brief.pdf>)',
         '',
         '- Bullet item',
         '',

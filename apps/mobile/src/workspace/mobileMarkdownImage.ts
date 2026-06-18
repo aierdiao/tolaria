@@ -1,3 +1,5 @@
+import { mobilePortableAttachmentHref } from './mobileAttachmentUris'
+
 type HtmlSnippet = string
 type ImageAltText = string
 type MarkdownLine = string
@@ -8,6 +10,9 @@ type MobileMarkdownImage = {
   alt: ImageAltText
   src: UrlText
   title?: PlainText
+}
+type MobileImageNodeMarkdownOptions = {
+  vaultRootUri?: string | null
 }
 
 type BareDestinationCursor = {
@@ -24,8 +29,11 @@ export function mobileMarkdownImageHtml(line: MarkdownLine): HtmlSnippet | null 
   return image ? imageHtml(image) : null
 }
 
-export function mobileImageNodeMarkdown(attrs: Record<string, unknown> | undefined): MarkdownLine {
-  const src = typeof attrs?.src === 'string' ? attrs.src : ''
+export function mobileImageNodeMarkdown(
+  attrs: Record<string, unknown> | undefined,
+  options: MobileImageNodeMarkdownOptions = {},
+): MarkdownLine {
+  const src = typeof attrs?.src === 'string' ? mobilePortableAttachmentHref(attrs.src, options.vaultRootUri) : ''
   const alt = typeof attrs?.alt === 'string' ? attrs.alt : ''
   const title = typeof attrs?.title === 'string' ? attrs.title : ''
   return src ? `![${escapeMarkdownLabel(alt)}](${imageDestination(src, title)})` : ''

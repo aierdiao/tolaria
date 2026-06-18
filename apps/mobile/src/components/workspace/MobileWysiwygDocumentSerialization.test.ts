@@ -50,6 +50,27 @@ describe('native WYSIWYG document serialization', () => {
     expect(result.content).toBe('Body still has no H1.\n')
   })
 
+  it('preserves portable attachment links when native TenTap saves file URIs', () => {
+    const result = nativeWysiwygDocumentContentFromJson({
+      currentContent: 'Original body.\n',
+      initialBodyHasContent: true,
+      isFirstSerialization: false,
+      json: documentNode({
+        type: 'paragraph',
+        content: [
+          {
+            marks: [{ attrs: { href: 'file:///vault/root/attachments/project%20brief.pdf' }, type: 'link' }],
+            text: 'project brief.pdf',
+            type: 'text',
+          },
+        ],
+      }),
+      vaultRootUri: 'file:///vault/root/',
+    })
+
+    expect(result.content).toBe('[project brief.pdf](<attachments/project brief.pdf>)\n')
+  })
+
   it('keeps unsupported Expo Go table content editable as markdown lines', () => {
     const result = nativeWysiwygDocumentContentFromJson({
       currentContent: tableDocumentSource(),

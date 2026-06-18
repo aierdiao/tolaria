@@ -4,6 +4,7 @@ import {
   nativeWysiwygMutationLogLine,
   nativeWysiwygMutationProof,
   nativeWysiwygMutationPreProofLogText,
+  nativeWysiwygMutationProbeContent,
   nativeWysiwygMutationProbeInitialContent,
   parseNativeWysiwygMutationProofs,
 } from './nativeWysiwygMutationProbe'
@@ -42,6 +43,21 @@ describe('native WYSIWYG mutation probe', () => {
     expect(assertNativeWysiwygMutationProofs([proof])).toEqual([])
   })
 
+  it('seeds native file attachment links when the active vault root is available', () => {
+    expect(nativeWysiwygMutationProbeContent('file:///vault/root/')).toMatchObject({
+      content: expect.arrayContaining([
+        expect.objectContaining({
+          content: expect.arrayContaining([
+            expect.objectContaining({
+              marks: [{ attrs: { href: 'file:///vault/root/attachments/project%20brief.pdf' }, type: 'link' }],
+              text: 'project brief.pdf',
+            }),
+          ]),
+        }),
+      ]),
+    })
+  })
+
   it('parses native simulator log lines and reports missing invariants', () => {
     const proof = nativeWysiwygMutationProof({
       content: '# Native WYSIWYG Mutation Probe\n\nNative bridge mutation saved through TenTap.\n',
@@ -52,6 +68,7 @@ describe('native WYSIWYG mutation probe', () => {
     expect(parsed).toEqual([proof])
     expect(assertNativeWysiwygMutationProofs(parsed).map((failure) => failure.id)).toEqual([
       'editor.wysiwyg.mutation.frontmatter',
+      'editor.wysiwyg.mutation.attachment',
       'editor.wysiwyg.mutation.type',
       'editor.wysiwyg.mutation.status',
       'editor.wysiwyg.mutation.tags',
@@ -115,6 +132,8 @@ function savedMutationContent(): string {
     'Native bridge mutation saved through TenTap.',
     '',
     'Formatting: **bold**, *italic*, ~~strike~~, `code`, ==highlight==, [[AI Ops Guide]].',
+    '',
+    '[project brief.pdf](<attachments/project brief.pdf>)',
     '',
     '- Bullet item',
     '',

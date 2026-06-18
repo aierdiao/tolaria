@@ -6,6 +6,7 @@ type MobileWysiwygMarkdownEditorProps = MobileMarkdownSourceEditorProps & {
   wysiwygAutocompleteProbe?: boolean
   wysiwygWikilinkInsertProbe?: boolean
   wysiwygMutationProbe?: boolean
+  vaultRootUri?: string | null
 }
 
 export function MobileWysiwygMarkdownEditor({
@@ -13,11 +14,13 @@ export function MobileWysiwygMarkdownEditor({
   wysiwygAutocompleteProbe,
   wysiwygWikilinkInsertProbe,
   wysiwygMutationProbe,
+  vaultRootUri,
   ...props
 }: MobileWysiwygMarkdownEditorProps) {
   void layoutProbe
   void wysiwygAutocompleteProbe
   void wysiwygWikilinkInsertProbe
   void wysiwygMutationProbe
+  void vaultRootUri
   return <MobileMarkdownSourceEditor {...props} />
 }

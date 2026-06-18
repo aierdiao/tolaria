@@ -8,6 +8,7 @@ type NativeWysiwygDocumentSerializationInput = {
   initialBodyHasContent: boolean
   isFirstSerialization: boolean
   json: unknown
+  vaultRootUri?: string | null
 }
 
 type NativeWysiwygDocumentSerializationResult = {
@@ -21,8 +22,9 @@ export function nativeWysiwygDocumentContentFromJson({
   initialBodyHasContent,
   isFirstSerialization,
   json,
+  vaultRootUri = null,
 }: NativeWysiwygDocumentSerializationInput): NativeWysiwygDocumentSerializationResult {
-  const markdown = tiptapJsonToMobileMarkdown(json)
+  const markdown = tiptapJsonToMobileMarkdown(json, { vaultRootUri })
   if (shouldSkipInitialEmptySerialization({ initialBodyHasContent, isFirstSerialization, markdown })) {
     return { content: currentContent, markdown, skipped: true }
   }

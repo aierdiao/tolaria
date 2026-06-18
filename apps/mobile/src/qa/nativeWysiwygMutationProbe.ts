@@ -11,6 +11,7 @@ type ProofFailureId = string
 type ProofFailureMessage = string
 
 export type NativeWysiwygMutationProof = {
+  attachmentLinkSaved: boolean
   codeBlockSaved: boolean
   contentLength: number
   dividerSaved: boolean
@@ -41,10 +42,12 @@ type NativeWysiwygMutationProofInput = {
 
 type NativeWysiwygMutationSeedNote = Pick<MobileNote, 'favorite' | 'snippet' | 'status' | 'tags' | 'title' | 'type'>
 type NativeWysiwygMutationBooleanField = Exclude<keyof NativeWysiwygMutationProof, 'contentLength' | 'noteId'>
+type VaultRootUri = string | null | undefined
 
 const mutationLogPrefix = 'TOLARIA_MOBILE_WYSIWYG_MUTATION_PROBE'
 const mutationTitle = 'Native WYSIWYG Mutation Probe'
 const mutationText = 'Native bridge mutation saved through TenTap.'
+const mutationAttachmentLink = '[project brief.pdf](<attachments/project brief.pdf>)'
 const mutationInlineSamples = ['**bold**', '*italic*', '~~strike~~', '`code`', '==highlight=='] as const
 const mutationListSamples = ['- Bullet item', '1. Ordered item', '- [x] Task item'] as const
 const mutationQuote = '> Quoted desktop parity'
@@ -54,6 +57,7 @@ const mutationTableLines = ['| Surface | Target |', '| --- | --- |', '| Editor |
 const mutationDividerBeforeTable = `\n---\n\n${mutationTableLines[0]}`
 const mutationWikilink = '[[AI Ops Guide]]'
 const mutationProofBooleanFields: readonly NativeWysiwygMutationBooleanField[] = [
+  'attachmentLinkSaved',
   'codeBlockSaved',
   'dividerSaved',
   'favoritePreserved',
@@ -69,28 +73,6 @@ const mutationProofBooleanFields: readonly NativeWysiwygMutationBooleanField[] =
   'typePreserved',
   'wikilinkSaved',
 ]
-const mutationRichInlineParagraphNode: TiptapJsonNode = {
-  content: [
-    { text: 'Formatting: ', type: 'text' },
-    { marks: [{ type: 'bold' }], text: 'bold', type: 'text' },
-    { text: ', ', type: 'text' },
-    { marks: [{ type: 'italic' }], text: 'italic', type: 'text' },
-    { text: ', ', type: 'text' },
-    { marks: [{ type: 'strike' }], text: 'strike', type: 'text' },
-    { text: ', ', type: 'text' },
-    { marks: [{ type: 'code' }], text: 'code', type: 'text' },
-    { text: ', ', type: 'text' },
-    { marks: [{ type: 'highlight' }], text: 'highlight', type: 'text' },
-    { text: ', ', type: 'text' },
-    {
-      marks: [{ attrs: { href: 'tolaria://wikilink/AI%20Ops%20Guide' }, type: 'link' }],
-      text: 'AI Ops Guide',
-      type: 'text',
-    },
-    { text: '.', type: 'text' },
-  ],
-  type: 'paragraph',
-}
 const mutationBulletListNode: TiptapJsonNode = {
   content: [{ content: [paragraphNode('Bullet item')], type: 'listItem' }],
   type: 'bulletList',
@@ -109,12 +91,12 @@ const mutationQuoteNode: TiptapJsonNode = {
   type: 'blockquote',
 }
 
-export function nativeWysiwygMutationProbeContent(): TiptapJsonNode {
+export function nativeWysiwygMutationProbeContent(vaultRootUri?: VaultRootUri): TiptapJsonNode {
   return {
     content: [
       headingNode(mutationTitle),
       paragraphNode(mutationText),
-      mutationRichInlineParagraphNode,
+      mutationRichInlineParagraphNode(vaultRootUri),
       mutationBulletListNode,
       mutationOrderedListNode,
       mutationTaskListNode,
@@ -139,6 +121,7 @@ export function nativeWysiwygMutationProof({
   noteId,
 }: NativeWysiwygMutationProofInput): NativeWysiwygMutationProof {
   return {
+    attachmentLinkSaved: content.includes(mutationAttachmentLink),
     codeBlockSaved: content.includes(mutationCodeFence),
     contentLength: content.length,
     dividerSaved: content.includes(mutationDividerBeforeTable),
@@ -184,6 +167,7 @@ export function assertNativeWysiwygMutationProofs(
 
   return [
     proofFailure(latest.frontmatterPreserved, 'editor.wysiwyg.mutation.frontmatter', 'Frontmatter boundary survives native WYSIWYG saves'),
+    proofFailure(latest.attachmentLinkSaved, 'editor.wysiwyg.mutation.attachment', 'Native file attachment links serialize back to portable desktop markdown'),
     proofFailure(latest.typePreserved, 'editor.wysiwyg.mutation.type', 'Desktop type frontmatter survives native WYSIWYG saves'),
     proofFailure(latest.statusPreserved, 'editor.wysiwyg.mutation.status', 'Desktop status frontmatter survives native WYSIWYG saves'),
     proofFailure(latest.tagsPreserved, 'editor.wysiwyg.mutation.tags', 'Desktop tag frontmatter survives native WYSIWYG saves'),
@@ -216,6 +200,47 @@ function headingNode(text: FrontmatterValue): TiptapJsonNode {
     content: [{ text, type: 'text' }],
     type: 'heading',
   }
+}
+
+function mutationRichInlineParagraphNode(vaultRootUri?: VaultRootUri): TiptapJsonNode {
+  return {
+    content: [
+      { text: 'Formatting: ', type: 'text' },
+      { marks: [{ type: 'bold' }], text: 'bold', type: 'text' },
+      { text: ', ', type: 'text' },
+      { marks: [{ type: 'italic' }], text: 'italic', type: 'text' },
+      { text: ', ', type: 'text' },
+      { marks: [{ type: 'strike' }], text: 'strike', type: 'text' },
+      { text: ', ', type: 'text' },
+      { marks: [{ type: 'code' }], text: 'code', type: 'text' },
+      { text: ', ', type: 'text' },
+      { marks: [{ type: 'highlight' }], text: 'highlight', type: 'text' },
+      { text: ', ', type: 'text' },
+      {
+        marks: [{ attrs: { href: 'tolaria://wikilink/AI%20Ops%20Guide' }, type: 'link' }],
+        text: 'AI Ops Guide',
+        type: 'text',
+      },
+      { text: ', ', type: 'text' },
+      {
+        marks: [{ attrs: { href: mutationAttachmentHref(vaultRootUri) }, type: 'link' }],
+        text: 'project brief.pdf',
+        type: 'text',
+      },
+      { text: '.', type: 'text' },
+    ],
+    type: 'paragraph',
+  }
+}
+
+function mutationAttachmentHref(vaultRootUri?: VaultRootUri): string {
+  return vaultRootUri?.trim()
+    ? `${ensureTrailingSlash(vaultRootUri.trim())}attachments/project%20brief.pdf`
+    : 'attachments/project brief.pdf'
+}
+
+function ensureTrailingSlash(value: string): string {
+  return value.endsWith('/') ? value : `${value}/`
 }
 
 function paragraphNode(...lines: readonly FrontmatterValue[]): TiptapJsonNode {

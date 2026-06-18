@@ -6,6 +6,7 @@ import {
   mobileMarkdownBodyToTentapHtml,
   mobileNoteEditableContent,
 } from '../../workspace/mobileDocumentContent'
+import { mobileHtmlWithResolvedAttachmentUris } from '../../workspace/mobileAttachmentUris'
 import type { MobileEditorBlock, MobileNote } from '../../workspace/mobileWorkspaceModel'
 import { probeProps, type MobileLayoutProbe } from '../../qa/mobileLayoutProbe'
 import { mobileColors, mobileSpace } from '../../ui/tokens'
@@ -54,6 +55,7 @@ type MobileWysiwygMarkdownEditorProps = {
   notes: MobileNote[]
   onImportAttachment?: () => Promise<NativeWysiwygAttachmentPayload | null>
   onUpdateContent: (noteId: string, content: string) => void
+  vaultRootUri?: string | null
   wysiwygAutocompleteProbe?: boolean
   wysiwygWikilinkInsertProbe?: boolean
   wysiwygMutationProbe?: boolean
@@ -137,6 +139,7 @@ export function MobileWysiwygMarkdownEditor({
   notes,
   onImportAttachment,
   onUpdateContent,
+  vaultRootUri = null,
   wysiwygAutocompleteProbe = false,
   wysiwygWikilinkInsertProbe = false,
   wysiwygMutationProbe = false,
@@ -163,6 +166,7 @@ export function MobileWysiwygMarkdownEditor({
     note,
     onInlineAutocomplete: handleInlineAutocomplete,
     onUpdateContent,
+    vaultRootUri,
     wysiwygAutocompleteProbe,
     wysiwygWikilinkInsertProbe,
     wysiwygMutationProbe,
@@ -267,13 +271,17 @@ function useNativeTentapEditorBridge({
   note,
   onInlineAutocomplete,
   onUpdateContent,
+  vaultRootUri = null,
   wysiwygAutocompleteProbe = false,
   wysiwygWikilinkInsertProbe = false,
   wysiwygMutationProbe = false,
 }: NativeTentapEditorBridgeOptions) {
   const initialBody = mobileDocumentBody(initialDocumentContent)
   const initialBodyHasContent = initialBody.trim().length > 0
-  const [initialContent] = useState(() => mobileMarkdownBodyToTentapHtml(initialBody))
+  const [initialContent] = useState(() => mobileHtmlWithResolvedAttachmentUris(
+    mobileMarkdownBodyToTentapHtml(initialBody),
+    vaultRootUri,
+  ))
   const refs = useNativeTentapEditorRefs(initialDocumentContent)
 
   const flushEditorDocument = useFlushEditorDocument({
@@ -282,6 +290,7 @@ function useNativeTentapEditorBridge({
     noteId: note.id,
     onUpdateContent,
     refs,
+    vaultRootUri,
     wikilinkInsertProbeEnabled: wysiwygWikilinkInsertProbe,
   })
   const scheduleEditorChange = useScheduleEditorChange(refs, flushEditorDocument, onInlineAutocomplete)
@@ -301,7 +310,7 @@ function useNativeTentapEditorBridge({
   useResetEditorChangeGate({ initialContent, noteId: note.id, refs })
   useNativeWysiwygAutocompleteProbe({ enabled: wysiwygAutocompleteProbe, refs })
   useNativeWysiwygWikilinkInsertProbe({ enabled: wysiwygWikilinkInsertProbe, flushEditorDocument, refs })
-  useNativeWysiwygMutationProbe({ enabled: wysiwygMutationProbe, flushEditorDocument, refs })
+  useNativeWysiwygMutationProbe({ enabled: wysiwygMutationProbe, flushEditorDocument, refs, vaultRootUri })
   useFlushOnUnmount(refs, flushEditorDocument)
 
   return { editor, injectEditorCss, insertAttachment, insertWikilink }
@@ -344,6 +353,7 @@ function useFlushEditorDocument({
   noteId,
   onUpdateContent,
   refs,
+  vaultRootUri,
   wikilinkInsertProbeEnabled,
 }: {
   initialBodyHasContent: boolean
@@ -351,6 +361,7 @@ function useFlushEditorDocument({
   noteId: string
   onUpdateContent: (noteId: string, content: string) => void
   refs: NativeTentapEditorRefs
+  vaultRootUri?: string | null
   wikilinkInsertProbeEnabled: boolean
 }) {
   return useCallback(() => {
@@ -360,9 +371,10 @@ function useFlushEditorDocument({
       noteId,
       onUpdateContent,
       refs,
+      vaultRootUri,
       wikilinkInsertProbeEnabled,
     })
-  }, [initialBodyHasContent, mutationProbeEnabled, noteId, onUpdateContent, refs, wikilinkInsertProbeEnabled])
+  }, [initialBodyHasContent, mutationProbeEnabled, noteId, onUpdateContent, refs, vaultRootUri, wikilinkInsertProbeEnabled])
 }
 
 function flushEditorDocumentFromBridge({
@@ -371,6 +383,7 @@ function flushEditorDocumentFromBridge({
   noteId,
   onUpdateContent,
   refs,
+  vaultRootUri,
   wikilinkInsertProbeEnabled,
 }: {
   initialBodyHasContent: boolean
@@ -378,6 +391,7 @@ function flushEditorDocumentFromBridge({
   noteId: string
   onUpdateContent: (noteId: string, content: string) => void
   refs: NativeTentapEditorRefs
+  vaultRootUri?: string | null
   wikilinkInsertProbeEnabled: boolean
 }) {
   const editor = refs.editorRef.current
@@ -391,6 +405,7 @@ function flushEditorDocumentFromBridge({
       noteId,
       onUpdateContent,
       refs,
+      vaultRootUri,
       wikilinkInsertProbeEnabled,
     }))
     .catch((error: unknown) => {
@@ -405,6 +420,7 @@ function writeEditorJsonToMarkdown({
   noteId,
   onUpdateContent,
   refs,
+  vaultRootUri,
   wikilinkInsertProbeEnabled,
 }: {
   initialBodyHasContent: boolean
@@ -413,6 +429,7 @@ function writeEditorJsonToMarkdown({
   noteId: string
   onUpdateContent: (noteId: string, content: string) => void
   refs: NativeTentapEditorRefs
+  vaultRootUri?: string | null
   wikilinkInsertProbeEnabled: boolean
 }) {
   const nextContent = nativeWysiwygDocumentContentFromJson({
@@ -420,6 +437,7 @@ function writeEditorJsonToMarkdown({
     initialBodyHasContent,
     isFirstSerialization: refs.firstEditorSerializationRef.current,
     json,
+    vaultRootUri,
   })
   refs.firstEditorSerializationRef.current = false
   if (!nextContent.skipped && nextContent.content !== refs.contentRef.current) {
@@ -433,10 +451,12 @@ function useNativeWysiwygMutationProbe({
   enabled,
   flushEditorDocument,
   refs,
+  vaultRootUri,
 }: {
   enabled: boolean
   flushEditorDocument: () => void
   refs: NativeTentapEditorRefs
+  vaultRootUri?: string | null
 }) {
   useEffect(() => {
     if (!enabled) return undefined
@@ -446,7 +466,7 @@ function useNativeWysiwygMutationProbe({
       if (!isContentSettableEditorBridge(editor)) return
 
       refs.hasAcceptedEditorChangeRef.current = true
-      editor.setContent(nativeWysiwygMutationProbeContent())
+      editor.setContent(nativeWysiwygMutationProbeContent(vaultRootUri))
       refs.saveTimerRef.current = setTimeout(flushEditorDocument, 500)
     }, 1500)
 
@@ -454,7 +474,7 @@ function useNativeWysiwygMutationProbe({
       clearTimeout(contentTimer)
       if (refs.saveTimerRef.current) clearTimeout(refs.saveTimerRef.current)
     }
-  }, [enabled, flushEditorDocument, refs])
+  }, [enabled, flushEditorDocument, refs, vaultRootUri])
 }
 
 function useNativeWysiwygAutocompleteProbe({

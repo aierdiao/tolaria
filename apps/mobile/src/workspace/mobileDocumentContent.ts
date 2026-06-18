@@ -5,6 +5,7 @@ import {
   readMobileDisplayMathBlock,
 } from './mobileDisplayMath'
 import { mobileEditorBlocksToMarkdown, mobileFallbackBulletsToMarkdown } from './mobileEditorBlockMarkdown'
+import { mobilePortableAttachmentHref } from './mobileAttachmentUris'
 import { isMobileMarkdownCodeFenceClose, readMobileMarkdownCodeFence } from './mobileMarkdownCodeFence'
 import { mobileMarkdownListHtml, type MobileMarkdownListItem } from './mobileMarkdownListHtml'
 import { mobileImageNodeMarkdown, mobileMarkdownImageHtml } from './mobileMarkdownImage'
@@ -36,6 +37,12 @@ type ReadQuoteResult = { paragraphs: MarkdownLines[]; nextIndex: number }
 type UrlText = string
 type WikilinkTarget = string
 type MarkdownNormalizer = (markdown: MarkdownBody) => MarkdownBody
+type TiptapMarkdownOptions = {
+  vaultRootUri?: string | null
+}
+type SerializeInlineOptions = TiptapMarkdownOptions & {
+  escapePlainText?: boolean
+}
 
 export type TiptapJsonMark = {
   attrs?: Record<string, unknown>
@@ -106,9 +113,12 @@ export function mobileMarkdownBodyToTentapHtml(body: MarkdownBody): string {
   return blocks.join('\n')
 }
 
-export function tiptapJsonToMobileMarkdown(node: unknown): MarkdownBody {
+export function tiptapJsonToMobileMarkdown(
+  node: unknown,
+  options: TiptapMarkdownOptions = {},
+): MarkdownBody {
   if (!isTiptapJsonNode(node)) return ''
-  return serializeBlockChildren(node.content ?? []).trimEnd()
+  return serializeBlockChildren(node.content ?? [], options).trimEnd()
 }
 
 function optionalTitleHeading(title: NoteTitleText): string {
@@ -633,37 +643,37 @@ function emailAutolinkHtml(email: LinkLabel): string {
   return `<a href="mailto:${escapeAttribute(unescapeHtml(email))}">${email}</a>`
 }
 
-function serializeBlockChildren(nodes: TiptapJsonNode[]): MarkdownBody {
+function serializeBlockChildren(nodes: TiptapJsonNode[], options: TiptapMarkdownOptions): MarkdownBody {
   return nodes
-    .map((node) => serializeBlockNode(node))
+    .map((node) => serializeBlockNode(node, options))
     .filter((block) => block.length > 0)
     .join('\n\n')
 }
 
-function serializeBlockNode(node: TiptapJsonNode): MarkdownBody {
+function serializeBlockNode(node: TiptapJsonNode, options: TiptapMarkdownOptions): MarkdownBody {
   const serializer = node.type ? blockNodeSerializers[node.type] : undefined
-  return serializer ? serializer(node) : serializeBlockChildren(node.content ?? [])
+  return serializer ? serializer(node, options) : serializeBlockChildren(node.content ?? [], options)
 }
 
-const blockNodeSerializers: Record<string, (node: TiptapJsonNode) => MarkdownBody> = {
+const blockNodeSerializers: Record<string, (node: TiptapJsonNode, options: TiptapMarkdownOptions) => MarkdownBody> = {
   paragraph: serializeParagraph,
-  heading: (node) => `${'#'.repeat(headingLevel(node))} ${serializeInlineChildren(node.content ?? [])}`.trimEnd(),
-  bulletList: (node) => serializeList(node, 'bullet'),
-  orderedList: (node) => serializeList(node, 'ordered'),
-  taskList: (node) => serializeList(node, 'task'),
-  blockquote: (node) => prefixLines(serializeBlockChildren(node.content ?? []), '> '),
+  heading: (node, options) => `${'#'.repeat(headingLevel(node))} ${serializeInlineChildren(node.content ?? [], options)}`.trimEnd(),
+  bulletList: (node, options) => serializeList(node, 'bullet', options),
+  orderedList: (node, options) => serializeList(node, 'ordered', options),
+  taskList: (node, options) => serializeList(node, 'task', options),
+  blockquote: (node, options) => prefixLines(serializeBlockChildren(node.content ?? [], options), '> '),
   codeBlock: codeBlockMarkdown,
   horizontalRule: () => '---',
   image: imageMarkdown,
   table: tableMarkdown,
 }
 
-function serializeParagraph(node: TiptapJsonNode): MarkdownBody {
-  const rawMarkdown = serializeInlineChildren(node.content ?? [])
+function serializeParagraph(node: TiptapJsonNode, options: TiptapMarkdownOptions): MarkdownBody {
+  const rawMarkdown = serializeInlineChildren(node.content ?? [], options)
   const normalizedMarkdown = normalizeMobileFallbackParagraphMarkdown(rawMarkdown)
   return normalizedMarkdown !== rawMarkdown || hasInlineMarkdownImageSource(rawMarkdown)
     ? normalizedMarkdown
-    : serializeInlineChildren(node.content ?? [], { escapePlainText: true })
+    : serializeInlineChildren(node.content ?? [], { ...options, escapePlainText: true })
 }
 
 function normalizeMobileFallbackParagraphMarkdown(markdown: MarkdownBody): MarkdownBody {
@@ -796,50 +806,50 @@ function stripHardBreakMarker(line: MarkdownLine): MarkdownLine {
 
 function serializeInlineChildren(
   nodes: TiptapJsonNode[],
-  options?: { escapePlainText?: boolean },
+  options: SerializeInlineOptions,
 ): string {
   return nodes.map((node) => serializeInlineNode(node, options)).join('')
 }
 
-function serializeInlineNode(node: TiptapJsonNode, options?: { escapePlainText?: boolean }): string {
+function serializeInlineNode(node: TiptapJsonNode, options: SerializeInlineOptions): string {
   if (node.type === 'text') return serializeTextNode(node, options)
   if (node.type === 'hardBreak') return '  \n'
-  if (node.type === 'image') return imageMarkdown(node)
+  if (node.type === 'image') return imageMarkdown(node, options)
   return serializeInlineChildren(node.content ?? [], options)
 }
 
-function serializeTextNode(node: TiptapJsonNode, options?: { escapePlainText?: boolean }): string {
+function serializeTextNode(node: TiptapJsonNode, options: SerializeInlineOptions): string {
   const text = node.text ?? ''
   const marks = node.marks ?? []
   return options?.escapePlainText === true && marks.length === 0
     ? escapePlainInlineMarkdown(text)
-    : applyMarks(text, marks)
+    : applyMarks(text, marks, options)
 }
 
-function serializeList(node: TiptapJsonNode, kind: ListKind): MarkdownBody {
+function serializeList(node: TiptapJsonNode, kind: ListKind, options: TiptapMarkdownOptions): MarkdownBody {
   const start = numberAttr(node.attrs?.start) ?? 1
   return (node.content ?? []).map((item, index) => {
     if (kind === 'task') {
       const checked = item.attrs?.checked === true ? 'x' : ' '
-      return `- [${checked}] ${serializeListItem(item)}`
+      return `- [${checked}] ${serializeListItem(item, options)}`
     }
 
     const marker = kind === 'ordered' ? `${start + index}.` : '-'
-    return `${marker} ${serializeListItem(item)}`
+    return `${marker} ${serializeListItem(item, options)}`
   }).join('\n')
 }
 
-function serializeListItem(item: TiptapJsonNode): string {
+function serializeListItem(item: TiptapJsonNode, options: TiptapMarkdownOptions): string {
   const blocks = item.content ?? []
   const [first, ...rest] = blocks
-  const firstText = first ? serializeBlockNode(first) : ''
-  const nested = rest.map((block) => indentLines(serializeBlockNode(block), '  ')).filter(Boolean)
+  const firstText = first ? serializeBlockNode(first, options) : ''
+  const nested = rest.map((block) => indentLines(serializeBlockNode(block, options), '  ')).filter(Boolean)
   return [firstText, ...nested].filter(Boolean).join('\n')
 }
 
-function tableMarkdown(node: TiptapJsonNode): MarkdownBody {
+function tableMarkdown(node: TiptapJsonNode, options: TiptapMarkdownOptions): MarkdownBody {
   const rows = (node.content ?? []).map((row) => (
-    (row.content ?? []).map((cell) => serializeInlineChildren(cell.content ?? []))
+    (row.content ?? []).map((cell) => serializeInlineChildren(cell.content ?? [], options))
   ))
   if (rows.length === 0) return ''
 
@@ -855,26 +865,30 @@ function codeBlockMarkdown(node: TiptapJsonNode): MarkdownBody {
   return `\`\`\`${language}\n${plainText(node.content ?? [])}\n\`\`\``
 }
 
-function imageMarkdown(node: TiptapJsonNode): MarkdownBody {
-  return mobileImageNodeMarkdown(node.attrs)
+function imageMarkdown(node: TiptapJsonNode, options: TiptapMarkdownOptions): MarkdownBody {
+  return mobileImageNodeMarkdown(node.attrs, options)
 }
 
-function applyMarks(text: PlainText, marks: TiptapJsonMark[]): string {
-  return marks.reduce((current, mark) => applyMark(current, mark), text)
+function applyMarks(text: PlainText, marks: TiptapJsonMark[], options: TiptapMarkdownOptions): string {
+  return marks.reduce((current, mark) => applyMark(current, mark, options), text)
 }
 
-function applyMark(text: PlainText, mark: TiptapJsonMark): string {
+function applyMark(text: PlainText, mark: TiptapJsonMark, options: TiptapMarkdownOptions): string {
   if (mark.type === 'code') return `\`${text.replace(/`/g, '\\`')}\``
   if (mark.type === 'bold') return `**${text}**`
   if (mark.type === 'italic') return `*${text}*`
   if (mark.type === 'strike') return `~~${text}~~`
   if (mark.type === 'highlight') return `==${text}==`
-  if (mark.type === 'link') return linkMarkdown(text, mark.attrs)
+  if (mark.type === 'link') return linkMarkdown(text, mark.attrs, options)
   return text
 }
 
-function linkMarkdown(text: LinkLabel, attrs: Record<string, unknown> | undefined): string {
-  const href = typeof attrs?.href === 'string' ? attrs.href : ''
+function linkMarkdown(
+  text: LinkLabel,
+  attrs: Record<string, unknown> | undefined,
+  options: TiptapMarkdownOptions,
+): string {
+  const href = typeof attrs?.href === 'string' ? mobilePortableAttachmentHref(attrs.href, options.vaultRootUri) : ''
   if (!href) return text
   if (href.startsWith(WIKILINK_HREF_PREFIX)) {
     const target = decodeURIComponent(href.slice(WIKILINK_HREF_PREFIX.length))

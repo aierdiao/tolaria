@@ -411,23 +411,18 @@ Updated body.
   })
 
   it('serializes link destinations with spaces using desktop angle syntax', () => {
-    const document: TiptapJsonNode = {
-      type: 'doc',
-      content: [
-        {
-          type: 'paragraph',
-          content: [
-            {
-              marks: [{ attrs: { href: 'attachments/project brief.pdf' }, type: 'link' }],
-              text: 'project brief.pdf',
-              type: 'text',
-            },
-          ],
-        },
-      ],
-    }
+    expect(tiptapJsonToMobileMarkdown(linkDocument('attachments/project brief.pdf'))).toBe(
+      '[project brief.pdf](<attachments/project brief.pdf>)',
+    )
+  })
 
-    expect(tiptapJsonToMobileMarkdown(document)).toBe('[project brief.pdf](<attachments/project brief.pdf>)')
+  it('serializes native attachment link URIs back to portable markdown destinations', () => {
+    expect(tiptapJsonToMobileMarkdown(
+      linkDocument('file:///vault/root/attachments/project%20brief.pdf'),
+      { vaultRootUri: 'file:///vault/root/' },
+    )).toBe(
+      '[project brief.pdf](<attachments/project brief.pdf>)',
+    )
   })
 
   it('serializes url and email autolinks back to durable markdown autolink syntax', () => {
@@ -555,55 +550,37 @@ Updated body.
   })
 
   it('serializes TenTap image nodes back to portable markdown images', () => {
-    const document: TiptapJsonNode = {
-      type: 'doc',
-      content: [
-        {
-          attrs: {
-            alt: 'Architecture diagram',
-            src: 'attachments/mobile diagram.png',
-          },
-          type: 'image',
-        },
-      ],
-    }
+    expect(tiptapJsonToMobileMarkdown(imageDocument({
+      alt: 'Architecture diagram',
+      src: 'attachments/mobile diagram.png',
+    }))).toBe('![Architecture diagram](<attachments/mobile diagram.png>)')
+  })
 
-    expect(tiptapJsonToMobileMarkdown(document)).toBe('![Architecture diagram](<attachments/mobile diagram.png>)')
+  it('serializes native attachment image URIs back to portable markdown images', () => {
+    expect(tiptapJsonToMobileMarkdown(
+      imageDocument({
+        alt: 'Architecture diagram',
+        src: 'file:///vault/root/attachments/mobile%20diagram.png',
+      }),
+      { vaultRootUri: 'file:///vault/root/' },
+    )).toBe(
+      '![Architecture diagram](<attachments/mobile diagram.png>)',
+    )
   })
 
   it('serializes TenTap image titles back to desktop markdown image titles', () => {
-    const document: TiptapJsonNode = {
-      type: 'doc',
-      content: [
-        {
-          attrs: {
-            alt: 'shot',
-            src: 'attachments/file.png',
-            title: 'starter vault',
-          },
-          type: 'image',
-        },
-      ],
-    }
-
-    expect(tiptapJsonToMobileMarkdown(document)).toBe('![shot](attachments/file.png "starter vault")')
+    expect(tiptapJsonToMobileMarkdown(imageDocument({
+      alt: 'shot',
+      src: 'attachments/file.png',
+      title: 'starter vault',
+    }))).toBe('![shot](attachments/file.png "starter vault")')
   })
 
   it('serializes image URLs with closing parentheses as escaped markdown destinations', () => {
-    const document: TiptapJsonNode = {
-      type: 'doc',
-      content: [
-        {
-          attrs: {
-            alt: '',
-            src: 'https://cdn.example.com/Opengraph%20-%20Home%20Page%20(1).jpg',
-          },
-          type: 'image',
-        },
-      ],
-    }
-
-    expect(tiptapJsonToMobileMarkdown(document)).toBe(
+    expect(tiptapJsonToMobileMarkdown(imageDocument({
+      alt: '',
+      src: 'https://cdn.example.com/Opengraph%20-%20Home%20Page%20(1).jpg',
+    }))).toBe(
       '![](https://cdn.example.com/Opengraph%20-%20Home%20Page%20\\(1\\).jpg)',
     )
   })
@@ -611,6 +588,30 @@ Updated body.
 
 function paragraphDocument(...lines: string[]): TiptapJsonNode {
   return { type: 'doc', content: [paragraphNode(...lines)] }
+}
+
+function linkDocument(href: string, text = 'project brief.pdf'): TiptapJsonNode {
+  return {
+    type: 'doc',
+    content: [{
+      type: 'paragraph',
+      content: [{
+        marks: [{ attrs: { href }, type: 'link' }],
+        text,
+        type: 'text',
+      }],
+    }],
+  }
+}
+
+function imageDocument(attrs: Record<string, string>): TiptapJsonNode {
+  return {
+    type: 'doc',
+    content: [{
+      attrs,
+      type: 'image',
+    }],
+  }
 }
 
 function paragraphNode(...lines: string[]): TiptapJsonNode {

@@ -26,6 +26,10 @@ import {
   useMobileAttachmentImporter,
   type MobileAttachmentImporter,
 } from '../workspace/mobileAttachmentImport'
+import {
+  useMobileAttachmentLinkOpener,
+  type MobileAttachmentLinkOpener,
+} from '../workspace/mobileAttachmentOpen'
 import { shouldRenderEditorDocumentTitle } from './tabletEditorDocumentTitle'
 
 type TabletEditorPanelProps = {
@@ -69,8 +73,10 @@ type EditorContentProps = {
   layoutProbe: MobileLayoutProbe
   onNavigateWikilink: (target: string) => void
   onImportAttachment?: MobileAttachmentImporter
+  onOpenLink: MobileAttachmentLinkOpener
   onUpdateContent: (noteId: string, content: string) => void
   sourceSelectionProbe?: boolean
+  vaultRootUri?: string | null
   wysiwygAutocompleteProbe?: boolean
   wysiwygWikilinkInsertProbe?: boolean
   wysiwygMutationProbe?: boolean
@@ -101,6 +107,7 @@ export function TabletEditorPanel(props: TabletEditorPanelProps) {
   const [editing, setEditing] = useState(initialEditing)
   const [editingMode, setEditingMode] = useState<EditorEditingMode>(initialEditingMode)
   const importAttachment = useMobileAttachmentImporter(vaultRootUri)
+  const openLink = useMobileAttachmentLinkOpener(vaultRootUri)
   const layoutProbe = useMobileLayoutProbe(layoutProbeEnabled)
   const toggleEditing = useCallback(() => {
     setEditing((current) => {
@@ -145,8 +152,10 @@ export function TabletEditorPanel(props: TabletEditorPanelProps) {
             notes={notes}
             onImportAttachment={importAttachment}
             onNavigateWikilink={onNavigateWikilink}
+            onOpenLink={openLink}
             onUpdateContent={onUpdateContent}
             sourceSelectionProbe={sourceSelectionProbe}
+            vaultRootUri={vaultRootUri}
             wysiwygAutocompleteProbe={wysiwygAutocompleteProbe}
             wysiwygWikilinkInsertProbe={wysiwygWikilinkInsertProbe}
             wysiwygMutationProbe={wysiwygMutationProbe}
@@ -169,8 +178,10 @@ export function TabletEditorPanel(props: TabletEditorPanelProps) {
             notes={notes}
             onImportAttachment={importAttachment}
             onNavigateWikilink={onNavigateWikilink}
+            onOpenLink={openLink}
             onUpdateContent={onUpdateContent}
             sourceSelectionProbe={sourceSelectionProbe}
+            vaultRootUri={vaultRootUri}
             wysiwygAutocompleteProbe={wysiwygAutocompleteProbe}
             wysiwygWikilinkInsertProbe={wysiwygWikilinkInsertProbe}
             wysiwygMutationProbe={wysiwygMutationProbe}
@@ -241,8 +252,10 @@ function EditorContent({
   notes,
   onImportAttachment,
   onNavigateWikilink,
+  onOpenLink,
   onUpdateContent,
   sourceSelectionProbe = false,
+  vaultRootUri = null,
   wysiwygAutocompleteProbe = false,
   wysiwygWikilinkInsertProbe = false,
   wysiwygMutationProbe = false,
@@ -275,6 +288,7 @@ function EditorContent({
         notes={notes}
         onImportAttachment={onImportAttachment}
         onUpdateContent={onUpdateContent}
+        vaultRootUri={vaultRootUri}
         wysiwygAutocompleteProbe={wysiwygAutocompleteProbe}
         wysiwygWikilinkInsertProbe={wysiwygWikilinkInsertProbe}
         wysiwygMutationProbe={wysiwygMutationProbe}
@@ -289,7 +303,12 @@ function EditorContent({
           <Text style={[panelStyles.title, compact ? panelStyles.titleCompact : null]} testID="editor-title">{note.title}</Text>
         </View>
       ) : null}
-      <MobileEditorBlocks blocks={blocks} fallbackBullets={bullets} onNavigateWikilink={onNavigateWikilink} />
+      <MobileEditorBlocks
+        blocks={blocks}
+        fallbackBullets={bullets}
+        onOpenLink={onOpenLink}
+        onNavigateWikilink={onNavigateWikilink}
+      />
     </>
   )
 }
