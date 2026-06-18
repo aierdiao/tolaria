@@ -14,23 +14,30 @@ import {
   mobileWysiwygWikilinkPayloadForNote,
   mobileWysiwygWikilinkPickerSuggestions,
 } from './MobileWysiwygWikilinkPickerModel'
-import type { NativeWysiwygWikilinkPayload } from './MobileWysiwygWikilinkBridgeModel'
+import type {
+  NativeWysiwygInlineAutocompleteKind,
+  NativeWysiwygWikilinkPayload,
+} from './MobileWysiwygWikilinkBridgeModel'
 
 type MobileWysiwygWikilinkPickerProps = {
+  initialQuery?: string
+  kind?: NativeWysiwygInlineAutocompleteKind
   notes: MobileNote[]
   onClose: () => void
   onSelect: (payload: NativeWysiwygWikilinkPayload) => void
 }
 
 export function MobileWysiwygWikilinkPicker({
+  initialQuery = '',
+  kind = 'wikilink',
   notes,
   onClose,
   onSelect,
 }: MobileWysiwygWikilinkPickerProps) {
-  const [query, setQuery] = useState('')
+  const [query, setQuery] = useState(initialQuery)
   const suggestions = useMemo(
-    () => mobileWysiwygWikilinkPickerSuggestions(notes, query),
-    [notes, query],
+    () => mobileWysiwygWikilinkPickerSuggestions(notes, query, kind),
+    [kind, notes, query],
   )
 
   return (

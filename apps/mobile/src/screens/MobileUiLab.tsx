@@ -19,6 +19,9 @@ import {
   nativeWysiwygPersistenceProbeEnabled,
 } from '../qa/nativeWysiwygPersistenceProbe'
 import {
+  nativeWysiwygAutocompleteProbeEnabled,
+} from '../qa/nativeWysiwygAutocompleteProbe'
+import {
   nativeWysiwygWikilinkInsertProbeEnabled,
 } from '../qa/nativeWysiwygWikilinkInsertProbe'
 import {
@@ -50,6 +53,7 @@ export function MobileUiLab() {
   const { initialEditorEditing, initialEditorEditingMode } = initialMobileEditorStateFromMode(editorMode(searchParams))
   const layoutProbe = layoutProbeEnabled(searchParams)
   const sourceSelectionProbe = nativeSourceSelectionProbeEnabled(searchParams)
+  const wysiwygAutocompleteProbe = nativeWysiwygAutocompleteProbeEnabled(searchParams)
   const wysiwygWikilinkInsertProbe = nativeWysiwygWikilinkInsertProbeEnabled(searchParams)
   const wysiwygMutationProbe = nativeWysiwygMutationProbeEnabled(searchParams) || wysiwygPersistenceProbe
   const baseSnapshot = repository.readSnapshot(repositoryRequest)
@@ -65,6 +69,7 @@ export function MobileUiLab() {
     snapshot,
     source,
     sourceSelectionProbe,
+    wysiwygAutocompleteProbe,
     wysiwygWikilinkInsertProbe,
     wysiwygMutationProbe,
     wysiwygPersistenceProbe,
@@ -86,6 +91,7 @@ export function MobileUiLab() {
         repositoryRequest={repositoryRequest}
         sourceSelectionProbe={sourceSelectionProbe}
         snapshot={snapshot}
+        wysiwygAutocompleteProbe={wysiwygAutocompleteProbe}
         wysiwygWikilinkInsertProbe={wysiwygWikilinkInsertProbe}
         wysiwygMutationProbe={wysiwygMutationProbe}
       />
@@ -180,6 +186,7 @@ function mobileWorkspaceKey({
   snapshot,
   source,
   sourceSelectionProbe,
+  wysiwygAutocompleteProbe,
   wysiwygWikilinkInsertProbe,
   wysiwygMutationProbe,
   wysiwygPersistenceProbe,
@@ -192,6 +199,7 @@ function mobileWorkspaceKey({
   snapshot: ReturnType<typeof readOnlyWorkspaceRepository.readSnapshot>
   source: ReturnType<typeof currentSnapshotSource>
   sourceSelectionProbe: boolean
+  wysiwygAutocompleteProbe: boolean
   wysiwygWikilinkInsertProbe: boolean
   wysiwygMutationProbe: boolean
   wysiwygPersistenceProbe: boolean
@@ -202,18 +210,23 @@ function mobileWorkspaceKey({
     source,
     scenarioIdOrDefault(scenarioId),
     qaRun ?? 'interactive',
-    initialEditorEditing ? 'raw-editor' : 'read-editor',
+    flagKey(initialEditorEditing, 'raw-editor', 'read-editor'),
     initialEditorEditingMode,
-    sourceSelectionProbe ? 'source-selection-probe' : 'no-source-selection-probe',
-    wysiwygWikilinkInsertProbe ? 'wysiwyg-wikilink-insert-probe' : 'no-wysiwyg-wikilink-insert-probe',
-    wysiwygMutationProbe ? 'wysiwyg-mutation-probe' : 'no-wysiwyg-mutation-probe',
-    wysiwygPersistenceProbe ? 'wysiwyg-persistence-probe' : 'no-wysiwyg-persistence-probe',
+    flagKey(sourceSelectionProbe, 'source-selection-probe', 'no-source-selection-probe'),
+    flagKey(wysiwygAutocompleteProbe, 'wysiwyg-autocomplete-probe', 'no-wysiwyg-autocomplete-probe'),
+    flagKey(wysiwygWikilinkInsertProbe, 'wysiwyg-wikilink-insert-probe', 'no-wysiwyg-wikilink-insert-probe'),
+    flagKey(wysiwygMutationProbe, 'wysiwyg-mutation-probe', 'no-wysiwyg-mutation-probe'),
+    flagKey(wysiwygPersistenceProbe, 'wysiwyg-persistence-probe', 'no-wysiwyg-persistence-probe'),
     layoutProbeMode(layoutProbe),
-    sourceInfo ? sourceInfo.kind : 'fixture',
-    sourceInfo ? sourceInfo.label : 'Tolaria Vault',
-    sourceInfo ? sourceInfo.totalNotes : snapshot.notes.length,
+    sourceInfo?.kind ?? 'fixture',
+    sourceInfo?.label ?? 'Tolaria Vault',
+    sourceInfo?.totalNotes ?? snapshot.notes.length,
     firstNoteId(snapshot),
   ].join(':')
+}
+
+function flagKey(enabled: boolean, enabledKey: string, disabledKey: string): string {
+  return enabled ? enabledKey : disabledKey
 }
 
 function scenarioIdOrDefault(scenarioId: string | null) {

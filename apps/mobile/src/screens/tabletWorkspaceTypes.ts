@@ -180,6 +180,7 @@ export type TabletWorkspaceChromeProps = {
   selectedNoteId: string | null
   sourceSelectionProbe?: boolean
   snapshot: MobileWorkspaceSnapshot
+  wysiwygAutocompleteProbe?: boolean
   wysiwygWikilinkInsertProbe?: boolean
   typePropertyOptions: string[]
   typeRelationshipTargetOptions: MobileWorkspaceSuggestionItem[]

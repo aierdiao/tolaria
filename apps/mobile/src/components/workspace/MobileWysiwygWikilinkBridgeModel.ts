@@ -1,4 +1,8 @@
 import { mobileWikilinkHref } from '../../workspace/mobileWikilinks'
+import {
+  activeMobilePersonMentionQuery,
+  activeMobileWikilinkQuery,
+} from '../../workspace/mobileWikilinkAutocomplete'
 import type { TiptapJsonNode } from '../../workspace/mobileDocumentContent'
 
 type NativeWysiwygWikilinkTextNode = {
@@ -7,6 +11,18 @@ type NativeWysiwygWikilinkTextNode = {
   type: 'text'
 }
 type NativeWysiwygInsertionResult = { inserted: boolean; node: TiptapJsonNode }
+type NativeWysiwygInlineMatchInput = {
+  kind: NativeWysiwygInlineAutocompleteKind
+  position: number
+  projection: NativeWysiwygProjectedInlineText
+  query: string
+  start: number
+}
+type NativeWysiwygProjectedInlineText = {
+  cursor: number
+  positions: number[]
+  text: string
+}
 
 export type NativeWysiwygWikilinkPayload = {
   label: string
@@ -16,6 +32,12 @@ export type NativeWysiwygWikilinkPayload = {
 export type NativeWysiwygSelection = {
   from: number
   to: number
+}
+export type NativeWysiwygInlineAutocompleteKind = 'personMention' | 'wikilink'
+export type NativeWysiwygInlineAutocomplete = {
+  kind: NativeWysiwygInlineAutocompleteKind
+  query: string
+  range: NativeWysiwygSelection
 }
 
 export function nativeWysiwygWikilinkContent(
@@ -56,6 +78,20 @@ export function nativeWysiwygDocumentWithInsertedWikilink({
   return appendWikilinkToFirstParagraph(json, content)?.node ?? null
 }
 
+export function nativeWysiwygInlineAutocompleteAtSelection({
+  json,
+  selection,
+}: {
+  json: unknown
+  selection?: NativeWysiwygSelection
+}): NativeWysiwygInlineAutocomplete | null {
+  if (!isTiptapDocument(json) || !selection) return null
+  const normalized = normalizedSelection(selection)
+  if (normalized.from !== normalized.to) return null
+
+  return findInlineAutocompleteAtPosition(json, normalized.from)
+}
+
 function insertWikilinkAtSelection(
   node: TiptapJsonNode,
   wikilinkContent: TiptapJsonNode[],
@@ -78,6 +114,107 @@ function insertWikilinkAtSelection(
   }
 
   return null
+}
+
+function findInlineAutocompleteAtPosition(
+  node: TiptapJsonNode,
+  position: number,
+  nodeStart = 0,
+): NativeWysiwygInlineAutocomplete | null {
+  if (isInlineContainer(node)) {
+    return inlineAutocompleteForContainer(node, position, nodeStart + 1)
+  }
+
+  const children = node.content ?? []
+  let childStart = node.type === 'doc' ? nodeStart : nodeStart + 1
+  for (const child of children) {
+    const childEnd = childStart + tiptapNodeSize(child)
+    if (position >= childStart && position <= childEnd) {
+      const match = findInlineAutocompleteAtPosition(child, position, childStart)
+      if (match) return match
+    }
+    childStart = childEnd
+  }
+
+  return null
+}
+
+function inlineAutocompleteForContainer(
+  node: TiptapJsonNode,
+  position: number,
+  contentStart: number,
+): NativeWysiwygInlineAutocomplete | null {
+  const projection = projectedInlineText(node.content ?? [], position, contentStart)
+  const wikilinkMatch = activeMobileWikilinkQuery(projection.text, projection.cursor)
+  if (wikilinkMatch) {
+    return inlineAutocompleteMatch({
+      kind: 'wikilink',
+      position,
+      projection,
+      query: wikilinkMatch.query,
+      start: wikilinkMatch.start,
+    })
+  }
+
+  const mentionMatch = activeMobilePersonMentionQuery(projection.text, projection.cursor)
+  if (!mentionMatch || mentionMatch.query.length === 0) return null
+
+  return inlineAutocompleteMatch({
+    kind: 'personMention',
+    position,
+    projection,
+    query: mentionMatch.query,
+    start: mentionMatch.start,
+  })
+}
+
+function inlineAutocompleteMatch({
+  kind,
+  position,
+  projection,
+  query,
+  start,
+}: NativeWysiwygInlineMatchInput): NativeWysiwygInlineAutocomplete | null {
+  const from = projection.positions[start]
+  if (from === undefined) return null
+
+  return {
+    kind,
+    query,
+    range: { from, to: position },
+  }
+}
+
+function projectedInlineText(
+  nodes: TiptapJsonNode[],
+  position: number,
+  contentStart: number,
+): NativeWysiwygProjectedInlineText {
+  const positions: number[] = []
+  let cursor = contentStart
+  let text = ''
+  let textCursor: number | null = null
+
+  for (const node of nodes) {
+    const nodeSize = tiptapNodeSize(node)
+    const nodeEnd = cursor + nodeSize
+    if (typeof node.text === 'string') {
+      if (position >= cursor && position <= nodeEnd) textCursor = text.length + position - cursor
+      for (let index = 0; index < node.text.length; index += 1) positions.push(cursor + index)
+      text += node.text
+    } else {
+      if (position >= cursor && position <= nodeEnd) textCursor = text.length
+      positions.push(cursor)
+      text += '\n'
+    }
+    cursor = nodeEnd
+  }
+
+  return {
+    cursor: textCursor ?? text.length,
+    positions,
+    text,
+  }
 }
 
 function appendWikilinkToFirstParagraph(

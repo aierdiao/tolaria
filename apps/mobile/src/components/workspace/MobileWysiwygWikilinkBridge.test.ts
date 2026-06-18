@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { tiptapJsonToMobileMarkdown, type TiptapJsonNode } from '../../workspace/mobileDocumentContent'
 import {
   nativeWysiwygDocumentWithInsertedWikilink,
+  nativeWysiwygInlineAutocompleteAtSelection,
   nativeWysiwygWikilinkContent,
   type NativeWysiwygSelection,
   type NativeWysiwygWikilinkPayload,
@@ -68,7 +69,57 @@ describe('native WYSIWYG wikilink bridge', () => {
 
     expect(tiptapJsonToMobileMarkdown(nextDocument)).toBe(['# Title', '', 'Body[[AI Ops Guide]]'].join('\n'))
   })
+
+  it('detects an active native wikilink autocomplete query and replacement range', () => {
+    expectAutocomplete('See [[AI', 9, {
+      kind: 'wikilink',
+      query: 'AI',
+      range: { from: 5, to: 9 },
+    })
+  })
+
+  it('detects an active native person mention autocomplete query', () => {
+    expectAutocomplete('Ask @lu', 8, {
+      kind: 'personMention',
+      query: 'lu',
+      range: { from: 5, to: 8 },
+    })
+  })
+
+  it('ignores empty native person mention queries', () => {
+    expect(nativeWysiwygInlineAutocompleteAtSelection({
+      json: documentNode(paragraphNode('Ask @')),
+      selection: { from: 6, to: 6 },
+    })).toBeNull()
+  })
+
+  it('replaces an active native autocomplete query with the selected wikilink', () => {
+    const autocomplete = nativeWysiwygInlineAutocompleteAtSelection({
+      json: documentNode(paragraphNode('See [[AI')),
+      selection: { from: 9, to: 9 },
+    })
+
+    expect(insertedWikilinkMarkdown({
+      payload: {
+        label: 'AI Ops Guide',
+        target: 'AI Ops Guide',
+      },
+      selection: autocomplete?.range,
+      text: 'See [[AI',
+    })).toBe('See [[AI Ops Guide]]')
+  })
 })
+
+function expectAutocomplete(
+  text: string,
+  cursor: number,
+  expected: ReturnType<typeof nativeWysiwygInlineAutocompleteAtSelection>,
+): void {
+  expect(nativeWysiwygInlineAutocompleteAtSelection({
+    json: documentNode(paragraphNode(text)),
+    selection: { from: cursor, to: cursor },
+  })).toEqual(expected)
+}
 
 function insertedWikilinkMarkdown({
   payload,

@@ -37,6 +37,7 @@ type TabletEditorPanelProps = {
   onToggleFavorite: () => void
   onUpdateContent: (noteId: string, content: string) => void
   sourceSelectionProbe?: boolean
+  wysiwygAutocompleteProbe?: boolean
   wysiwygWikilinkInsertProbe?: boolean
   wysiwygMutationProbe?: boolean
 }
@@ -63,6 +64,7 @@ type EditorContentProps = {
   onNavigateWikilink: (target: string) => void
   onUpdateContent: (noteId: string, content: string) => void
   sourceSelectionProbe?: boolean
+  wysiwygAutocompleteProbe?: boolean
   wysiwygWikilinkInsertProbe?: boolean
   wysiwygMutationProbe?: boolean
 }
@@ -84,6 +86,7 @@ export function TabletEditorPanel(props: TabletEditorPanelProps) {
     onToggleFavorite,
     onUpdateContent,
     sourceSelectionProbe = false,
+    wysiwygAutocompleteProbe = false,
     wysiwygWikilinkInsertProbe = false,
     wysiwygMutationProbe = false,
   } = props
@@ -134,6 +137,7 @@ export function TabletEditorPanel(props: TabletEditorPanelProps) {
             onNavigateWikilink={onNavigateWikilink}
             onUpdateContent={onUpdateContent}
             sourceSelectionProbe={sourceSelectionProbe}
+            wysiwygAutocompleteProbe={wysiwygAutocompleteProbe}
             wysiwygWikilinkInsertProbe={wysiwygWikilinkInsertProbe}
             wysiwygMutationProbe={wysiwygMutationProbe}
           />
@@ -152,6 +156,7 @@ export function TabletEditorPanel(props: TabletEditorPanelProps) {
             onNavigateWikilink={onNavigateWikilink}
             onUpdateContent={onUpdateContent}
             sourceSelectionProbe={sourceSelectionProbe}
+            wysiwygAutocompleteProbe={wysiwygAutocompleteProbe}
             wysiwygWikilinkInsertProbe={wysiwygWikilinkInsertProbe}
             wysiwygMutationProbe={wysiwygMutationProbe}
           />
@@ -221,6 +226,7 @@ function EditorContent({
   onNavigateWikilink,
   onUpdateContent,
   sourceSelectionProbe = false,
+  wysiwygAutocompleteProbe = false,
   wysiwygWikilinkInsertProbe = false,
   wysiwygMutationProbe = false,
 }: EditorContentProps) {
@@ -250,6 +256,7 @@ function EditorContent({
         note={note}
         notes={notes}
         onUpdateContent={onUpdateContent}
+        wysiwygAutocompleteProbe={wysiwygAutocompleteProbe}
         wysiwygWikilinkInsertProbe={wysiwygWikilinkInsertProbe}
         wysiwygMutationProbe={wysiwygMutationProbe}
       />

@@ -20,6 +20,15 @@ describe('native WYSIWYG wikilink picker model', () => {
     expect(suggestions.map((suggestion) => suggestion.title)).toEqual(['Project Alpha'])
   })
 
+  it('uses the shared mobile person mention candidates for native @ autocomplete', () => {
+    const suggestions = mobileWysiwygWikilinkPickerSuggestions([
+      note({ title: 'Luca', type: 'Person' }),
+      note({ title: 'Luca Project', type: 'Project' }),
+    ], 'luc', 'personMention')
+
+    expect(suggestions.map((suggestion) => suggestion.title)).toEqual(['Luca'])
+  })
+
   it('builds the native insertion payload with the note title as label and canonical path target', () => {
     expect(mobileWysiwygWikilinkPayloadForNote(note({
       path: 'Tolaria/Mobile UI/How I Run an Open Source Project.md',

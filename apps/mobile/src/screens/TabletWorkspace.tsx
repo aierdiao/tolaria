@@ -27,6 +27,7 @@ export function TabletWorkspace({
   repositoryRequest,
   sourceSelectionProbe = false,
   snapshot,
+  wysiwygAutocompleteProbe = false,
   wysiwygWikilinkInsertProbe = false,
   wysiwygMutationProbe = false,
 }: {
@@ -38,6 +39,7 @@ export function TabletWorkspace({
   repositoryRequest?: ReadOnlyWorkspaceRequest
   sourceSelectionProbe?: boolean
   snapshot: MobileWorkspaceSnapshot
+  wysiwygAutocompleteProbe?: boolean
   wysiwygWikilinkInsertProbe?: boolean
   wysiwygMutationProbe?: boolean
 }) {
@@ -53,6 +55,7 @@ export function TabletWorkspace({
         initialEditorEditingMode={initialEditorEditingMode}
         layoutProbe={layoutProbe}
         sourceSelectionProbe={sourceSelectionProbe}
+        wysiwygAutocompleteProbe={wysiwygAutocompleteProbe}
         wysiwygWikilinkInsertProbe={wysiwygWikilinkInsertProbe}
         wysiwygMutationProbe={wysiwygMutationProbe}
         {...controller}
@@ -187,6 +190,7 @@ type TabletEditorPanelHostProps = Pick<
   | 'onUpdateNoteContent'
   | 'selectedNote'
   | 'sourceSelectionProbe'
+  | 'wysiwygAutocompleteProbe'
   | 'wysiwygWikilinkInsertProbe'
   | 'wysiwygMutationProbe'
 > & {
@@ -208,6 +212,7 @@ function TabletEditorPanelHost({
   selectedNote,
   sourceSelectionProbe,
   suggestionNotes,
+  wysiwygAutocompleteProbe,
   wysiwygWikilinkInsertProbe,
   wysiwygMutationProbe,
 }: TabletEditorPanelHostProps) {
@@ -226,6 +231,7 @@ function TabletEditorPanelHost({
       onToggleFavorite={onToggleFavorite}
       onUpdateContent={onUpdateNoteContent}
       sourceSelectionProbe={sourceSelectionProbe}
+      wysiwygAutocompleteProbe={wysiwygAutocompleteProbe}
       wysiwygWikilinkInsertProbe={wysiwygWikilinkInsertProbe}
       wysiwygMutationProbe={wysiwygMutationProbe}
     />

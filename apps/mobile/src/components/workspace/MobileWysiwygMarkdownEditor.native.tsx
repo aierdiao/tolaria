@@ -20,6 +20,9 @@ import { nativeWysiwygDocumentContentFromJson } from './MobileWysiwygDocumentSer
 import { MobileWysiwygWikilinkPicker } from './MobileWysiwygWikilinkPicker'
 import {
   nativeWysiwygDocumentWithInsertedWikilink,
+  nativeWysiwygInlineAutocompleteAtSelection,
+  type NativeWysiwygInlineAutocomplete,
+  type NativeWysiwygInlineAutocompleteKind,
   type NativeWysiwygSelection,
   type NativeWysiwygWikilinkPayload,
 } from './MobileWysiwygWikilinkBridgeModel'
@@ -28,6 +31,12 @@ import {
   nativeWysiwygMutationProbeContent,
   nativeWysiwygMutationProof,
 } from '../../qa/nativeWysiwygMutationProbe'
+import {
+  nativeWysiwygAutocompleteLogLine,
+  nativeWysiwygAutocompleteProbeContent,
+  nativeWysiwygAutocompleteProbeSelection,
+  nativeWysiwygAutocompleteProof,
+} from '../../qa/nativeWysiwygAutocompleteProbe'
 import {
   nativeWysiwygWikilinkInsertLogLine,
   nativeWysiwygWikilinkInsertProbePayload,
@@ -42,6 +51,7 @@ type MobileWysiwygMarkdownEditorProps = {
   note: MobileNote
   notes: MobileNote[]
   onUpdateContent: (noteId: string, content: string) => void
+  wysiwygAutocompleteProbe?: boolean
   wysiwygWikilinkInsertProbe?: boolean
   wysiwygMutationProbe?: boolean
 }
@@ -66,13 +76,17 @@ type CssInjectableEditorBridge = EditorBridge & {
 type TimerHandle = ReturnType<typeof setTimeout>
 type NativeTentapEditorBridgeOptions = Omit<MobileWysiwygMarkdownEditorProps, 'notes'> & {
   initialDocumentContent: string
+  onInlineAutocomplete: NativeWysiwygInlineAutocompleteHandler
 }
 type NativeTentapEditorSurfaceProps = {
   editor: EditorBridge
   injectEditorCss: () => void
-  insertWikilink: (payload: NativeWysiwygWikilinkPayload) => void
+  insertWikilink: (payload: NativeWysiwygWikilinkPayload, selection?: NativeWysiwygSelection) => void
   layoutProbe?: MobileLayoutProbe
   notes: MobileNote[]
+  onCloseWikilinkPicker: () => void
+  onOpenToolbarWikilinkPicker: () => void
+  pickerState: NativeWysiwygPickerState | null
 }
 type NativeTentapEditorRefs = {
   acceptsEditorChangesRef: MutableRefObject<boolean>
@@ -81,11 +95,22 @@ type NativeTentapEditorRefs = {
   editorRef: MutableRefObject<EditorBridge | null>
   firstEditorSerializationRef: MutableRefObject<boolean>
   hasAcceptedEditorChangeRef: MutableRefObject<boolean>
+  inlineAutocompleteTimerRef: MutableRefObject<TimerHandle | null>
   saveTimerRef: MutableRefObject<TimerHandle | null>
+}
+type NativeWysiwygInlineAutocompleteHandler = (match: NativeWysiwygInlineAutocomplete | null) => void
+type NativeWysiwygPickerState = {
+  kind: NativeWysiwygInlineAutocompleteKind
+  query: string
+  replacementRange?: NativeWysiwygSelection
+  source: 'inline' | 'toolbar'
 }
 
 type ContentSettableEditorBridge = EditorBridge & {
   setContent: (content: unknown) => void
+}
+type SelectionSettableEditorBridge = EditorBridge & {
+  setSelection: (from: number, to: number) => void
 }
 
 export function MobileWysiwygMarkdownEditor({
@@ -96,21 +121,47 @@ export function MobileWysiwygMarkdownEditor({
   note,
   notes,
   onUpdateContent,
+  wysiwygAutocompleteProbe = false,
   wysiwygWikilinkInsertProbe = false,
   wysiwygMutationProbe = false,
 }: MobileWysiwygMarkdownEditorProps) {
+  const [pickerState, setPickerState] = useState<NativeWysiwygPickerState | null>(null)
+  const handleInlineAutocomplete = useCallback((match: NativeWysiwygInlineAutocomplete | null) => {
+    setPickerState((current) => inlineAutocompletePickerState(current, match))
+  }, [])
+  const handleOpenToolbarWikilinkPicker = useCallback(() => {
+    setPickerState({
+      kind: 'wikilink',
+      query: '',
+      source: 'toolbar',
+    })
+  }, [])
+  const handleCloseWikilinkPicker = useCallback(() => {
+    setPickerState(null)
+  }, [])
   const bridge = useNativeTentapEditorBridge({
     blocks,
     bullets,
     compact,
     initialDocumentContent: initialNativeEditorContent({ blocks, bullets, note }),
     note,
+    onInlineAutocomplete: handleInlineAutocomplete,
     onUpdateContent,
+    wysiwygAutocompleteProbe,
     wysiwygWikilinkInsertProbe,
     wysiwygMutationProbe,
   })
 
-  return <NativeTentapEditorSurface {...bridge} layoutProbe={layoutProbe} notes={notes} />
+  return (
+    <NativeTentapEditorSurface
+      {...bridge}
+      layoutProbe={layoutProbe}
+      notes={notes}
+      pickerState={pickerState}
+      onCloseWikilinkPicker={handleCloseWikilinkPicker}
+      onOpenToolbarWikilinkPicker={handleOpenToolbarWikilinkPicker}
+    />
+  )
 }
 
 function NativeTentapEditorSurface({
@@ -119,19 +170,21 @@ function NativeTentapEditorSurface({
   insertWikilink,
   layoutProbe,
   notes,
+  onCloseWikilinkPicker,
+  onOpenToolbarWikilinkPicker,
+  pickerState,
 }: NativeTentapEditorSurfaceProps) {
-  const [wikilinkPickerOpen, setWikilinkPickerOpen] = useState(false)
   const handleFormat = useCallback((action: Parameters<typeof applyNativeWysiwygFormat>[1]) => {
     if (action === 'wikilink') {
-      setWikilinkPickerOpen(true)
+      onOpenToolbarWikilinkPicker()
       return
     }
     applyNativeWysiwygFormat(editor as NativeWysiwygCommandBridge, action)
-  }, [editor])
+  }, [editor, onOpenToolbarWikilinkPicker])
   const handleInsertWikilink = useCallback((payload: NativeWysiwygWikilinkPayload) => {
-    insertWikilink(payload)
-    setWikilinkPickerOpen(false)
-  }, [insertWikilink])
+    insertWikilink(payload, pickerState?.replacementRange)
+    onCloseWikilinkPicker()
+  }, [insertWikilink, onCloseWikilinkPicker, pickerState?.replacementRange])
 
   return (
     <View {...probeProps(layoutProbe, 'editor.wysiwyg.form')} style={nativeEditorStyles.container} testID="editor-wysiwyg-form">
@@ -154,10 +207,13 @@ function NativeTentapEditorSurface({
           onFormat={handleFormat}
         />
       </KeyboardAvoidingView>
-      {wikilinkPickerOpen ? (
+      {pickerState ? (
         <MobileWysiwygWikilinkPicker
+          initialQuery={pickerState.query}
+          key={wikilinkPickerKey(pickerState)}
+          kind={pickerState.kind}
           notes={notes}
-          onClose={() => setWikilinkPickerOpen(false)}
+          onClose={onCloseWikilinkPicker}
           onSelect={handleInsertWikilink}
         />
       ) : null}
@@ -182,7 +238,9 @@ function useNativeTentapEditorBridge({
   compact,
   initialDocumentContent,
   note,
+  onInlineAutocomplete,
   onUpdateContent,
+  wysiwygAutocompleteProbe = false,
   wysiwygWikilinkInsertProbe = false,
   wysiwygMutationProbe = false,
 }: NativeTentapEditorBridgeOptions) {
@@ -199,7 +257,7 @@ function useNativeTentapEditorBridge({
     refs,
     wikilinkInsertProbeEnabled: wysiwygWikilinkInsertProbe,
   })
-  const scheduleDocumentFlush = useScheduleDocumentFlush(refs, flushEditorDocument)
+  const scheduleEditorChange = useScheduleEditorChange(refs, flushEditorDocument, onInlineAutocomplete)
   const injectEditorCss = useEditorCssInjection({ compact, refs })
   const insertWikilink = useNativeWysiwygWikilinkInserter({ flushEditorDocument, refs })
 
@@ -207,12 +265,13 @@ function useNativeTentapEditorBridge({
     avoidIosKeyboard: true,
     bridgeExtensions: TenTapStartKit,
     initialContent,
-    onChange: scheduleDocumentFlush,
+    onChange: scheduleEditorChange,
   })
 
   useEditorBridgeRef(refs.editorRef, editor)
   useEditableContentRef({ blocks, bullets, note, refs })
   useResetEditorChangeGate({ initialContent, noteId: note.id, refs })
+  useNativeWysiwygAutocompleteProbe({ enabled: wysiwygAutocompleteProbe, refs })
   useNativeWysiwygWikilinkInsertProbe({ enabled: wysiwygWikilinkInsertProbe, flushEditorDocument, refs })
   useNativeWysiwygMutationProbe({ enabled: wysiwygMutationProbe, flushEditorDocument, refs })
   useFlushOnUnmount(refs, flushEditorDocument)
@@ -227,6 +286,7 @@ function useNativeTentapEditorRefs(initialDocumentContent: string): NativeTentap
   const editorRef = useRef<EditorBridge | null>(null)
   const firstEditorSerializationRef = useRef(true)
   const hasAcceptedEditorChangeRef = useRef(false)
+  const inlineAutocompleteTimerRef = useRef<TimerHandle | null>(null)
   const saveTimerRef = useRef<TimerHandle | null>(null)
 
   return useMemo(() => ({
@@ -236,6 +296,7 @@ function useNativeTentapEditorRefs(initialDocumentContent: string): NativeTentap
     editorRef,
     firstEditorSerializationRef,
     hasAcceptedEditorChangeRef,
+    inlineAutocompleteTimerRef,
     saveTimerRef,
   }), [
     acceptsEditorChangesRef,
@@ -244,6 +305,7 @@ function useNativeTentapEditorRefs(initialDocumentContent: string): NativeTentap
     editorRef,
     firstEditorSerializationRef,
     hasAcceptedEditorChangeRef,
+    inlineAutocompleteTimerRef,
     saveTimerRef,
   ])
 }
@@ -367,6 +429,50 @@ function useNativeWysiwygMutationProbe({
   }, [enabled, flushEditorDocument, refs])
 }
 
+function useNativeWysiwygAutocompleteProbe({
+  enabled,
+  refs,
+}: {
+  enabled: boolean
+  refs: NativeTentapEditorRefs
+}) {
+  useEffect(() => {
+    if (!enabled) return undefined
+
+    let detectTimer: TimerHandle | null = null
+    let probeTimer: TimerHandle | null = null
+    const runProbe = () => {
+      if (!refs.acceptsEditorChangesRef.current) {
+        probeTimer = setTimeout(runProbe, 250)
+        return
+      }
+
+      const editor = refs.editorRef.current
+      if (!isContentSettableEditorBridge(editor) || !isSelectionSettableEditorBridge(editor)) return
+
+      editor.setContent(nativeWysiwygAutocompleteProbeContent())
+      const selection = nativeWysiwygAutocompleteProbeSelection()
+      editor.setSelection(selection.from, selection.to)
+      detectTimer = setTimeout(() => {
+        void detectNativeWysiwygInlineAutocomplete(editor)
+          .then((match) => {
+            console.info(nativeWysiwygAutocompleteLogLine(nativeWysiwygAutocompleteProof(match)))
+          })
+          .catch((error: unknown) => {
+            console.warn('[mobile-editor] Failed to run native WYSIWYG autocomplete probe:', error)
+          })
+      }, 500)
+    }
+
+    probeTimer = setTimeout(runProbe, 500)
+
+    return () => {
+      if (detectTimer) clearTimeout(detectTimer)
+      if (probeTimer) clearTimeout(probeTimer)
+    }
+  }, [enabled, refs])
+}
+
 function publishNativeWysiwygMutationProof(noteId: string, content: string): void {
   if (Platform.OS === 'web') return
 
@@ -388,8 +494,8 @@ function useNativeWysiwygWikilinkInserter({
 }) {
   const { editorRef, hasAcceptedEditorChangeRef, saveTimerRef } = refs
 
-  return useCallback((payload: NativeWysiwygWikilinkPayload) => {
-    void insertWikilinkIntoNativeEditor(editorRef.current, payload)
+  return useCallback((payload: NativeWysiwygWikilinkPayload, selection?: NativeWysiwygSelection) => {
+    void insertWikilinkIntoNativeEditor(editorRef.current, payload, selection)
       .then((inserted) => {
         if (!inserted) return
 
@@ -406,6 +512,7 @@ function useNativeWysiwygWikilinkInserter({
 async function insertWikilinkIntoNativeEditor(
   editor: EditorBridge | null,
   payload: NativeWysiwygWikilinkPayload,
+  selection?: NativeWysiwygSelection,
 ): Promise<boolean> {
   if (!isJsonReadableEditorBridge(editor) || !isContentSettableEditorBridge(editor)) return false
 
@@ -413,7 +520,7 @@ async function insertWikilinkIntoNativeEditor(
   const nextJson = nativeWysiwygDocumentWithInsertedWikilink({
     json,
     payload,
-    selection: nativeWysiwygEditorSelection(editor),
+    selection: selection ?? nativeWysiwygEditorSelection(editor),
   })
   if (!nextJson) return false
 
@@ -485,18 +592,77 @@ function useNativeWysiwygWikilinkInsertProbe({
   }, [enabled, flushEditorDocument, refs])
 }
 
-function useScheduleDocumentFlush(
+function inlineAutocompletePickerState(
+  current: NativeWysiwygPickerState | null,
+  match: NativeWysiwygInlineAutocomplete | null,
+): NativeWysiwygPickerState | null {
+  if (current?.source === 'toolbar') return current
+  if (!match) return current?.source === 'inline' ? null : current
+
+  return {
+    kind: match.kind,
+    query: match.query,
+    replacementRange: match.range,
+    source: 'inline',
+  }
+}
+
+function wikilinkPickerKey(state: NativeWysiwygPickerState): string {
+  return [
+    state.source,
+    state.kind,
+    state.query,
+    state.replacementRange?.from ?? 'selection',
+    state.replacementRange?.to ?? 'selection',
+  ].join(':')
+}
+
+function useScheduleEditorChange(
   refs: NativeTentapEditorRefs,
   flushEditorDocument: () => void,
+  onInlineAutocomplete: NativeWysiwygInlineAutocompleteHandler,
 ) {
-  const { acceptsEditorChangesRef, hasAcceptedEditorChangeRef, saveTimerRef } = refs
+  const {
+    acceptsEditorChangesRef,
+    editorRef,
+    hasAcceptedEditorChangeRef,
+    inlineAutocompleteTimerRef,
+    saveTimerRef,
+  } = refs
 
   return useCallback(() => {
     if (!acceptsEditorChangesRef.current) return
     hasAcceptedEditorChangeRef.current = true
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
     saveTimerRef.current = setTimeout(flushEditorDocument, 250)
-  }, [acceptsEditorChangesRef, flushEditorDocument, hasAcceptedEditorChangeRef, saveTimerRef])
+    if (inlineAutocompleteTimerRef.current) clearTimeout(inlineAutocompleteTimerRef.current)
+    inlineAutocompleteTimerRef.current = setTimeout(() => {
+      void detectNativeWysiwygInlineAutocomplete(editorRef.current)
+        .then(onInlineAutocomplete)
+        .catch((error: unknown) => {
+          console.warn('[mobile-editor] Failed to detect native WYSIWYG autocomplete:', error)
+        })
+    }, 80)
+  }, [
+    acceptsEditorChangesRef,
+    editorRef,
+    flushEditorDocument,
+    hasAcceptedEditorChangeRef,
+    inlineAutocompleteTimerRef,
+    onInlineAutocomplete,
+    saveTimerRef,
+  ])
+}
+
+async function detectNativeWysiwygInlineAutocomplete(
+  editor: EditorBridge | null,
+): Promise<NativeWysiwygInlineAutocomplete | null> {
+  if (!isJsonReadableEditorBridge(editor)) return null
+
+  return nativeWysiwygInlineAutocompleteAtSelection({
+    json: await editor.getJSON(),
+    selection: nativeWysiwygEditorSelection(editor),
+  })
 }
 
 function useEditorCssInjection({
@@ -574,6 +740,7 @@ function useFlushOnUnmount(
 ) {
   useEffect(() => () => {
     if (refs.editorReadyTimerRef.current) clearTimeout(refs.editorReadyTimerRef.current)
+    if (refs.inlineAutocompleteTimerRef.current) clearTimeout(refs.inlineAutocompleteTimerRef.current)
     if (refs.saveTimerRef.current) clearTimeout(refs.saveTimerRef.current)
     if (refs.hasAcceptedEditorChangeRef.current) flushEditorDocument()
   }, [flushEditorDocument, refs])
@@ -593,6 +760,10 @@ function isEditorStateReadableBridge(editor: EditorBridge | null): editor is Edi
 
 function isContentSettableEditorBridge(editor: EditorBridge | null): editor is ContentSettableEditorBridge {
   return typeof (editor as Partial<ContentSettableEditorBridge> | null)?.setContent === 'function'
+}
+
+function isSelectionSettableEditorBridge(editor: EditorBridge | null): editor is SelectionSettableEditorBridge {
+  return typeof (editor as Partial<SelectionSettableEditorBridge> | null)?.setSelection === 'function'
 }
 
 const nativeEditorStyles = StyleSheet.create({
