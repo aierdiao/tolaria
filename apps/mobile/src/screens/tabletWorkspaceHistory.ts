@@ -1,11 +1,13 @@
-import type { MobileNote, MobileWorkspaceSnapshot } from '../workspace/mobileWorkspaceModel'
+import type {
+  MobileNote,
+  MobileSavedView,
+  MobileTypeDefinition,
+  MobileWorkspaceSnapshot,
+} from '../workspace/mobileWorkspaceModel'
 import type { MobileWorkspaceEdit } from '../workspace/mobileWorkspaceEditing'
 import { mobileNoteEditableContent } from '../workspace/mobileDocumentContent'
 
-type WorkspaceHistoryEdit = Extract<
-  MobileWorkspaceEdit,
-  { type: 'updateNoteContent' | 'updateTextFileContent' }
->
+type WorkspaceHistoryEdit = MobileWorkspaceEdit
 
 export type MobileWorkspaceHistoryEntry = {
   redoEdits: WorkspaceHistoryEdit[]
@@ -31,21 +33,13 @@ export function mobileWorkspaceHistoryEntry(
 ): MobileWorkspaceHistoryEntry | null {
   if (sourceEdit && !historyRecordsEdit(sourceEdit)) return null
 
-  const nextNotesById = new Map(workspaceNotes(nextSnapshot).map((note) => [note.id, note]))
-  const edits = workspaceNotes(previousSnapshot).reduce<MobileWorkspaceHistoryEntry>((entry, previousNote) => {
-    const nextNote = nextNotesById.get(previousNote.id)
-    const reversible = reversibleContentChange({
-      nextNote,
-      nextSnapshot,
-      previousNote,
-      previousSnapshot,
-    })
-    if (!reversible) return entry
-
-    entry.undoEdits.push(reversible.undoEdit)
-    entry.redoEdits.push(reversible.redoEdit)
-    return entry
-  }, { redoEdits: [], undoEdits: [] })
+  const edits = emptyHistoryEntry()
+  recordRemovedFolderHistory(edits, previousSnapshot, nextSnapshot)
+  recordAddedFolderHistory(edits, previousSnapshot, nextSnapshot)
+  recordViewHistory(edits, previousSnapshot, nextSnapshot)
+  recordTypeDefinitionHistory(edits, previousSnapshot, nextSnapshot)
+  recordContentHistory(edits, previousSnapshot, nextSnapshot)
+  recordNoteHistory(edits, previousSnapshot, nextSnapshot)
 
   return edits.undoEdits.length > 0 ? edits : null
 }
@@ -59,6 +53,129 @@ export function recordMobileWorkspaceHistory(
   return {
     future: [],
     past: [...history.past, entry].slice(-maxWorkspaceHistoryEntries),
+  }
+}
+
+function recordContentHistory(
+  entry: MobileWorkspaceHistoryEntry,
+  previousSnapshot: MobileWorkspaceSnapshot,
+  nextSnapshot: MobileWorkspaceSnapshot,
+) {
+  const nextNotesById = new Map(workspaceNotes(nextSnapshot).map((note) => [note.id, note]))
+  for (const previousNote of workspaceNotes(previousSnapshot)) {
+    const reversible = reversibleContentChange({
+      nextNote: nextNotesById.get(previousNote.id),
+      nextSnapshot,
+      previousNote,
+      previousSnapshot,
+    })
+    if (!reversible) continue
+
+    entry.undoEdits.push(reversible.undoEdit)
+    entry.redoEdits.push(reversible.redoEdit)
+  }
+}
+
+function recordNoteHistory(
+  entry: MobileWorkspaceHistoryEntry,
+  previousSnapshot: MobileWorkspaceSnapshot,
+  nextSnapshot: MobileWorkspaceSnapshot,
+) {
+  const previousNotesById = new Map(workspaceNotes(previousSnapshot).map((note) => [note.id, note]))
+  const nextNotesById = new Map(workspaceNotes(nextSnapshot).map((note) => [note.id, note]))
+
+  for (const note of workspaceNotes(nextSnapshot)) {
+    if (previousNotesById.has(note.id)) continue
+    entry.undoEdits.push({ noteId: note.id, type: 'deleteNote' })
+    entry.redoEdits.push(restoreNoteEdit(note, nextSnapshot))
+  }
+
+  for (const note of workspaceNotes(previousSnapshot)) {
+    if (nextNotesById.has(note.id)) continue
+    entry.undoEdits.push(restoreNoteEdit(note, previousSnapshot))
+    entry.redoEdits.push({ noteId: note.id, type: 'deleteNote' })
+  }
+}
+
+function recordRemovedFolderHistory(
+  entry: MobileWorkspaceHistoryEntry,
+  previousSnapshot: MobileWorkspaceSnapshot,
+  nextSnapshot: MobileWorkspaceSnapshot,
+) {
+  const nextPaths = normalizedFolderPathSet(nextSnapshot)
+  for (const path of normalizedFolderPaths(previousSnapshot)) {
+    if (nextPaths.has(path)) continue
+    entry.undoEdits.unshift({ path, type: 'restoreFolder' })
+    entry.redoEdits.push({ folderPath: path, type: 'deleteFolder' })
+  }
+}
+
+function recordAddedFolderHistory(
+  entry: MobileWorkspaceHistoryEntry,
+  previousSnapshot: MobileWorkspaceSnapshot,
+  nextSnapshot: MobileWorkspaceSnapshot,
+) {
+  const previousPaths = normalizedFolderPathSet(previousSnapshot)
+  for (const path of normalizedFolderPaths(nextSnapshot)) {
+    if (previousPaths.has(path)) continue
+    entry.undoEdits.push({ folderPath: path, type: 'deleteFolder' })
+    entry.redoEdits.unshift({ path, type: 'restoreFolder' })
+  }
+}
+
+function recordViewHistory(
+  entry: MobileWorkspaceHistoryEntry,
+  previousSnapshot: MobileWorkspaceSnapshot,
+  nextSnapshot: MobileWorkspaceSnapshot,
+) {
+  const previousViews = previousSnapshot.views ?? []
+  const nextViews = nextSnapshot.views ?? []
+  const previousViewsById = new Map(previousViews.map((view) => [view.id, view]))
+  const nextViewsById = new Map(nextViews.map((view) => [view.id, view]))
+
+  for (const view of nextViews) {
+    const previousView = previousViewsById.get(view.id)
+    if (!previousView) {
+      entry.undoEdits.push({ viewId: view.id, type: 'deleteView' })
+      entry.redoEdits.push(restoreViewEdit(view, nextViews))
+    } else if (!sameJson(previousView, view)) {
+      entry.undoEdits.push(restoreViewEdit(previousView, previousViews))
+      entry.redoEdits.push(restoreViewEdit(view, nextViews))
+    }
+  }
+
+  for (const view of previousViews) {
+    if (nextViewsById.has(view.id)) continue
+    entry.undoEdits.push(restoreViewEdit(view, previousViews))
+    entry.redoEdits.push({ viewId: view.id, type: 'deleteView' })
+  }
+}
+
+function recordTypeDefinitionHistory(
+  entry: MobileWorkspaceHistoryEntry,
+  previousSnapshot: MobileWorkspaceSnapshot,
+  nextSnapshot: MobileWorkspaceSnapshot,
+) {
+  const previousDefinitions = previousSnapshot.typeDefinitions ?? {}
+  const nextDefinitions = nextSnapshot.typeDefinitions ?? {}
+  const typeNames = new Set([...Object.keys(previousDefinitions), ...Object.keys(nextDefinitions)])
+
+  for (const typeName of typeNames) {
+    const previousDefinition = previousDefinitions[typeName]
+    const nextDefinition = nextDefinitions[typeName]
+    if (previousDefinition && nextDefinition && sameJson(previousDefinition, nextDefinition)) continue
+
+    if (previousDefinition) {
+      entry.undoEdits.push({ definition: previousDefinition, type: 'restoreTypeDefinition', typeName })
+    } else {
+      entry.undoEdits.push({ type: 'deleteTypeDefinition', typeName })
+    }
+
+    if (nextDefinition) {
+      entry.redoEdits.push({ definition: nextDefinition, type: 'restoreTypeDefinition', typeName })
+    } else {
+      entry.redoEdits.push({ type: 'deleteTypeDefinition', typeName })
+    }
   }
 }
 
@@ -137,7 +254,12 @@ function editableContent(note: MobileNote, snapshot: MobileWorkspaceSnapshot): s
 }
 
 function historyRecordsEdit(edit: MobileWorkspaceEdit): boolean {
-  return edit.type !== 'hydrateNoteContent' && edit.type !== 'hydrateTextFileContent'
+  return edit.type !== 'hydrateNoteContent'
+    && edit.type !== 'hydrateTextFileContent'
+    && edit.type !== 'restoreFolder'
+    && edit.type !== 'restoreNote'
+    && edit.type !== 'restoreTypeDefinition'
+    && edit.type !== 'restoreView'
 }
 
 function noteWithSnapshotEditorContent(note: MobileNote, snapshot: MobileWorkspaceSnapshot): MobileNote {
@@ -156,4 +278,41 @@ function notePath(note: MobileNote): string {
 
 function workspaceNotes(snapshot: MobileWorkspaceSnapshot): MobileNote[] {
   return snapshot.allNotes ?? snapshot.notes
+}
+
+function emptyHistoryEntry(): MobileWorkspaceHistoryEntry {
+  return { redoEdits: [], undoEdits: [] }
+}
+
+function restoreNoteEdit(note: MobileNote, snapshot: MobileWorkspaceSnapshot): WorkspaceHistoryEdit {
+  return {
+    allNoteIndex: snapshot.allNotes?.findIndex((candidate) => candidate.id === note.id),
+    note,
+    noteIndex: snapshot.notes.findIndex((candidate) => candidate.id === note.id),
+    type: 'restoreNote',
+  }
+}
+
+function restoreViewEdit(view: MobileSavedView, views: MobileSavedView[]): WorkspaceHistoryEdit {
+  return {
+    type: 'restoreView',
+    view,
+    viewIndex: views.findIndex((candidate) => candidate.id === view.id),
+  }
+}
+
+function normalizedFolderPaths(snapshot: MobileWorkspaceSnapshot): string[] {
+  return [...new Set((snapshot.folderPaths ?? []).map(normalizedFolderPath).filter(Boolean))]
+}
+
+function normalizedFolderPathSet(snapshot: MobileWorkspaceSnapshot): Set<string> {
+  return new Set(normalizedFolderPaths(snapshot))
+}
+
+function normalizedFolderPath(path: string): string {
+  return path.trim().replaceAll('\\', '/').replace(/^\/+|\/+$/gu, '').replace(/\/+/gu, '/')
+}
+
+function sameJson(left: MobileSavedView | MobileTypeDefinition, right: MobileSavedView | MobileTypeDefinition): boolean {
+  return JSON.stringify(left) === JSON.stringify(right)
 }

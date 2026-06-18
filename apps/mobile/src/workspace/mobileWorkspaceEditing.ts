@@ -27,6 +27,7 @@ import type {
   MobileRelationshipValue,
   MobileSavedView,
   MobileTone,
+  MobileTypeDefinition,
   MobileTypeDefinitions,
   MobileViewDefinition,
   MobileWorkspaceSnapshot,
@@ -66,6 +67,7 @@ import { normalizeMobileNoteWidth } from './mobileNoteWidth'
 import { mobileNoteForWikilinkTarget } from './mobileWikilinks'
 import type { MobileTypeDefinitionPatch } from './mobileTypeDefinitions'
 import { applyMobileTypeEdit } from './mobileWorkspaceTypeEditing'
+import { applyMobileRestorationEdit } from './mobileWorkspaceRestoration'
 import { normalizeRelationshipKey } from './mobileWorkspaceSuggestions'
 import {
   applyMobileTextFileContentEdit,
@@ -90,6 +92,7 @@ export type MobileWorkspaceEdit =
   | { content: TextFileContent; noteId: NoteId; type: 'updateTextFileContent' }
   | { defaults?: MobileCreateNoteDefaults; title: NoteTitle; type: 'createNote' }
   | { noteId: NoteId; type: 'deleteNote' }
+  | { allNoteIndex?: number; note: MobileNote; noteIndex?: number; type: 'restoreNote' }
   | { noteId: NoteId; rawContent: MarkdownContent; type: 'hydrateNoteContent' }
   | { noteId: NoteId; rawContent: TextFileContent; type: 'hydrateTextFileContent' }
   | { key: FrontmatterKey; noteId: NoteId; value: MobilePropertyValue; type: 'updateProperty' }
@@ -103,24 +106,28 @@ export type MobileWorkspaceEdit =
   | { name: string; parentPath?: FolderPath; type: 'createFolder' }
   | { folderPath: FolderPath; name: string; type: 'renameFolder' }
   | { folderPath: FolderPath; type: 'deleteFolder' }
+  | { path: FolderPath; type: 'restoreFolder' }
   | { noteId: NoteId; type: 'toggleFavorite' }
   | { archived: boolean; noteId: NoteId; type: 'setArchived' }
   | { noteId: NoteId; organized: boolean; type: 'setOrganized' }
   | { definition: MobileViewDefinition; type: 'createView' }
   | { definition: MobileViewDefinition; viewId: string; type: 'updateView' }
   | { viewId: string; type: 'deleteView' }
+  | { view: MobileSavedView; viewIndex?: number; type: 'restoreView' }
   | { direction: MobileViewMoveDirection; viewId: string; type: 'moveView' }
   | { listPropertiesDisplay: string[]; target: 'allNotes' | 'inbox'; type: 'updatePrimaryNoteListProperties' }
   | { direction: MobileViewMoveDirection; type: 'moveTypeSection'; typeName: NoteTitle }
   | { type: 'createTypeDefinition'; typeName: NoteTitle }
   | { type: 'deleteTypeDefinition'; typeName: NoteTitle }
+  | { definition: MobileTypeDefinition; type: 'restoreTypeDefinition'; typeName: NoteTitle }
   | { patch: MobileTypeDefinitionPatch; type: 'updateTypeDefinition'; typeName: NoteTitle }
 type MobileViewEdit = Extract<MobileWorkspaceEdit, { type: 'createView' | 'deleteView' | 'moveView' | 'updateView' }>
 type MobileTypeEdit = Extract<MobileWorkspaceEdit, { type: 'createTypeDefinition' | 'deleteTypeDefinition' | 'moveTypeSection' | 'updateTypeDefinition' }>
 type MobileFolderEdit = Extract<MobileWorkspaceEdit, { type: 'createFolder' | 'deleteFolder' | 'renameFolder' }>
 type MobilePrimaryNoteListEdit = Extract<MobileWorkspaceEdit, { type: 'updatePrimaryNoteListProperties' }>
+type MobileRestorationEdit = Extract<MobileWorkspaceEdit, { type: 'restoreFolder' | 'restoreNote' | 'restoreTypeDefinition' | 'restoreView' }>
 type MobileSnapshotEdit = Extract<MobileWorkspaceEdit, { type: 'createRelationshipTarget' | 'deleteNote' | 'moveNoteToFolder' | 'renameNoteFile' }>
-type MobileNoteEdit = Exclude<MobileWorkspaceEdit, MobileFolderEdit | MobilePrimaryNoteListEdit | MobileSnapshotEdit | MobileTypeEdit | MobileViewEdit | { type: 'createNote' }>
+type MobileNoteEdit = Exclude<MobileWorkspaceEdit, MobileFolderEdit | MobilePrimaryNoteListEdit | MobileRestorationEdit | MobileSnapshotEdit | MobileTypeEdit | MobileViewEdit | { type: 'createNote' }>
 type MobileWorkspaceResultHandlerMap = {
   [Type in MobileWorkspaceEdit['type']]?: (
     snapshot: MobileWorkspaceSnapshot,
@@ -243,6 +250,10 @@ const mobileWorkspaceResultHandlers: MobileWorkspaceResultHandlerMap = {
   moveNoteToFolder: (snapshot, edit) => moveNoteToFolder(snapshot, edit),
   renameFolder: (snapshot, edit) => applyMobileFolderEdit(snapshot, edit, rebuildSnapshot),
   renameNoteFile: (snapshot, edit) => renameNoteFile(snapshot, edit),
+  restoreFolder: (snapshot, edit) => applyMobileRestorationEdit(snapshot, edit, rebuildSnapshot),
+  restoreNote: (snapshot, edit) => applyMobileRestorationEdit(snapshot, edit, rebuildSnapshot),
+  restoreTypeDefinition: (snapshot, edit) => applyMobileRestorationEdit(snapshot, edit, rebuildSnapshot),
+  restoreView: (snapshot, edit) => applyMobileRestorationEdit(snapshot, edit, rebuildSnapshot),
   updatePrimaryNoteListProperties: (snapshot, edit) => updatePrimaryNoteListProperties(snapshot, edit),
   updateTypeDefinition: (snapshot, edit) => applyMobileTypeEdit(snapshot, edit, rebuildSnapshot),
   updateProperty: (snapshot, edit) => updateMobileNoteProperty(snapshot, edit),
