@@ -1,5 +1,5 @@
 import { Pressable, StyleSheet, type NativeSyntheticEvent, type TextInputSelectionChangeEventData, View } from 'react-native'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Input } from '../ui/input'
 import { Text } from '../ui/text'
 import { MobileChip } from '../../ui/MobileChip'
@@ -28,6 +28,15 @@ import {
   type MobileMarkdownTextSelection,
 } from '../../workspace/mobileMarkdownSourceSelection'
 import { mobileNoteEditableContent } from '../../workspace/mobileDocumentContent'
+import {
+  commitMobileEditorDraft,
+  createMobileEditorDraft,
+  editMobileEditorDraft,
+  mobileEditorDraftCommitDelayMs,
+  mobileEditorDraftNeedsCommit,
+  syncMobileEditorDraft,
+  type MobileEditorDraftState,
+} from '../../workspace/mobileEditorDraft'
 import type { MobileEditorBlock, MobileNote } from '../../workspace/mobileWorkspaceModel'
 import { nativeSourceSelectionProof } from '../../qa/nativeSourceSelectionProbe'
 import { nativeSourceSelectionLogLine } from '../../qa/nativeSourceSelectionLog'
@@ -45,6 +54,7 @@ export type MobileMarkdownSourceEditorProps = {
 }
 
 type InlineAutocompleteKind = 'personMention' | 'wikilink'
+type TimerHandle = ReturnType<typeof setTimeout>
 
 export function MobileMarkdownSourceEditor({
   blocks,
@@ -56,17 +66,22 @@ export function MobileMarkdownSourceEditor({
   onUpdateContent,
   sourceSelectionProbe = false,
 }: MobileMarkdownSourceEditorProps) {
-  const content = mobileNoteEditableContent({
+  const sourceContent = mobileNoteEditableContent({
     ...note,
     editorBlocks: note.editorBlocks ?? blocks,
     editorBullets: bullets,
   })
+  const editorDraft = useMobileSourceEditorDraft({
+    noteId: note.id,
+    onCommit: onUpdateContent,
+    sourceContent,
+  })
   const autocomplete = useMarkdownInlineAutocomplete({
-    content,
+    content: editorDraft.content,
     noteId: note.id,
     notes,
     onImportAttachment,
-    onUpdateContent,
+    onUpdateContent: editorDraft.updateContent,
   })
   useNativeSourceSelectionProbe(sourceSelectionProbe)
 
@@ -80,7 +95,7 @@ export function MobileMarkdownSourceEditor({
         style={[editorStyles.input, compact ? editorStyles.inputCompact : null]}
         testID="editor-markdown-input"
         textAlignVertical="top"
-        value={content}
+        value={editorDraft.content}
         selection={autocomplete.controlledSelection}
         onChangeText={autocomplete.handleMarkdownChange}
         onSelectionChange={autocomplete.handleSelectionChange}
@@ -104,6 +119,71 @@ export function MobileMarkdownSourceEditor({
       ) : null}
     </View>
   )
+}
+
+function useMobileSourceEditorDraft({
+  noteId,
+  onCommit,
+  sourceContent,
+}: {
+  noteId: string
+  onCommit: (noteId: string, content: string) => void
+  sourceContent: string
+}) {
+  const commitTimerRef = useRef<TimerHandle | null>(null)
+  const onCommitRef = useRef(onCommit)
+  const [draft, setDraft] = useState(() => createMobileEditorDraft(noteId, sourceContent))
+  const draftRef = useRef<MobileEditorDraftState>(draft)
+
+  useEffect(() => {
+    onCommitRef.current = onCommit
+  }, [onCommit])
+  useEffect(() => {
+    draftRef.current = draft
+  }, [draft])
+
+  const clearScheduledCommit = useCallback(() => {
+    if (commitTimerRef.current) clearTimeout(commitTimerRef.current)
+    commitTimerRef.current = null
+  }, [])
+  const flushDraft = useCallback((updateState: boolean) => {
+    clearScheduledCommit()
+    const current = draftRef.current
+    if (!mobileEditorDraftNeedsCommit(current)) return
+
+    onCommitRef.current(current.noteId, current.draftContent)
+    const committed = commitMobileEditorDraft(current)
+    draftRef.current = committed
+    if (updateState) setDraft(committed)
+  }, [clearScheduledCommit])
+  const commitDraft = useCallback(() => flushDraft(true), [flushDraft])
+  const scheduleCommit = useCallback(() => {
+    clearScheduledCommit()
+    commitTimerRef.current = setTimeout(commitDraft, mobileEditorDraftCommitDelayMs)
+  }, [clearScheduledCommit, commitDraft])
+  const updateContent = useCallback((_noteId: string, nextContent: string) => {
+    const nextDraft = editMobileEditorDraft(draftRef.current, nextContent)
+    draftRef.current = nextDraft
+    setDraft(nextDraft)
+    if (mobileEditorDraftNeedsCommit(nextDraft)) scheduleCommit()
+    else clearScheduledCommit()
+  }, [clearScheduledCommit, scheduleCommit])
+
+  useEffect(() => {
+    setDraft((current) => {
+      const nextDraft = syncMobileEditorDraft(current, { content: sourceContent, noteId })
+      draftRef.current = nextDraft
+      return nextDraft
+    })
+  }, [noteId, sourceContent])
+  useEffect(() => () => {
+    flushDraft(false)
+  }, [flushDraft])
+
+  return {
+    content: draft.draftContent,
+    updateContent,
+  }
 }
 
 function useNativeSourceSelectionProbe(enabled: boolean) {
