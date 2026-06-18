@@ -92,6 +92,42 @@ describe('mobile Type document editing', () => {
     ])
   })
 
+  it('retargets Type document wikilinks and Type schema relationships when renamed', () => {
+    const result = applyMobileWorkspaceEditWithWrites(typeRenamePathRewriteSnapshot(), {
+      nextTypeName: 'Playbook',
+      type: 'renameTypeDefinition',
+      typeName: 'Procedure',
+    })
+
+    expect(noteById(result.snapshot, 'procedure-reference').rawContent).toContain('[[playbook]]')
+    expect(noteById(result.snapshot, 'procedure-reference').rawContent).toContain('[[playbook|Procedure alias]]')
+    expect(result.snapshot.typeDefinitions?.Release?.relationships?.related_to).toEqual(['[[playbook]]'])
+    expect(result.snapshot.typeDefinitions?.Release?.rawContent).toContain('[[playbook]]')
+    expect(result.writes).toEqual([
+      { kind: 'moveNote', path: 'procedure.md', toPath: 'playbook.md' },
+      {
+        content: expect.stringContaining('# Playbook'),
+        kind: 'saveNote',
+        path: 'playbook.md',
+      },
+      {
+        content: expect.stringContaining('type: Playbook'),
+        kind: 'saveNote',
+        path: 'Tolaria/Mobile UI/How I Run an Open Source Project.md',
+      },
+      {
+        content: expect.stringContaining('[[playbook]]'),
+        kind: 'saveNote',
+        path: 'procedure-reference.md',
+      },
+      {
+        content: expect.stringContaining('[[playbook]]'),
+        kind: 'saveNote',
+        path: 'release.md',
+      },
+    ])
+  })
+
   it('does not rename a Type over an existing slug-equivalent Type', () => {
     const result = applyMobileWorkspaceEditWithWrites(typeRenameSnapshot(), {
       nextTypeName: 'essay',
@@ -144,6 +180,33 @@ function typeRenameSnapshot(): MobileWorkspaceSnapshot {
         ...procedureDefinition,
         label: 'Procedures',
         rawContent: '---\ntype: Type\n_sidebar_label: Procedures\ncolor: purple\nicon: stack\n---\n# Procedure\n',
+      },
+    },
+  }
+}
+
+function typeRenamePathRewriteSnapshot(): MobileWorkspaceSnapshot {
+  const snapshot = typeRenameSnapshot()
+  const referencingNote = {
+    ...snapshot.notes[1],
+    id: 'procedure-reference',
+    path: 'procedure-reference.md',
+    rawContent: '---\ntype: Essay\n---\n# Procedure Reference\n\nSee [[Procedure]] and [[procedure.md|Procedure alias]].\n',
+    title: 'Procedure Reference',
+    type: 'Essay',
+    typeTone: 'green' as const,
+  }
+
+  return {
+    ...snapshot,
+    allNotes: [...snapshot.allNotes ?? snapshot.notes, referencingNote],
+    notes: [...snapshot.notes, referencingNote],
+    typeDefinitions: {
+      ...snapshot.typeDefinitions,
+      Release: {
+        ...snapshot.typeDefinitions?.Release,
+        rawContent: '---\ntype: Type\ncolor: orange\nrelated_to:\n  - "[[Procedure]]"\n---\n# Release\n',
+        relationships: { related_to: ['[[Procedure]]'] },
       },
     },
   }

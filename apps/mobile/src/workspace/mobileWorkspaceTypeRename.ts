@@ -10,6 +10,10 @@ import {
   writeMobileFrontmatterContentValue,
 } from './mobileFrontmatterWrites'
 import type { MobileWorkspaceEdit, MobileWorkspaceEditResult, MobileWorkspaceWrite } from './mobileWorkspaceEditing'
+import {
+  mobileTypeDefinitionWikilinkWritesForWorkspaceWrites,
+  rewriteMobileTypeDefinitionWikilinks,
+} from './mobileTypeDefinitionPathRewrites'
 import type {
   MobileNote,
   MobileTypeDefinition,
@@ -19,6 +23,9 @@ import type {
 import {
   noteWithWritePath,
   noteWritePath,
+  movedNoteWikilinkRewrite,
+  rewriteMovedNoteWikilinks,
+  type MovedNoteWikilinkRewrite,
 } from './mobileWorkspacePathRewrites'
 
 type RenameTypeEdit = Extract<MobileWorkspaceEdit, { type: 'renameTypeDefinition' }>
@@ -36,6 +43,7 @@ type TypeRenameContext = {
   sourceTypeName: TypeName
 }
 type TypeRenameWithDefinitions = TypeRenameContext & {
+  rewrite: MovedNoteWikilinkRewrite
   typeDefinitions: MobileTypeDefinitions
 }
 
@@ -55,12 +63,15 @@ export function renameMobileTypeDefinition(
   const renameContext = typeRenameContext(snapshot, edit)
   if (!renameContext) return { snapshot, writes: [] }
 
-  const renamedDefinition = renamedMobileTypeDefinition(renameContext)
-  const typeDefinitions = renamedTypeDefinitions(snapshot.typeDefinitions, {
-    definition: renamedDefinition,
+  const baseRenamedDefinition = renamedMobileTypeDefinition(renameContext)
+  const rewrite = typeDocumentWikilinkRewrite(renameContext, baseRenamedDefinition)
+  const typeDefinitions = rewrittenRenamedTypeDefinitions(snapshot.typeDefinitions, {
+    definition: baseRenamedDefinition,
+    rewrite,
     ...renameContext,
   })
-  const renameWithDefinitions = { ...renameContext, typeDefinitions }
+  const renamedDefinition = typeDefinitions[renameContext.nextTypeName] ?? baseRenamedDefinition
+  const renameWithDefinitions = { ...renameContext, rewrite, typeDefinitions }
   const notes = renameTypeInNotes(snapshot.notes, renameWithDefinitions)
   const allNotes = snapshot.allNotes
     ? renameTypeInNotes(snapshot.allNotes, renameWithDefinitions)
@@ -71,6 +82,7 @@ export function renameMobileTypeDefinition(
     writes: renameTypeWrites(snapshot, {
       notes: allNotes ?? notes,
       renamedDefinition,
+      typeDefinitions,
       ...renameContext,
     }),
   }
@@ -144,6 +156,19 @@ function renamedTypeDefinitions(
   return nextDefinitions
 }
 
+function rewrittenRenamedTypeDefinitions(
+  definitions: MobileTypeDefinitions | undefined,
+  rename: {
+    definition: MobileTypeDefinition
+    nextTypeName: string
+    rewrite: MovedNoteWikilinkRewrite
+    sourceTypeName: string
+  },
+): MobileTypeDefinitions {
+  const nextDefinitions = renamedTypeDefinitions(definitions, rename)
+  return rewriteMobileTypeDefinitionWikilinks(nextDefinitions, [rename.rewrite]) ?? nextDefinitions
+}
+
 function renameTypeInNotes(
   notes: MobileNote[],
   rename: TypeRenameWithDefinitions,
@@ -153,8 +178,10 @@ function renameTypeInNotes(
       return noteWithRenamedTypeDocument(note, rename)
     }
 
-    if (note.type !== rename.sourceTypeName) return note
-    return noteWithRenamedAssignedType(note, rename)
+    const renamedNote = note.type === rename.sourceTypeName
+      ? noteWithRenamedAssignedType(note, rename)
+      : note
+    return rewriteMovedNoteWikilinks(renamedNote, rename.rewrite)
   })
 }
 
@@ -193,12 +220,22 @@ function renameTypeWrites(
   rename: TypeRenameContext & {
     notes: MobileNote[]
     renamedDefinition: MobileTypeDefinition
+    typeDefinitions: MobileTypeDefinitions
   },
 ): MobileWorkspaceWrite[] {
-  return [
+  const workspaceWrites = [
     ...moveTypeDocumentWrite(rename),
     ...saveTypeDocumentWrite(rename),
-    ...saveAssignedTypeWrites(snapshot, rename),
+    ...saveChangedNoteWrites(snapshot, rename),
+  ]
+
+  return [
+    ...workspaceWrites,
+    ...mobileTypeDefinitionWikilinkWritesForWorkspaceWrites(
+      snapshot.typeDefinitions,
+      rename.typeDefinitions,
+      workspaceWrites,
+    ),
   ]
 }
 
@@ -228,18 +265,17 @@ function saveTypeDocumentWrite(rename: {
   }]
 }
 
-function saveAssignedTypeWrites(
+function saveChangedNoteWrites(
   snapshot: MobileWorkspaceSnapshot,
   rename: {
     notes: MobileNote[]
-    sourceTypeName: string
   },
 ): MobileWorkspaceWrite[] {
   const previousByPath = new Map(workspaceNotePool(snapshot).map((note) => [noteWritePath(note), note]))
 
   return rename.notes.flatMap((note) => {
     const previousNote = previousByPath.get(noteWritePath(note))
-    if (previousNote?.type !== rename.sourceTypeName) return []
+    if (!previousNote) return []
     if (previousNote.rawContent === undefined || note.rawContent === undefined) return []
     if (previousNote.rawContent === note.rawContent) return []
 
@@ -249,6 +285,39 @@ function saveAssignedTypeWrites(
       path: noteWritePath(note),
     }]
   })
+}
+
+function typeDocumentWikilinkRewrite(
+  rename: TypeRenameContext,
+  renamedDefinition: MobileTypeDefinition,
+): MovedNoteWikilinkRewrite {
+  return movedNoteWikilinkRewrite(
+    typeDocumentRewriteNote(rename.sourceTypeName, rename.sourceDefinition),
+    typeDocumentRewriteNote(rename.nextTypeName, renamedDefinition),
+  )
+}
+
+function typeDocumentRewriteNote(typeName: TypeName, definition: MobileTypeDefinition): MobileNote {
+  const path = mobileTypeDefinitionPath(typeName, definition)
+
+  return {
+    created: '',
+    date: '',
+    favorite: false,
+    id: path,
+    links: 0,
+    modified: '',
+    path,
+    rawContent: definition.rawContent,
+    relationships: [],
+    snippet: '',
+    status: '',
+    tags: [],
+    title: typeName,
+    type: 'Type',
+    typeTone: definition.tone ?? 'gray',
+    workspace: '',
+  }
 }
 
 function isTypeDocumentNote(
