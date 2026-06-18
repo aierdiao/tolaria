@@ -144,6 +144,25 @@ describe('tablet workspace editing history', () => {
     )
   })
 
+  it('undoes and redoes relationship target creation as one command', () => {
+    const previousSnapshot = relationshipTargetHistorySnapshot()
+    const edit: MobileWorkspaceEdit = {
+      key: 'related_to',
+      sourceNoteId: 'workflow-orchestration',
+      targetTitle: 'New Dependency',
+      type: 'createRelationshipTarget',
+    }
+    const nextSnapshot = applyMobileWorkspaceEdit(previousSnapshot, edit)
+    const entry = requiredHistoryEntry(previousSnapshot, nextSnapshot, edit)
+    const undoneSnapshot = applyHistoryEdits(nextSnapshot, entry.undoEdits)
+    const redoneSnapshot = applyHistoryEdits(undoneSnapshot, entry.redoEdits)
+
+    expect(noteByIdOptional(undoneSnapshot, 'Tolaria/Mobile UI/new-dependency.md')).toBeNull()
+    expect(noteById(undoneSnapshot, 'workflow-orchestration').rawContent).toBe('# Workflow Orchestration Essay\n\nSource body.\n')
+    expect(noteById(redoneSnapshot, 'Tolaria/Mobile UI/new-dependency.md').rawContent).toBe('---\ntitle: New Dependency\ntype: Note\n---\n')
+    expect(noteById(redoneSnapshot, 'workflow-orchestration').rawContent).toContain('related_to:\n  - "[[Tolaria/Mobile UI/new-dependency]]"')
+  })
+
   it('undoes and redoes saved views without losing their generated filename', () => {
     const previousSnapshot = workspaceScenarioForId('default')
     const edit: MobileWorkspaceEdit = {
@@ -418,6 +437,20 @@ function snapshotWithPathBackedSelectedNote(): MobileWorkspaceSnapshot {
     allNotes: [pathBackedNote, ...base.notes.slice(1)],
     notes: [pathBackedNote, ...base.notes.slice(1)],
     selectedNoteId: pathBackedNote.id,
+  }
+}
+
+function relationshipTargetHistorySnapshot(): MobileWorkspaceSnapshot {
+  const base = workspaceScenarioForId('default')
+  const source = {
+    ...noteById(base, 'workflow-orchestration'),
+    rawContent: '# Workflow Orchestration Essay\n\nSource body.\n',
+  }
+  return {
+    ...base,
+    allNotes: [source, ...base.notes.slice(1)],
+    notes: [source, ...base.notes.slice(1)],
+    selectedNoteId: source.id,
   }
 }
 
