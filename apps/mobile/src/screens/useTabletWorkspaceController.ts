@@ -51,6 +51,7 @@ import {
   type MobilePropertyValueKind,
 } from '../workspace/mobilePropertyValues'
 import { mobileFilenameStemForTitle } from '../workspace/mobileNotePaths'
+import { toggleMobileNoteWidth } from '../workspace/mobileNoteWidth'
 import {
   mobileSidebarIconFromValue,
   mobileToneFromValue,
@@ -679,6 +680,14 @@ function editorWorkspaceActions({
     },
     onSetOrganized: (organized: boolean) => {
       if (selectedNote) applyEdit({ noteId: selectedNote.id, organized, type: 'setOrganized' })
+    },
+    onToggleNoteWidth: () => {
+      if (selectedNote) applyEdit({
+        key: '_width',
+        noteId: selectedNote.id,
+        type: 'updateProperty',
+        value: toggleMobileNoteWidth(selectedNote.noteWidth),
+      })
     },
     onToggleFavorite: () => {
       if (selectedNote) applyEdit({ noteId: selectedNote.id, type: 'toggleFavorite' })

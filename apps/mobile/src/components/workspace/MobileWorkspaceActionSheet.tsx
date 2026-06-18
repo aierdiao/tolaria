@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { Pressable, ScrollView, StyleSheet, View, type NativeSyntheticEvent, type TextInputKeyPressEventData } from 'react-native'
-import { Archive, CheckCircle, FilePlus, FolderOpen, LinkSimple, PencilSimple, Star, Tag, Trash } from 'phosphor-react-native'
+import { Archive, ArrowsInLineHorizontal, ArrowsOutLineHorizontal, CheckCircle, FilePlus, FolderOpen, LinkSimple, PencilSimple, Star, Tag, Trash } from 'phosphor-react-native'
 import { Text } from '../ui/text'
 import { mobileText } from '../../i18n/mobileText'
 import { MobileButton } from '../../ui/MobileButton'
@@ -125,6 +125,7 @@ type MobileWorkspaceActionSheetProps = {
   onSelectNote: (noteId: string) => void
   onSetArchived: (archived: boolean) => void
   onSetOrganized: (organized: boolean) => void
+  onToggleNoteWidth: () => void
   onViewIconChange: (value: MobileSidebarIcon) => void
   onViewDisplayPropertiesChange: (value: string[]) => void
   onViewFiltersChange: (value: MobileViewFilterGroup) => void
@@ -260,6 +261,7 @@ const actionContentByAction: Record<MobileWorkspaceAction, (props: MobileWorkspa
       onRenameNoteFileToTitle={props.onRenameNoteFileToTitle}
       onSetArchived={props.onSetArchived}
       onSetOrganized={props.onSetOrganized}
+      onToggleNoteWidth={props.onToggleNoteWidth}
       onDeleteNote={props.onDeleteNote}
     />
   ),
@@ -854,6 +856,7 @@ function MoreActionsContent(props: {
   onRenameNoteFileToTitle: () => void
   onSetArchived: (archived: boolean) => void
   onSetOrganized: (organized: boolean) => void
+  onToggleNoteWidth: () => void
   onDeleteNote: () => void
 }) {
   const {
@@ -867,6 +870,7 @@ function MoreActionsContent(props: {
     onRenameNoteFileToTitle,
     onSetArchived,
     onSetOrganized,
+    onToggleNoteWidth,
   } = props
 
   return (
@@ -883,6 +887,7 @@ function MoreActionsContent(props: {
           onRenameNoteFileToTitle={onRenameNoteFileToTitle}
           onSetArchived={onSetArchived}
           onSetOrganized={onSetOrganized}
+          onToggleNoteWidth={onToggleNoteWidth}
         />
       ) : null}
       <ActionRow
@@ -909,6 +914,7 @@ function NoteMoreActionRows(props: {
   onRenameNoteFileToTitle: () => void
   onSetArchived: (archived: boolean) => void
   onSetOrganized: (organized: boolean) => void
+  onToggleNoteWidth: () => void
 }) {
   const {
     note,
@@ -920,7 +926,9 @@ function NoteMoreActionRows(props: {
     onRenameNoteFileToTitle,
     onSetArchived,
     onSetOrganized,
+    onToggleNoteWidth,
   } = props
+  const wideNote = note.noteWidth === 'wide'
 
   return (
     <>
@@ -972,6 +980,17 @@ function NoteMoreActionRows(props: {
         label={mobileText('command.note.moveToFolder')}
         testID="workspace-action-move-note-folder"
         onPress={onOpenMoveNoteToFolder}
+      />
+      <ActionRow
+        icon={wideNote
+          ? <ArrowsInLineHorizontal color={mobileColors.textMuted} size={desktopToolbarActionParity.iconSize} />
+          : <ArrowsOutLineHorizontal color={mobileColors.textMuted} size={desktopToolbarActionParity.iconSize} />}
+        label={mobileText(wideNote ? 'editor.toolbar.noteWidthNormal' : 'editor.toolbar.noteWidthWide')}
+        testID="workspace-action-toggle-note-width"
+        onPress={() => {
+          onToggleNoteWidth()
+          onClose()
+        }}
       />
       <DeleteActionRow onClose={onClose} onDeleteNote={onDeleteNote} />
     </>

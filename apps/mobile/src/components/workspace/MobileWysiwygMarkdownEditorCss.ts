@@ -1,22 +1,24 @@
 import { desktopEditorParity } from '../../ui/desktopParity'
 import { mobileColors, mobileSpace } from '../../ui/tokens'
+import type { MobileNoteWidth } from '../../workspace/mobileWorkspaceModel'
 
 type CssDeclaration = readonly [property: string, value: string | number]
 
-export function mobileTentapEditorCss(compact: boolean): string {
+export function mobileTentapEditorCss(compact: boolean, noteWidth: MobileNoteWidth | null | undefined = null): string {
   const horizontalPadding = compact ? mobileSpace.xl : desktopEditorParity.contentPaddingHorizontal
   const h1FontSize = compact ? 30 : desktopEditorParity.h1FontSize
   const h1LineHeight = compact ? 36 : desktopEditorParity.h1LineHeight
+  const wide = noteWidth === 'wide'
 
   return [
-    ...documentRules(horizontalPadding),
+    ...documentRules({ horizontalPadding, wide }),
     ...headingRules({ h1FontSize, h1LineHeight }),
     ...blockRules(),
     ...tableRules(),
   ].join('\n')
 }
 
-function documentRules(horizontalPadding: number): string[] {
+function documentRules({ horizontalPadding, wide }: { horizontalPadding: number; wide: boolean }): string[] {
   return [
     cssRule('html, body', [
       ['background', mobileColors.editor],
@@ -30,11 +32,11 @@ function documentRules(horizontalPadding: number): string[] {
     cssRule('.ProseMirror', [
       ['box-sizing', 'border-box'],
       ['caret-color', mobileColors.primary],
-      ['margin', '0 auto'],
-      ['max-width', `${desktopEditorParity.contentMaxWidth}px`],
+      ['margin', wide ? '0' : '0 auto'],
+      ['max-width', wide ? 'none' : `${desktopEditorParity.contentMaxWidth}px`],
       ['min-height', '100vh'],
       ['outline', 'none'],
-      ['padding', `${desktopEditorParity.contentPaddingVertical}px ${horizontalPadding}px 96px`],
+      ['padding', `${desktopEditorParity.contentPaddingVertical}px ${wide ? 'clamp(24px, 4vw, 72px)' : `${horizontalPadding}px`} 96px`],
       ['width', '100%'],
     ]),
   ]

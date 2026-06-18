@@ -13,6 +13,15 @@ describe('mobile TenTap editor CSS', () => {
       `margin: ${desktopEditorParity.h4MarginTop}px 0 ${desktopEditorParity.h4MarginBottom}px;`,
     )
   })
+
+  it('removes the normal desktop max width in wide-note mode', () => {
+    const css = mobileTentapEditorCss(false, 'wide')
+    const proseMirror = cssBlock(css, '.ProseMirror')
+
+    expect(proseMirror).toContain('max-width: none;')
+    expect(proseMirror).toContain('margin: 0;')
+    expect(proseMirror).toContain('padding: 20px clamp(24px, 4vw, 72px) 96px;')
+  })
 })
 
 function cssBlock(css: string, selector: string): string {

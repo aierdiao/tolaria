@@ -25,6 +25,7 @@ test.describe('mobile UI lab interactions', () => {
     await toggleFavorite(page)
     await retargetSelectedRelease(page)
     await createMobileQaDraft(page)
+    await toggleSelectedNoteWidth(page)
     await createSavedViewFromSidebar(page, { returnToInbox: true })
     await addDatePropertyFromSuggestion(page)
     await addRelationshipFromSuggestion(page)
@@ -334,6 +335,18 @@ async function assertSelectedReleaseDeepLink(page: PageLike) {
 
 async function createMobileQaDraft(page: PageLike) {
   await createNote(page, 'Mobile QA Draft', 'mobile-qa-draft.md')
+}
+
+async function toggleSelectedNoteWidth(page: PageLike) {
+  await page.getByTestId('editor-more-action').click()
+  await expect(page.getByText('Switch to wide note width')).toBeVisible()
+  await page.getByTestId('workspace-action-toggle-note-width').click()
+  await expect(page.getByTestId('workspace-action-sheet')).toBeHidden()
+
+  await page.getByTestId('editor-more-action').click()
+  await expect(page.getByText('Switch to normal note width')).toBeVisible()
+  await page.getByTestId('workspace-action-sheet-toolbar').getByRole('button', { name: 'Cancel' }).click()
+  await expect(page.getByTestId('workspace-action-sheet')).toBeHidden()
 }
 
 async function createNote(page: PageLike, title: string, rowId: string) {

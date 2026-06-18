@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { workspaceScenarioForId } from '../fixtures/workspaceFixtures'
 import { applyMobileWorkspaceEdit } from './mobileWorkspaceEditing'
-import { normalizeMobileNoteWidth } from './mobileNoteWidth'
+import { normalizeMobileNoteWidth, toggleMobileNoteWidth } from './mobileNoteWidth'
 
 describe('normalizeMobileNoteWidth', () => {
   it.each([
@@ -17,6 +17,16 @@ describe('normalizeMobileNoteWidth', () => {
   })
 })
 
+describe('toggleMobileNoteWidth', () => {
+  it.each([
+    [null, 'wide'],
+    ['normal', 'wide'],
+    ['wide', 'normal'],
+  ] as const)('toggles %s to %s', (value, expected) => {
+    expect(toggleMobileNoteWidth(value)).toBe(expected)
+  })
+})
+
 describe('mobile note width metadata', () => {
   it('re-derives desktop note width metadata after note content edits', () => {
     const snapshot = applyMobileWorkspaceEdit(workspaceScenarioForId('default'), {
@@ -26,6 +36,19 @@ describe('mobile note width metadata', () => {
     })
 
     const note = snapshot.notes.find((candidate) => candidate.id === 'workflow-orchestration')
+    expect(note?.noteWidth).toBe('wide')
+  })
+
+  it('persists note width through the canonical desktop _width key', () => {
+    const result = applyMobileWorkspaceEdit(workspaceScenarioForId('default'), {
+      key: 'width',
+      noteId: 'workflow-orchestration',
+      type: 'updateProperty',
+      value: 'wide',
+    })
+
+    const note = result.notes.find((candidate) => candidate.id === 'workflow-orchestration')
+    expect(note?.rawContent).toContain('_width: wide')
     expect(note?.noteWidth).toBe('wide')
   })
 })

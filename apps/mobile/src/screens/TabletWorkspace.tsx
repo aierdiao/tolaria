@@ -403,6 +403,7 @@ function actionSheetHandlers(props: ActionSheetHostProps) {
     onSelectNote: props.onSelectNote,
     onSetArchived: props.onSetArchived,
     onSetOrganized: props.onSetOrganized,
+    onToggleNoteWidth: props.onToggleNoteWidth,
     onTypeDisplayPropertiesChange: props.onTypeDisplayPropertiesChange,
     onTypeNameChange: props.onTypeNameChange,
     onTypePropertyQueryChange: props.onTypePropertyQueryChange,

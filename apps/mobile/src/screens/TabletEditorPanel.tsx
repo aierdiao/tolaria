@@ -143,7 +143,11 @@ export function TabletEditorPanel(props: TabletEditorPanelProps) {
           />
         </View>
       ) : (
-        <ScrollView contentContainerStyle={[panelStyles.content, compact ? panelStyles.contentCompact : null]} testID="editor-scroll">
+        <ScrollView contentContainerStyle={[
+          panelStyles.content,
+          note.noteWidth === 'wide' ? panelStyles.contentWide : null,
+          compact ? panelStyles.contentCompact : null,
+        ]} testID="editor-scroll">
           <EditorContent
             blocks={blocks}
             bullets={bullets}
@@ -299,6 +303,11 @@ const panelStyles = StyleSheet.create({
   },
   contentCompact: {
     paddingHorizontal: mobileSpace.xl,
+  },
+  contentWide: {
+    alignSelf: 'stretch',
+    maxWidth: '100%',
+    paddingHorizontal: 56,
   },
   emptyState: {
     flex: 1,

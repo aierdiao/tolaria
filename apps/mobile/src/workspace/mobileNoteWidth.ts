@@ -6,3 +6,7 @@ export function normalizeMobileNoteWidth(value: unknown): MobileNoteWidth | null
   const normalized = value.trim().toLowerCase()
   return normalized === 'normal' || normalized === 'wide' ? normalized : null
 }
+
+export function toggleMobileNoteWidth(value: unknown): MobileNoteWidth {
+  return normalizeMobileNoteWidth(value) === 'wide' ? 'normal' : 'wide'
+}

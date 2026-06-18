@@ -173,6 +173,7 @@ export type TabletWorkspaceChromeProps = {
   onSetArchived: (archived: boolean) => void
   onSetOrganized: (organized: boolean) => void
   onToggleFavorite: () => void
+  onToggleNoteWidth: () => void
   openAction: MobileWorkspaceAction | null
   readOnlyForm: TabletReadOnlyForm
   searchQuery: SearchQuery

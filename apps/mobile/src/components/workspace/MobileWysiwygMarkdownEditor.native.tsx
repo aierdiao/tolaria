@@ -258,7 +258,7 @@ function useNativeTentapEditorBridge({
     wikilinkInsertProbeEnabled: wysiwygWikilinkInsertProbe,
   })
   const scheduleEditorChange = useScheduleEditorChange(refs, flushEditorDocument, onInlineAutocomplete)
-  const injectEditorCss = useEditorCssInjection({ compact, refs })
+  const injectEditorCss = useEditorCssInjection({ compact, noteWidth: note.noteWidth, refs })
   const insertWikilink = useNativeWysiwygWikilinkInserter({ flushEditorDocument, refs })
 
   const editor = useEditorBridge({
@@ -667,22 +667,24 @@ async function detectNativeWysiwygInlineAutocomplete(
 
 function useEditorCssInjection({
   compact,
+  noteWidth,
   refs,
 }: {
   compact: boolean
+  noteWidth: MobileNote['noteWidth']
   refs: NativeTentapEditorRefs
 }) {
   const { acceptsEditorChangesRef, editorReadyTimerRef, editorRef } = refs
 
   return useCallback(() => {
     if (isCssInjectableEditorBridge(editorRef.current)) {
-      editorRef.current.injectCSS(mobileTentapEditorCss(compact), 'tolaria-editor')
+      editorRef.current.injectCSS(mobileTentapEditorCss(compact, noteWidth), 'tolaria-editor')
     }
     if (editorReadyTimerRef.current) clearTimeout(editorReadyTimerRef.current)
     editorReadyTimerRef.current = setTimeout(() => {
       acceptsEditorChangesRef.current = true
     }, 750)
-  }, [acceptsEditorChangesRef, compact, editorReadyTimerRef, editorRef])
+  }, [acceptsEditorChangesRef, compact, editorReadyTimerRef, editorRef, noteWidth])
 }
 
 function useEditorBridgeRef(
