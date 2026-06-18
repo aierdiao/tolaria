@@ -128,6 +128,21 @@ describe('mobile Type document editing', () => {
     ])
   })
 
+  it('keeps visible assigned-note writes when large-vault allNotes are metadata-only', () => {
+    const result = applyMobileWorkspaceEditWithWrites(typeRenameMetadataOnlyAllNotesSnapshot(), {
+      nextTypeName: 'Playbook',
+      type: 'renameTypeDefinition',
+      typeName: 'Procedure',
+    })
+
+    expect(noteById(result.snapshot, 'open-source-project').rawContent).toContain('type: Playbook')
+    expect(result.writes).toContainEqual({
+      content: expect.stringContaining('type: Playbook'),
+      kind: 'saveNote',
+      path: 'Tolaria/Mobile UI/How I Run an Open Source Project.md',
+    })
+  })
+
   it('does not rename a Type over an existing slug-equivalent Type', () => {
     const result = applyMobileWorkspaceEditWithWrites(typeRenameSnapshot(), {
       nextTypeName: 'essay',
@@ -209,6 +224,20 @@ function typeRenamePathRewriteSnapshot(): MobileWorkspaceSnapshot {
         relationships: { related_to: ['[[Procedure]]'] },
       },
     },
+  }
+}
+
+function typeRenameMetadataOnlyAllNotesSnapshot(): MobileWorkspaceSnapshot {
+  const snapshot = typeRenamePathRewriteSnapshot()
+
+  return {
+    ...snapshot,
+    allNotes: (snapshot.allNotes ?? snapshot.notes).map((note) => ({
+      ...note,
+      editorBlocks: undefined,
+      editorBullets: undefined,
+      rawContent: undefined,
+    })),
   }
 }
 

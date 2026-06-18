@@ -26,6 +26,21 @@ describe('native workspace persistence probe', () => {
     ])
   })
 
+  it('reports incomplete Type rename persistence proofs', () => {
+    const proof = {
+      ...passingWorkspaceProof(),
+      renamedTypeAssignedNoteHydrated: false,
+      renamedTypeDefinitionHydrated: false,
+      renamedTypeSchemaRefsHydrated: false,
+    }
+
+    expect(assertNativeWorkspacePersistenceProofs([proof]).map((failure) => failure.id)).toEqual([
+      'workspace.persistence.renameType',
+      'workspace.persistence.renameType.assignedNote',
+      'workspace.persistence.renameType.schemaRefs',
+    ])
+  })
+
   it('ignores malformed and incomplete proof lines', () => {
     const logText = [
       'TOLARIA_MOBILE_WORKSPACE_PERSISTENCE_PROBE not-json',
@@ -48,6 +63,9 @@ function passingWorkspaceProof(): NativeWorkspacePersistenceProof {
     folderRenameApplied: true,
     movedNoteContentPreserved: true,
     persistedToNativeRepository: true,
+    renamedTypeAssignedNoteHydrated: true,
+    renamedTypeDefinitionHydrated: true,
+    renamedTypeSchemaRefsHydrated: true,
     savedViewHydrated: true,
     typeDefinitionHydrated: true,
   }

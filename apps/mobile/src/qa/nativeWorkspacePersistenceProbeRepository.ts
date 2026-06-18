@@ -1,4 +1,5 @@
 import type { Directory, Paths } from 'expo-file-system'
+import { applyMobileWorkspaceEditWithWrites } from '../workspace/mobileWorkspaceEditing'
 import type { MobileWorkspaceSnapshot } from '../workspace/mobileWorkspaceModel'
 import type { ReadOnlyWorkspaceRepository, ReadOnlyWorkspaceRequest } from '../workspace/readOnlyWorkspaceRepository'
 import {
@@ -18,6 +19,12 @@ const createdNotePath = 'Writing/Drafts/Mobile Created.md'
 const movedNotePath = 'Research/Seed.md'
 const oldTypeName = 'Retired Proof'
 const oldViewName = 'Old Native Proof'
+const renamedTypeAssignedNotePath = 'Writing/Type Rename Assigned.md'
+const renamedTypeName = 'Rename Target'
+const renamedTypePath = 'rename-target.md'
+const renamedTypeSchemaCarrierName = 'Schema Carrier'
+const renamedTypeSourceName = 'Rename Source'
+const renamedTypeSourcePath = 'rename-source.md'
 const renamedFolderPath = 'Folders/Proof Queue'
 const typeName = 'Proof Decision'
 const workspaceProbeStartedRootUris = new Set<string>()
@@ -69,14 +76,22 @@ async function logWorkspacePersistenceProof(
   request: ReadOnlyWorkspaceRequest,
 ) {
   resetWorkspacePersistenceProbeVault(request.vaultRootUri)
-  await baseRepository.persistWrites(workspacePersistenceProbeWrites(), request)
+  await baseRepository.persistWrites(seedWorkspacePersistenceProbeWrites(), request)
+  await baseRepository.persistWrites(workspacePersistenceProbeWrites(baseRepository.readSnapshot(request)), request)
 
   const snapshot = baseRepository.readSnapshot(request)
   const movedNote = snapshot.allNotes?.find((note) => note.path === movedNotePath)
     ?? snapshot.notes.find((note) => note.path === movedNotePath)
   const movedContent = movedNote ? await baseRepository.readNoteContent(movedNote, request) : null
+  const renamedAssignedNote = noteByPath(snapshot, renamedTypeAssignedNotePath)
+  const renamedAssignedContent = renamedAssignedNote
+    ? await baseRepository.readNoteContent(renamedAssignedNote, request)
+    : null
 
-  console.info(nativeWorkspacePersistenceLogLine(workspacePersistenceProof(snapshot, movedContent)))
+  console.info(nativeWorkspacePersistenceLogLine(workspacePersistenceProof(snapshot, {
+    movedContent,
+    renamedAssignedContent,
+  })))
 }
 
 function resetWorkspacePersistenceProbeVault(rootUri: string | null | undefined) {
@@ -97,9 +112,14 @@ function workspacePersistenceProbeRootUri(): string | null {
   }
 }
 
-function workspacePersistenceProbeWrites() {
+function workspacePersistenceProbeWrites(seedSnapshot: MobileWorkspaceSnapshot) {
+  const typeRenameWrites = applyMobileWorkspaceEditWithWrites(seedSnapshot, {
+    nextTypeName: renamedTypeName,
+    type: 'renameTypeDefinition',
+    typeName: renamedTypeSourceName,
+  }).writes
+
   return [
-    ...seedWorkspacePersistenceProbeWrites(),
     {
       content: mobileCreatedNoteContent(),
       kind: 'createNote' as const,
@@ -146,6 +166,7 @@ function workspacePersistenceProbeWrites() {
       kind: 'deleteNote' as const,
       path: `Types/${oldTypeName}.md`,
     },
+    ...typeRenameWrites,
   ]
 }
 
@@ -171,12 +192,30 @@ function seedWorkspacePersistenceProbeWrites() {
       kind: 'createNote' as const,
       path: `Types/${oldTypeName}.md`,
     },
+    {
+      content: typeDefinitionContent(renamedTypeSourceName, 'purple'),
+      kind: 'createNote' as const,
+      path: renamedTypeSourcePath,
+    },
+    {
+      content: renamedTypeSchemaCarrierContent(),
+      kind: 'createNote' as const,
+      path: 'schema-carrier.md',
+    },
+    {
+      content: renamedTypeAssignedNoteContent(),
+      kind: 'createNote' as const,
+      path: renamedTypeAssignedNotePath,
+    },
   ]
 }
 
 function workspacePersistenceProof(
   snapshot: MobileWorkspaceSnapshot,
-  movedContent: string | null,
+  content: {
+    movedContent: string | null
+    renamedAssignedContent: string | null
+  },
 ): NativeWorkspacePersistenceProof {
   return {
     createdNoteHydrated: snapshotContainsNotePath(snapshot, createdNotePath),
@@ -184,8 +223,11 @@ function workspacePersistenceProof(
     deletedViewRemoved: !viewExists(snapshot, oldViewName),
     folderDeleteApplied: !folderPathStartsWith(snapshot, 'Scratch'),
     folderRenameApplied: folderRenameApplied(snapshot),
-    movedNoteContentPreserved: movedContentPreserved(movedContent),
+    movedNoteContentPreserved: movedContentPreserved(content.movedContent),
     persistedToNativeRepository: snapshot.source?.kind === 'localVault',
+    renamedTypeAssignedNoteHydrated: renamedTypeAssignedNoteHydrated(snapshot, content.renamedAssignedContent),
+    renamedTypeDefinitionHydrated: renamedTypeDefinitionHydrated(snapshot),
+    renamedTypeSchemaRefsHydrated: renamedTypeSchemaRefsHydrated(snapshot),
     savedViewHydrated: viewExists(snapshot, 'Mobile Persistence'),
     typeDefinitionHydrated: snapshot.typeDefinitions?.[typeName]?.tone === 'green',
   }
@@ -197,7 +239,7 @@ function folderRenameApplied(snapshot: MobileWorkspaceSnapshot) {
 }
 
 function snapshotContainsNotePath(snapshot: MobileWorkspaceSnapshot, path: string) {
-  return Boolean(snapshot.allNotes?.some((note) => note.path === path) || snapshot.notes.some((note) => note.path === path))
+  return noteByPath(snapshot, path) !== null
 }
 
 function typeDefinitionExists(snapshot: MobileWorkspaceSnapshot, name: string) {
@@ -214,6 +256,32 @@ function folderPathStartsWith(snapshot: MobileWorkspaceSnapshot, pathPrefix: str
 
 function movedContentPreserved(content: string | null) {
   return content?.includes('saved before moving through native persistence') === true
+}
+
+function renamedTypeDefinitionHydrated(snapshot: MobileWorkspaceSnapshot) {
+  return snapshot.typeDefinitions?.[renamedTypeName]?.tone === 'purple'
+    && snapshot.typeDefinitions?.[renamedTypeSourceName] === undefined
+    && snapshotContainsNotePath(snapshot, renamedTypePath)
+    && !snapshotContainsNotePath(snapshot, renamedTypeSourcePath)
+}
+
+function renamedTypeAssignedNoteHydrated(
+  snapshot: MobileWorkspaceSnapshot,
+  content: string | null,
+) {
+  return noteByPath(snapshot, renamedTypeAssignedNotePath)?.type === renamedTypeName
+    && content?.includes(`type: ${renamedTypeName}`) === true
+    && content?.includes('[[rename-target]]') === true
+}
+
+function renamedTypeSchemaRefsHydrated(snapshot: MobileWorkspaceSnapshot) {
+  const schemaCarrier = snapshot.typeDefinitions?.[renamedTypeSchemaCarrierName]
+  return schemaCarrier?.relationships?.related_to?.includes('[[rename-target]]') === true
+    && schemaCarrier.rawContent?.includes('[[rename-target]]') === true
+}
+
+function noteByPath(snapshot: MobileWorkspaceSnapshot, path: string) {
+  return (snapshot.allNotes ?? snapshot.notes).find((note) => note.path === path) ?? null
 }
 
 function seedNoteInitialContent() {
@@ -253,6 +321,33 @@ function mobileCreatedNoteContent() {
     '# Mobile Created',
     '',
     'Created through native workspace persistence.',
+    '',
+  ].join('\n')
+}
+
+function renamedTypeAssignedNoteContent() {
+  return [
+    '---',
+    `type: ${renamedTypeSourceName}`,
+    'status: Draft',
+    '---',
+    '# Type Rename Assigned',
+    '',
+    `References [[${renamedTypeSourceName}]].`,
+    '',
+  ].join('\n')
+}
+
+function renamedTypeSchemaCarrierContent() {
+  return [
+    '---',
+    'type: Type',
+    'color: orange',
+    'icon: file-text',
+    'related_to:',
+    `  - "[[${renamedTypeSourceName}]]"`,
+    '---',
+    `# ${renamedTypeSchemaCarrierName}`,
     '',
   ].join('\n')
 }

@@ -9,6 +9,9 @@ export type NativeWorkspacePersistenceProof = {
   folderRenameApplied: boolean
   movedNoteContentPreserved: boolean
   persistedToNativeRepository: boolean
+  renamedTypeAssignedNoteHydrated: boolean
+  renamedTypeDefinitionHydrated: boolean
+  renamedTypeSchemaRefsHydrated: boolean
   savedViewHydrated: boolean
   typeDefinitionHydrated: boolean
 }
@@ -58,6 +61,9 @@ export function assertNativeWorkspacePersistenceProofs(
     proofFailure(latest.folderDeleteApplied, 'workspace.persistence.deleteFolder', 'Deleted native folders are absent from the mobile snapshot'),
     proofFailure(latest.typeDefinitionHydrated, 'workspace.persistence.createType', 'Created Type documents hydrate mobile Type definitions'),
     proofFailure(latest.deletedTypeDefinitionRemoved, 'workspace.persistence.deleteType', 'Deleted Type documents are removed from mobile Type definitions'),
+    proofFailure(latest.renamedTypeDefinitionHydrated, 'workspace.persistence.renameType', 'Renamed Type documents rehydrate from reducer-generated native writes'),
+    proofFailure(latest.renamedTypeAssignedNoteHydrated, 'workspace.persistence.renameType.assignedNote', 'Assigned notes rehydrate with renamed Type frontmatter and retargeted links'),
+    proofFailure(latest.renamedTypeSchemaRefsHydrated, 'workspace.persistence.renameType.schemaRefs', 'Type schema relationship refs rehydrate with renamed Type wikilinks'),
   ].filter((failure): failure is NativeWorkspacePersistenceAssertionFailure => failure !== null)
 }
 
@@ -93,6 +99,9 @@ function parsedWorkspacePersistenceProof(value: unknown): NativeWorkspacePersist
     folderRenameApplied: value.folderRenameApplied,
     movedNoteContentPreserved: value.movedNoteContentPreserved,
     persistedToNativeRepository: value.persistedToNativeRepository,
+    renamedTypeAssignedNoteHydrated: value.renamedTypeAssignedNoteHydrated,
+    renamedTypeDefinitionHydrated: value.renamedTypeDefinitionHydrated,
+    renamedTypeSchemaRefsHydrated: value.renamedTypeSchemaRefsHydrated,
     savedViewHydrated: value.savedViewHydrated,
     typeDefinitionHydrated: value.typeDefinitionHydrated,
   }
@@ -113,6 +122,9 @@ const workspacePersistenceProofKeys = [
   'folderRenameApplied',
   'movedNoteContentPreserved',
   'persistedToNativeRepository',
+  'renamedTypeAssignedNoteHydrated',
+  'renamedTypeDefinitionHydrated',
+  'renamedTypeSchemaRefsHydrated',
   'savedViewHydrated',
   'typeDefinitionHydrated',
 ] satisfies Array<keyof NativeWorkspacePersistenceProof>

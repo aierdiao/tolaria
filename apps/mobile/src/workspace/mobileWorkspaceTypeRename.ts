@@ -74,7 +74,7 @@ export function renameMobileTypeDefinition(
   const renameWithDefinitions = { ...renameContext, rewrite, typeDefinitions }
   const notes = renameTypeInNotes(snapshot.notes, renameWithDefinitions)
   const allNotes = snapshot.allNotes
-    ? renameTypeInNotes(snapshot.allNotes, renameWithDefinitions)
+    ? notesWithDetailedNotes(renameTypeInNotes(snapshot.allNotes, renameWithDefinitions), notes)
     : undefined
 
   return {
@@ -271,7 +271,7 @@ function saveChangedNoteWrites(
     notes: MobileNote[]
   },
 ): MobileWorkspaceWrite[] {
-  const previousByPath = new Map(workspaceNotePool(snapshot).map((note) => [noteWritePath(note), note]))
+  const previousByPath = new Map(workspaceNotePoolWithDetails(snapshot).map((note) => [noteWritePath(note), note]))
 
   return rename.notes.flatMap((note) => {
     const previousNote = previousByPath.get(noteWritePath(note))
@@ -285,6 +285,17 @@ function saveChangedNoteWrites(
       path: noteWritePath(note),
     }]
   })
+}
+
+function workspaceNotePoolWithDetails(snapshot: MobileWorkspaceSnapshot): MobileNote[] {
+  return snapshot.allNotes
+    ? notesWithDetailedNotes(snapshot.allNotes, snapshot.notes)
+    : snapshot.notes
+}
+
+function notesWithDetailedNotes(notes: MobileNote[], detailedNotes: MobileNote[]): MobileNote[] {
+  const detailedById = new Map(detailedNotes.map((note) => [note.id, note]))
+  return notes.map((note) => detailedById.get(note.id) ?? note)
 }
 
 function typeDocumentWikilinkRewrite(
@@ -387,8 +398,4 @@ function slugifyTypeName(value: TypeName): string {
 function wikilinkTarget(value: TypeNameInput): string {
   const match = value.match(/\[\[([^\]|]+)(?:\|[^\]]+)?\]\]/)
   return (match?.[1] ?? value).trim()
-}
-
-function workspaceNotePool(snapshot: MobileWorkspaceSnapshot): MobileNote[] {
-  return snapshot.allNotes ?? snapshot.notes
 }
