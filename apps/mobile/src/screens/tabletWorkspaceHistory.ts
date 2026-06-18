@@ -6,6 +6,7 @@ import type {
 } from '../workspace/mobileWorkspaceModel'
 import type { MobileWorkspaceEdit } from '../workspace/mobileWorkspaceEditing'
 import { mobileNoteEditableContent } from '../workspace/mobileDocumentContent'
+import { mobileWorkspacePathHistoryEntry } from './tabletWorkspacePathHistory'
 
 type WorkspaceHistoryEdit = MobileWorkspaceEdit
 
@@ -32,6 +33,8 @@ export function mobileWorkspaceHistoryEntry(
   sourceEdit?: MobileWorkspaceEdit,
 ): MobileWorkspaceHistoryEntry | null {
   if (sourceEdit && !historyRecordsEdit(sourceEdit)) return null
+  const pathHistoryEntry = mobileWorkspacePathHistoryEntry(previousSnapshot, nextSnapshot, sourceEdit)
+  if (pathHistoryEntry) return pathHistoryEntry
 
   const edits = emptyHistoryEntry()
   recordRemovedFolderHistory(edits, previousSnapshot, nextSnapshot)

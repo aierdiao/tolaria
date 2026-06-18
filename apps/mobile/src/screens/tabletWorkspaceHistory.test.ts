@@ -190,6 +190,42 @@ describe('tablet workspace editing history', () => {
     expect(redoneDefinition.label).toBe('Long Essays')
     expect(redoneDefinition.tone).toBe('blue')
   })
+
+  it('undoes and redoes note folder moves through path edits', () => {
+    const previousSnapshot = snapshotWithFolderPaths(['Tolaria/Mobile UI', 'Writing/Essays'])
+    const { redoneSnapshot, undoneSnapshot } = historyRoundTrip(previousSnapshot, {
+      folderPath: 'Writing/Essays',
+      noteId: 'workflow-orchestration',
+      type: 'moveNoteToFolder',
+    })
+
+    expect(noteById(undoneSnapshot, 'workflow-orchestration').path).toBe('Tolaria/Mobile UI/Workflow Orchestration Essay.md')
+    expect(noteById(redoneSnapshot, 'workflow-orchestration').path).toBe('Writing/Essays/Workflow Orchestration Essay.md')
+  })
+
+  it('undoes and redoes path-backed note filename renames', () => {
+    const previousSnapshot = snapshotWithPathBackedSelectedNote()
+    const { redoneSnapshot, undoneSnapshot } = historyRoundTrip(previousSnapshot, {
+      filenameStem: 'workflow-manual',
+      noteId: 'Tolaria/Mobile UI/Workflow Orchestration Essay.md',
+      type: 'renameNoteFile',
+    })
+
+    expect(noteById(undoneSnapshot, 'Tolaria/Mobile UI/Workflow Orchestration Essay.md').path).toBe('Tolaria/Mobile UI/Workflow Orchestration Essay.md')
+    expect(noteById(redoneSnapshot, 'Tolaria/Mobile UI/workflow-manual.md').path).toBe('Tolaria/Mobile UI/workflow-manual.md')
+  })
+
+  it('undoes and redoes folder subtree renames through folder edits', () => {
+    const previousSnapshot = snapshotWithFolderPaths(['Tolaria', 'Tolaria/Mobile UI'])
+    const { redoneSnapshot, undoneSnapshot } = historyRoundTrip(previousSnapshot, {
+      folderPath: 'Tolaria',
+      name: 'Research',
+      type: 'renameFolder',
+    })
+
+    expect(noteById(undoneSnapshot, 'workflow-orchestration').path).toBe('Tolaria/Mobile UI/Workflow Orchestration Essay.md')
+    expect(noteById(redoneSnapshot, 'workflow-orchestration').path).toBe('Research/Mobile UI/Workflow Orchestration Essay.md')
+  })
 })
 
 function snapshotWithEditableNote(overrides: Partial<MobileNote> & { id: string; rawContent: string }): MobileWorkspaceSnapshot {
@@ -201,6 +237,27 @@ function snapshotWithEditableNote(overrides: Partial<MobileNote> & { id: string;
     ...base,
     allNotes,
     notes,
+  }
+}
+
+function snapshotWithFolderPaths(folderPaths: string[]): MobileWorkspaceSnapshot {
+  return {
+    ...workspaceScenarioForId('default'),
+    folderPaths,
+  }
+}
+
+function snapshotWithPathBackedSelectedNote(): MobileWorkspaceSnapshot {
+  const base = workspaceScenarioForId('default')
+  const pathBackedNote = {
+    ...base.notes[0],
+    id: 'Tolaria/Mobile UI/Workflow Orchestration Essay.md',
+  }
+  return {
+    ...base,
+    allNotes: [pathBackedNote, ...base.notes.slice(1)],
+    notes: [pathBackedNote, ...base.notes.slice(1)],
+    selectedNoteId: pathBackedNote.id,
   }
 }
 
@@ -232,6 +289,17 @@ function requiredHistoryEntry(
 
 function applyHistoryEdits(snapshot: MobileWorkspaceSnapshot, edits: MobileWorkspaceEdit[]) {
   return edits.reduce(applyMobileWorkspaceEdit, snapshot)
+}
+
+function historyRoundTrip(previousSnapshot: MobileWorkspaceSnapshot, edit: MobileWorkspaceEdit) {
+  const nextSnapshot = applyMobileWorkspaceEdit(previousSnapshot, edit)
+  const entry = requiredHistoryEntry(previousSnapshot, nextSnapshot, edit)
+  const undoneSnapshot = applyHistoryEdits(nextSnapshot, entry.undoEdits)
+
+  return {
+    redoneSnapshot: applyHistoryEdits(undoneSnapshot, entry.redoEdits),
+    undoneSnapshot,
+  }
 }
 
 function neverEdit(): never {
