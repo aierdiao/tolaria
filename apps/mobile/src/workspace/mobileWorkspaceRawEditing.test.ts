@@ -20,6 +20,7 @@ describe('mobile raw workspace editing', () => {
     const note = workflowNote(result.snapshot)
     expect(note).toMatchObject({
       links: 1,
+      outgoingLinks: ['Release Notes'],
       snippet: 'Body with Release Notes.',
       status: 'Active',
       tags: ['Mobile', 'Parity'],

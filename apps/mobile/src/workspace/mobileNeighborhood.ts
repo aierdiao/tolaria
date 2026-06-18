@@ -21,6 +21,7 @@ export function buildMobileNeighborhood(source: MobileNote, notes: MobileNote[])
       ...instanceGroups(source, notes),
       ...directRelationshipGroups(source, notes),
       ...inverseRelationshipGroups(source, notes),
+      ...backlinkGroups(source, notes),
     ],
     source,
   }
@@ -89,6 +90,12 @@ function inverseRelationshipGroups(source: MobileNote, notes: MobileNote[]): Mob
   return orderInverseLabels(inverseGroups.keys()).map((label) => relationshipGroup(label, inverseGroups.get(label) ?? []))
 }
 
+function backlinkGroups(source: MobileNote, notes: MobileNote[]): MobileNeighborhoodGroup[] {
+  return [
+    relationshipGroup('Backlinks', notes.filter((note) => noteLinksToSource(note, source, notes))),
+  ].filter(hasNotes)
+}
+
 function relationshipGroup(label: string, candidates: MobileNote[], sourceId?: string): MobileNeighborhoodGroup {
   return {
     id: groupId(label),
@@ -108,6 +115,32 @@ function relationshipTargetsNote(relationship: MobileRelationship, source: Mobil
 
     return value.title === source.title
   })
+}
+
+function noteLinksToSource(note: MobileNote, source: MobileNote, notes: MobileNote[]) {
+  if (note.id === source.id) return false
+  return (note.outgoingLinks ?? []).some((target) => linkTargetsSource(target, source, notes))
+}
+
+function linkTargetsSource(target: string, source: MobileNote, notes: MobileNote[]) {
+  if (sourceLinkTargets(source).has(target)) return true
+  if (sourceLinkTargets(source).has(target.split('/').pop() ?? '')) return true
+
+  return mobileNoteForWikilinkTarget(notes, target)?.id === source.id
+}
+
+function sourceLinkTargets(note: MobileNote) {
+  const path = note.path ?? note.id
+  const filename = path.split('/').pop() ?? path
+  const filenameStem = filename.replace(/\.[^.]+$/u, '')
+  const relativePathStem = path.replace(/\.md$/u, '')
+
+  return new Set([
+    note.title,
+    ...(note.aliases ?? []),
+    filenameStem,
+    relativePathStem,
+  ].filter(Boolean))
 }
 
 function appendInverseRelationship(groups: Map<string, MobileNote[]>, label: string, note: MobileNote) {

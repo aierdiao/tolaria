@@ -18,6 +18,7 @@ export type MobileNote = {
   icon?: string | null
   noteWidth?: MobileNoteWidth | null
   organized?: boolean
+  outgoingLinks?: string[]
   path?: string
   properties?: MobileProperty[]
   rawContent?: string

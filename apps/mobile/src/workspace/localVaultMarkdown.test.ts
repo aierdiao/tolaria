@@ -3,6 +3,8 @@ import {
   deriveLocalVaultTitle,
   localVaultEditorBlocks,
   localVaultEditorBullets,
+  localVaultLinkCount,
+  localVaultOutgoingLinks,
   localVaultSnippet,
 } from './localVaultMarkdown'
 
@@ -96,5 +98,20 @@ describe('localVaultMarkdown', () => {
     expect(deriveLocalVaultTitle({ body, fallbackTitle: null, filename: 'fallback-title.md' })).toBe('Visible Title')
     expect(localVaultSnippet(body)).toBe('First item')
     expect(localVaultEditorBullets(blocks)).toEqual(['First item', 'Nested Target'])
+  })
+
+  it('extracts desktop body wikilink targets while ignoring fenced code', () => {
+    const body = [
+      'Body with [[Target Note|display]] and [[Folder/Other Note]].',
+      '',
+      '```md',
+      'Ignored [[Code Link]].',
+      '```',
+      '',
+      'Repeated [[Target Note]].',
+    ].join('\n')
+
+    expect(localVaultOutgoingLinks(body)).toEqual(['Folder/Other Note', 'Target Note'])
+    expect(localVaultLinkCount(body)).toBe(2)
   })
 })

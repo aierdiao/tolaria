@@ -14,6 +14,7 @@ describe('buildLocalVaultWorkspaceSnapshot', () => {
     expect(snapshot.notes).toHaveLength(1)
     expect(snapshot.notes[0]).toMatchObject({
       aliases: ['Mobile App'],
+      outgoingLinks: ['workflow-orchestration'],
       rawContent: tolariaMobileContent,
       title: 'Tolaria Mobile',
       type: 'Project',
@@ -486,6 +487,8 @@ related_to:
 # Tolaria Mobile
 
 Use **desktop parity** first.
+
+See [[workflow-orchestration|Workflow Orchestration]] for the planning note.
 
 ## Tasks
 

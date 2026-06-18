@@ -12,6 +12,7 @@ import { parseMobileWikilink } from './mobileWikilinks'
 type MarkdownBody = string
 type MarkdownLine = string
 type MarkdownText = string
+type WikilinkTarget = string
 type NoteFilename = string
 type NoteTitle = string
 type SnippetText = string
@@ -51,6 +52,28 @@ export function localVaultSnippet(body: MarkdownBody): SnippetText {
   const primary = lines.find(isPrimarySnippetLine)
   const fallback = lines.find(isFallbackSnippetLine)
   return truncateSnippet(stripMarkdown(primary ?? fallback ?? ''))
+}
+
+export function localVaultOutgoingLinks(body: MarkdownBody): WikilinkTarget[] {
+  const links: WikilinkTarget[] = []
+  const wikilinkPattern = /\[\[([^\]]+)\]\]/g
+  const searchableBody = blankFencedCodeLines(body)
+
+  for (const line of searchableBody.split('\n')) {
+    wikilinkPattern.lastIndex = 0
+    let match = wikilinkPattern.exec(line)
+    while (match) {
+      const parsed = parseMobileWikilink(match[0])
+      if (parsed?.target) links.push(parsed.target)
+      match = wikilinkPattern.exec(line)
+    }
+  }
+
+  return [...new Set(links)].sort()
+}
+
+export function localVaultLinkCount(body: MarkdownBody): number {
+  return localVaultOutgoingLinks(body).length
 }
 
 export function localVaultEditorBlocks(body: MarkdownBody): MobileEditorBlock[] {
@@ -116,6 +139,27 @@ function stripInitialH1(body: MarkdownBody): MarkdownBody {
     ...lines.slice(0, firstContentIndex),
     ...lines.slice(firstContentIndex + 1),
   ].join('\n')
+}
+
+function lineFenceMarker(line: MarkdownLine): string | null {
+  return line.trimStart().match(/^(`{3,}|~{3,})/)?.[1] ?? null
+}
+
+function nextMarkdownFenceMarker(line: MarkdownLine, currentMarker: string | null): string | null {
+  const marker = lineFenceMarker(line)
+  if (!marker) return currentMarker
+  if (!currentMarker) return marker
+  return marker[0] === currentMarker[0] && marker.length >= currentMarker.length ? null : currentMarker
+}
+
+function blankFencedCodeLines(body: MarkdownBody): MarkdownBody {
+  let fenceMarker: string | null = null
+  return body.split('\n').map((line) => {
+    const nextFenceMarker = nextMarkdownFenceMarker(line, fenceMarker)
+    const shouldBlank = fenceMarker !== null || nextFenceMarker !== fenceMarker
+    fenceMarker = nextFenceMarker
+    return shouldBlank ? '' : line
+  }).join('\n')
 }
 
 function isPrimarySnippetLine(line: MarkdownLine): boolean {

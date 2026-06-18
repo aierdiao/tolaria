@@ -13,6 +13,8 @@ import {
   deriveLocalVaultTitle,
   localVaultEditorBlocks,
   localVaultEditorBullets,
+  localVaultLinkCount,
+  localVaultOutgoingLinks,
   localVaultSnippet,
 } from './localVaultMarkdown'
 import type {
@@ -389,6 +391,7 @@ function createMobileNote(
       icon: null,
       links: 0,
       modified: '0m ago',
+      outgoingLinks: [],
       path: id,
       rawContent,
       relationships: [],
@@ -1011,10 +1014,11 @@ function deriveEditableNote({
       favorite: frontmatterFlag(document.frontmatter, ['_favorite', 'favorite']),
       favoriteIndex: frontmatterNumber(document.frontmatter, ['_favorite_index', 'favorite_index', 'favorite index']),
       icon: frontmatterText(document.frontmatter, ['_icon', 'icon']),
-      links: linkCount(document.body),
+      links: localVaultLinkCount(document.body),
       modified: '0m ago',
       noteWidth: normalizeMobileNoteWidth(frontmatterScalar(document.frontmatter, ['_width', 'width'])),
       organized: frontmatterFlag(document.frontmatter, ['_organized']),
+      outgoingLinks: localVaultOutgoingLinks(document.body),
       path: fallback.path ?? fallback.id,
       properties,
       rawContent,
@@ -1327,10 +1331,6 @@ function frontmatterValueForKey(
   return Object.entries(frontmatter).find(([candidateKey]) => (
     normalizedFrontmatterKey(candidateKey) === normalizedKey
   ))?.[1]
-}
-
-function linkCount(body: MarkdownContent): number {
-  return body.match(/\[\[[^\]]+\]\]/g)?.length ?? 0
 }
 
 function absoluteDate(timestamp: number): string {

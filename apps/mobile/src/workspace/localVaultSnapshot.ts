@@ -11,6 +11,8 @@ import {
   deriveLocalVaultTitle,
   localVaultEditorBlocks,
   localVaultEditorBullets,
+  localVaultLinkCount,
+  localVaultOutgoingLinks,
   localVaultSnippet,
 } from './localVaultMarkdown'
 import {
@@ -78,6 +80,7 @@ type LocalVaultEntry = {
   modifiedAt: TimestampMs | null
   noteWidth: MobileNoteWidth | null
   organized: boolean
+  outgoingLinks: string[]
   path: RelativeVaultPath
   properties: MobileProperty[]
   rawContent: string
@@ -174,10 +177,11 @@ function parseLocalVaultEntry(file: LocalVaultFile): LocalVaultEntry {
     filename,
     id: file.relativePath,
     icon: frontmatterText(document.frontmatter, ['_icon', 'icon']),
-    links: linkCount(document.body),
+    links: localVaultLinkCount(document.body),
     modifiedAt: file.modifiedAt,
     noteWidth: normalizeMobileNoteWidth(frontmatterScalar(document.frontmatter, ['_width', 'width'])),
     organized: frontmatterFlag(document.frontmatter, ['_organized']),
+    outgoingLinks: localVaultOutgoingLinks(document.body),
     path: file.relativePath,
     properties: mobileProperties(frontmatterProperties(document.frontmatter)),
     rawContent: file.content,
@@ -307,6 +311,7 @@ function localEntryToMobileNote(
     noteWidth: entry.noteWidth,
     archived: entry.archived,
     organized: entry.organized,
+    outgoingLinks: entry.outgoingLinks,
     path: entry.path,
     properties: entry.properties,
     rawContent: detailLevel === 'editable' ? entry.rawContent : undefined,
@@ -465,10 +470,6 @@ function relativeDate(timestamp: TimestampMs | null): string {
 function absoluteDate(timestamp: TimestampMs | null): string {
   if (!timestamp) return '-'
   return absoluteDateFormatter.format(new Date(timestamp))
-}
-
-function linkCount(body: string): number {
-  return body.match(/\[\[[^\]]+\]\]/g)?.length ?? 0
 }
 
 function humanizeRelationshipKey(label: RelationshipLabel): string {

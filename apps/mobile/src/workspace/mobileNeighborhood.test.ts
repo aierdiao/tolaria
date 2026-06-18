@@ -56,6 +56,38 @@ describe('mobile neighborhood', () => {
     expect(neighborhood.groups.find((group) => group.label === 'Instances')?.notes.map((item) => item.id)).toEqual(['child'])
   })
 
+  it('includes desktop Backlinks after inverse relationship groups', () => {
+    const source = note({
+      aliases: ['Launch Plan'],
+      id: 'projects/alpha.md',
+      path: 'projects/alpha.md',
+      title: 'Alpha Project',
+      type: 'Project',
+    })
+    const child = note({
+      id: 'child',
+      relationships: [relationship('belongs_to', [{ id: source.id, ref: '[[projects/alpha]]', title: 'Alpha Project' }])],
+      title: 'Child',
+    })
+    const backlink = note({
+      id: 'backlink',
+      modifiedAt: 20,
+      outgoingLinks: ['Launch Plan'],
+      title: 'Backlink',
+    })
+    const pathBacklink = note({
+      id: 'path-backlink',
+      modifiedAt: 10,
+      outgoingLinks: ['projects/alpha'],
+      title: 'Path Backlink',
+    })
+
+    const neighborhood = buildMobileNeighborhood(source, [source, child, backlink, pathBacklink])
+
+    expect(neighborhood.groups.map((group) => group.label)).toEqual(['Children', 'Backlinks'])
+    expect(neighborhood.groups.find((group) => group.label === 'Backlinks')?.notes.map((item) => item.id)).toEqual(['backlink', 'path-backlink'])
+  })
+
   it('filters relationship groups using note-list search fields', () => {
     const source = note({
       id: 'source',
