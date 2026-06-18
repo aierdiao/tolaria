@@ -226,6 +226,37 @@ describe('tablet workspace editing history', () => {
     expect(noteById(undoneSnapshot, 'workflow-orchestration').path).toBe('Tolaria/Mobile UI/Workflow Orchestration Essay.md')
     expect(noteById(redoneSnapshot, 'workflow-orchestration').path).toBe('Research/Mobile UI/Workflow Orchestration Essay.md')
   })
+
+  it('undoes and redoes primary note-list display property overrides', () => {
+    const previousSnapshot = workspaceScenarioForId('default')
+    const { redoneSnapshot, undoneSnapshot } = historyRoundTrip(previousSnapshot, {
+      listPropertiesDisplay: [' status ', 'belongs_to', 'Status'],
+      target: 'allNotes',
+      type: 'updatePrimaryNoteListProperties',
+    })
+
+    expect(undoneSnapshot.noteListPropertyOverrides).toBeUndefined()
+    expect(redoneSnapshot.noteListPropertyOverrides).toEqual({
+      allNotes: ['status', 'belongs_to'],
+    })
+  })
+
+  it('undoes primary note-list display resets back to the previous override', () => {
+    const previousSnapshot = {
+      ...workspaceScenarioForId('default'),
+      noteListPropertyOverrides: { inbox: ['status', 'tags'] },
+    }
+    const { redoneSnapshot, undoneSnapshot } = historyRoundTrip(previousSnapshot, {
+      listPropertiesDisplay: [],
+      target: 'inbox',
+      type: 'updatePrimaryNoteListProperties',
+    })
+
+    expect(undoneSnapshot.noteListPropertyOverrides).toEqual({
+      inbox: ['status', 'tags'],
+    })
+    expect(redoneSnapshot.noteListPropertyOverrides).toBeUndefined()
+  })
 })
 
 function snapshotWithEditableNote(overrides: Partial<MobileNote> & { id: string; rawContent: string }): MobileWorkspaceSnapshot {

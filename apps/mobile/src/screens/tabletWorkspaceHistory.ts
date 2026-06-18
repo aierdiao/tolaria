@@ -4,7 +4,10 @@ import type {
   MobileTypeDefinition,
   MobileWorkspaceSnapshot,
 } from '../workspace/mobileWorkspaceModel'
-import type { MobileWorkspaceEdit } from '../workspace/mobileWorkspaceEditing'
+import {
+  normalizedDisplayProperties,
+  type MobileWorkspaceEdit,
+} from '../workspace/mobileWorkspaceEditing'
 import { mobileNoteEditableContent } from '../workspace/mobileDocumentContent'
 import { mobileWorkspacePathHistoryEntry } from './tabletWorkspacePathHistory'
 
@@ -35,6 +38,8 @@ export function mobileWorkspaceHistoryEntry(
   if (sourceEdit && !historyRecordsEdit(sourceEdit)) return null
   const pathHistoryEntry = mobileWorkspacePathHistoryEntry(previousSnapshot, nextSnapshot, sourceEdit)
   if (pathHistoryEntry) return pathHistoryEntry
+  const primaryListHistoryEntry = primaryNoteListPropertiesHistoryEntry(previousSnapshot, nextSnapshot, sourceEdit)
+  if (primaryListHistoryEntry) return primaryListHistoryEntry
 
   const edits = emptyHistoryEntry()
   recordRemovedFolderHistory(edits, previousSnapshot, nextSnapshot)
@@ -182,6 +187,31 @@ function recordTypeDefinitionHistory(
   }
 }
 
+function primaryNoteListPropertiesHistoryEntry(
+  previousSnapshot: MobileWorkspaceSnapshot,
+  nextSnapshot: MobileWorkspaceSnapshot,
+  sourceEdit: MobileWorkspaceEdit | undefined,
+): MobileWorkspaceHistoryEntry | null {
+  if (sourceEdit?.type !== 'updatePrimaryNoteListProperties') return null
+
+  const previousProperties = primaryNoteListProperties(previousSnapshot, sourceEdit.target)
+  const nextProperties = primaryNoteListProperties(nextSnapshot, sourceEdit.target)
+  if (sameList(previousProperties, nextProperties)) return null
+
+  return {
+    redoEdits: [{
+      listPropertiesDisplay: nextProperties,
+      target: sourceEdit.target,
+      type: 'updatePrimaryNoteListProperties',
+    }],
+    undoEdits: [{
+      listPropertiesDisplay: previousProperties,
+      target: sourceEdit.target,
+      type: 'updatePrimaryNoteListProperties',
+    }],
+  }
+}
+
 function reversibleContentChange({
   nextNote,
   nextSnapshot,
@@ -318,4 +348,15 @@ function normalizedFolderPath(path: string): string {
 
 function sameJson(left: MobileSavedView | MobileTypeDefinition, right: MobileSavedView | MobileTypeDefinition): boolean {
   return JSON.stringify(left) === JSON.stringify(right)
+}
+
+function primaryNoteListProperties(
+  snapshot: MobileWorkspaceSnapshot,
+  target: 'allNotes' | 'inbox',
+): string[] {
+  return normalizedDisplayProperties(snapshot.noteListPropertyOverrides?.[target] ?? [])
+}
+
+function sameList(left: string[], right: string[]): boolean {
+  return left.length === right.length && left.every((value, index) => value === right[index])
 }
