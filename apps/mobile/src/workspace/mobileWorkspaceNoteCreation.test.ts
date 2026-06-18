@@ -6,6 +6,7 @@ import {
   applyMobileWorkspaceEditWithWrites,
   type MobileWorkspaceEditResult,
 } from './mobileWorkspaceEditing'
+import { buildMobileDeepLinkForNote } from './mobileDeepLinks'
 
 describe('mobile note creation parity', () => {
   it('creates a selected editable note with desktop-style frontmatter content', () => {
@@ -75,6 +76,24 @@ describe('mobile note creation parity', () => {
       kind: 'createNote',
       path: 'mobile-persistence-contract.md',
     }])
+  })
+
+  it('keeps fixture-created scratch notes on the default Tolaria vault label', () => {
+    const result = applyMobileWorkspaceEditWithWrites(workspaceScenarioForId('default'), {
+      title: 'Mobile QA Draft',
+      type: 'createNote',
+    })
+    const note = result.snapshot.notes[0]
+
+    expect(note).toMatchObject({
+      path: 'mobile-qa-draft.md',
+      workspace: 'Tolaria Vault',
+      workspaceAlias: null,
+    })
+    expect(buildMobileDeepLinkForNote({ note, source: result.snapshot.source })).toEqual({
+      ok: true,
+      url: 'tolaria://tolaria-vault/mobile-qa-draft.md',
+    })
   })
 
   it('creates notes in the selected folder with frontmatter defaults', () => {

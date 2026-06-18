@@ -453,8 +453,10 @@ function createMobileNote(
       title: trimmedTitle,
       type,
       typeTone: 'gray',
-      workspace: snapshot.source?.label ?? snapshot.notes[0]?.workspace ?? 'Tolaria Vault',
-      workspaceAlias: snapshot.source?.alias ?? snapshot.notes[0]?.workspaceAlias ?? null,
+      workspace: snapshot.source?.label ?? 'Tolaria Vault',
+      workspaceAlias: snapshot.source?.kind === 'localVault'
+        ? snapshot.source.alias ?? snapshot.notes[0]?.workspaceAlias ?? null
+        : null,
     },
     rawContent,
     typeDefinitions: snapshot.typeDefinitions,
