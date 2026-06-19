@@ -50,6 +50,23 @@ test.describe('mobile UI lab interactions', () => {
     await expect(page.getByTestId('editor-title')).toHaveText('How I Run an Open Source Project')
   })
 
+  test('creates a note from an unmatched quick open query', async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== 'tablet-landscape', 'Quick-open create checks use the full-width tablet layout.')
+
+    const title = 'Quick Open Mobile Draft'
+
+    await page.goto('/')
+    await page.getByTestId('note-list-search-action').click()
+    await page.getByTestId('workspace-search-input').fill(title)
+    await expect(page.getByTestId('workspace-search-results').getByText('No matching notes')).toBeVisible()
+    await expect(page.getByTestId('workspace-search-create-note')).toHaveText(`Create note "${title}"`)
+    await page.getByTestId('workspace-search-create-note').click()
+
+    await expect(page.getByTestId('workspace-action-sheet')).toBeHidden()
+    await expect(page.getByTestId('note-row-quick-open-mobile-draft.md')).toBeVisible()
+    await expectSelectedBodyOnlyNoteTitle(page, title)
+  })
+
   test('opens the markdown source editor from the editor toolbar', async ({ page }, testInfo) => {
     test.skip(testInfo.project.name !== 'tablet-landscape', 'Editor source mode checks use the full-width tablet layout.')
 

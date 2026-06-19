@@ -1,6 +1,22 @@
 import { expect, test, type Page } from '@playwright/test'
 
 test.describe('phone note action parity', () => {
+  test('creates a note from an unmatched phone quick open query', async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== 'phone-portrait', 'Phone quick-open create runs on the phone note-list shell.')
+
+    const title = 'Phone Quick Open Draft'
+
+    await page.goto('/')
+    await page.getByTestId('note-list-search-action').click()
+    await page.getByTestId('workspace-search-input').fill(title)
+    await expect(page.getByTestId('workspace-search-results').getByText('No matching notes')).toBeVisible()
+    await expect(page.getByTestId('workspace-search-create-note')).toHaveText(`Create note "${title}"`)
+    await page.getByTestId('workspace-search-create-note').click()
+
+    await expect(page.getByTestId('workspace-action-sheet')).toBeHidden()
+    await expect(page.getByTestId(`note-row-${noteRowSlug(title)}.md`)).toBeVisible()
+  })
+
   test('exercises phone More-sheet note commands', async ({ page }, testInfo) => {
     test.skip(testInfo.project.name !== 'phone-portrait', 'Phone note actions run on the phone editor shell.')
 

@@ -467,14 +467,14 @@ function createWorkspaceActions({
   workspaceSnapshot,
 }: WorkspaceActionsContext) {
   return {
-    onCreateNote: () => createNote({
+    onCreateNote: (titleOverride?: string) => createNote({
       applyEdit,
       closeAction,
       defaults: createNoteDefaultsForSelection(
         navigation.sidebarSelection,
         workspaceSnapshot.typeDefinitions,
       ),
-      title: readOnlyForm.createTitle,
+      title: titleOverride ?? readOnlyForm.createTitle,
     }),
     onCreateTitleChange: (value: string) => updateReadOnlyForm('createTitle', value),
     onCreateView: () => createView({

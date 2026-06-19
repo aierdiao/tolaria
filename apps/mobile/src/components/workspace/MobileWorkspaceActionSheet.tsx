@@ -112,7 +112,7 @@ type MobileWorkspaceActionSheetProps = {
   onChangeNoteTypeInputChange: (value: string) => void
   onClose: () => void
   onCreateFolder: () => void
-  onCreateNote: () => void
+  onCreateNote: (titleOverride?: string) => void
   onCreateRelationshipTarget: () => void
   onCreateTitleChange: (value: string) => void
   onCopyDeepLink: () => void
@@ -318,6 +318,7 @@ const actionContentByAction: Record<MobileWorkspaceAction, (props: MobileWorkspa
 
 function SearchContent({
   notes,
+  onCreateNote,
   onClose,
   onSearchQueryChange,
   onSelectNote,
@@ -325,6 +326,8 @@ function SearchContent({
 }: MobileWorkspaceActionSheetProps) {
   const searchResults = useMemo(() => mobileQuickOpenResults(notes, searchQuery), [notes, searchQuery])
   const [selectedResultIndex, setSelectedResultIndex] = useState(0)
+  const createTitle = searchQuery.trim()
+  const canCreateFromQuery = createTitle.length > 0 && searchResults.length === 0
 
   useEffect(() => {
     setSelectedResultIndex(0) // eslint-disable-line react-hooks/set-state-in-effect -- reset when quick-open results change
@@ -336,9 +339,19 @@ function SearchContent({
     onClose()
   }
 
+  const createFromQuery = () => {
+    if (!canCreateFromQuery) return
+    onCreateNote(createTitle)
+    onSearchQueryChange('')
+  }
+
   const selectActiveResult = () => {
     const selectedNote = mobileQuickOpenSelectedNote(searchResults, selectedResultIndex)
-    if (selectedNote) selectResult(selectedNote)
+    if (selectedNote) {
+      selectResult(selectedNote)
+      return
+    }
+    createFromQuery()
   }
 
   const handleKeyPress = (event: NativeSyntheticEvent<TextInputKeyPressEventData>) => {
@@ -367,7 +380,19 @@ function SearchContent({
         onSubmitEditing={selectActiveResult}
       />
       <ScrollView contentContainerStyle={styles.resultList} keyboardShouldPersistTaps="handled" testID="workspace-search-results">
-        {searchResults.length === 0 ? <EmptyState>{mobileText('noteList.empty.noMatching')}</EmptyState> : null}
+        {searchResults.length === 0 ? (
+          <>
+            <EmptyState>{mobileText('noteList.empty.noMatching')}</EmptyState>
+            {canCreateFromQuery ? (
+              <ActionRow
+                icon={<FilePlus color={mobileColors.textMuted} size={desktopToolbarActionParity.iconSize} />}
+                label={quickOpenCreateLabel(createTitle)}
+                testID="workspace-search-create-note"
+                onPress={createFromQuery}
+              />
+            ) : null}
+          </>
+        ) : null}
         {searchResults.map((note, index) => (
           <MobileListRow
             key={note.id}
@@ -385,6 +410,10 @@ function SearchContent({
       </ScrollView>
     </ScrollView>
   )
+}
+
+function quickOpenCreateLabel(title: string): string {
+  return mobileText('noteList.quickOpenCreate').replace('{title}', title)
 }
 
 function SingleTextFieldContent({ config }: { config: SingleTextFieldConfig }) {
@@ -523,7 +552,7 @@ function singleTextFieldConfig(props: MobileWorkspaceActionSheetProps) {
     inputValue: props.createTitle,
     onCancel: props.onClose,
     onChangeText: props.onCreateTitleChange,
-    onSubmit: props.onCreateNote,
+    onSubmit: () => props.onCreateNote(),
     submitLabel: mobileText('common.create'),
   }
 }
