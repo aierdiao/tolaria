@@ -7,6 +7,7 @@ type WorkspaceProbeWrites = ReturnType<typeof applyMobileWorkspaceEditWithWrites
 
 const bulkArchivedNotePath = 'Bulk/Archive Me.md'
 const bulkOrganizedNotePath = 'Bulk/Organize Me.md'
+const deletedNotePath = 'Delete/Delete Me.md'
 const renamedNoteFileInboundPath = 'Renames/Inbound.md'
 const renamedNoteFileOriginalPath = 'Renames/Original.md'
 const renamedNoteFilePath = 'Renames/manual-proof.md'
@@ -64,6 +65,16 @@ export const nativeWorkspaceNotePathSeedWrites = [
   },
   {
     content: [
+      '# Delete Me',
+      '',
+      'Ordinary note delete seed.',
+      '',
+    ].join('\n'),
+    kind: 'createNote',
+    path: deletedNotePath,
+  },
+  {
+    content: [
       '---',
       'related_to:',
       '  - "[[Renames/Original]]"',
@@ -115,6 +126,10 @@ export function nativeWorkspaceNotePathWrites(seedSnapshot: MobileWorkspaceSnaps
       type: 'renameNoteFile',
     },
     {
+      noteId: deletedNotePath,
+      type: 'deleteNote',
+    },
+    {
       key: 'title',
       noteId: titleRenameOriginalPath,
       type: 'updateProperty',
@@ -144,6 +159,7 @@ export function nativeWorkspaceNotePathProof(
 ) {
   return {
     bulkEditHydrated: bulkEditHydrated(snapshot, content),
+    deletedNoteRemoved: !snapshotContainsNotePath(snapshot, deletedNotePath),
     renamedNoteFileHydrated: renamedNoteFileHydrated(snapshot, content),
     titlePropertyRenameHydrated: titlePropertyRenameHydrated(snapshot, content),
   }

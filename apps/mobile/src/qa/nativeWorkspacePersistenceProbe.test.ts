@@ -39,6 +39,10 @@ describe('native workspace persistence probe', () => {
     ])
   })
 
+  it('reports incomplete note deletion persistence proofs', () => {
+    expectProofFailures({ deletedNoteRemoved: false }, ['workspace.persistence.deleteNote'])
+  })
+
   it('keeps native proof log lines compact for simulator log capture', () => {
     const line = nativeWorkspacePersistenceLogLine(passingWorkspaceProof())
 
@@ -165,6 +169,7 @@ function passingWorkspaceProof(): NativeWorkspacePersistenceProof {
   return {
     bulkEditHydrated: true,
     createdNoteHydrated: true,
+    deletedNoteRemoved: true,
     deletedTypeDefinitionRemoved: true,
     deletedViewRemoved: true,
     defaultNoteWidthHydrated: true,

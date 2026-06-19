@@ -4,6 +4,7 @@ type NativeWorkspacePersistenceLine = string
 export type NativeWorkspacePersistenceProof = {
   bulkEditHydrated: boolean
   createdNoteHydrated: boolean
+  deletedNoteRemoved: boolean
   deletedTypeDefinitionRemoved: boolean
   deletedViewRemoved: boolean
   defaultNoteWidthHydrated: boolean
@@ -79,6 +80,7 @@ export function assertNativeWorkspacePersistenceProofs(
     proofFailure(latest.createdNoteHydrated, 'workspace.persistence.createNote', 'Created notes rehydrate from the native vault snapshot'),
     proofFailure(latest.movedNoteContentPreserved, 'workspace.persistence.moveNote', 'Saved and moved note content is read back from the native repository'),
     proofFailure(latest.renamedNoteFileHydrated, 'workspace.persistence.renameNoteFile', 'Explicit note filename renames and inbound wikilink rewrites rehydrate from native filesystem writes'),
+    proofFailure(latest.deletedNoteRemoved, 'workspace.persistence.deleteNote', 'Deleted notes are absent from native filesystem snapshots after reducer-generated delete writes'),
     proofFailure(latest.titlePropertyRenameHydrated, 'workspace.persistence.titleRename', 'Title frontmatter edits rename files and rehydrate rewritten inbound wikilinks from native filesystem writes'),
     proofFailure(latest.bulkEditHydrated, 'workspace.persistence.bulkEdit', 'Bulk note action writes rehydrate from one native filesystem write batch'),
     proofFailure(latest.textFileContentHydrated, 'workspace.persistence.updateTextFileContent', 'Plain text file edits rehydrate from native filesystem writes'),
@@ -170,6 +172,7 @@ function workspacePersistenceProofFromValues(values: boolean[]): NativeWorkspace
 const workspacePersistenceProofKeys = [
   'bulkEditHydrated',
   'createdNoteHydrated',
+  'deletedNoteRemoved',
   'deletedTypeDefinitionRemoved',
   'deletedViewRemoved',
   'defaultNoteWidthHydrated',
