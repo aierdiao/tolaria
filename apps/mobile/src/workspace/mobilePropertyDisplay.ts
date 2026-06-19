@@ -1,5 +1,5 @@
 import { formatDateValueForDisplay } from '../../../../src/utils/dateDisplay'
-import type { MobilePropertyValue } from './mobileWorkspaceModel'
+import type { MobilePropertyDisplayMode, MobilePropertyValue } from './mobileWorkspaceModel'
 import { mobilePropertyValueKind, type MobilePropertyValueKind } from './mobilePropertyValues'
 
 type MobileBooleanDisplayLabels = {
@@ -18,8 +18,9 @@ export function mobilePropertyDisplay(
   key: string,
   value: MobilePropertyValue,
   booleanLabels: MobileBooleanDisplayLabels = { false: 'No', true: 'Yes' },
+  displayModes: Record<string, MobilePropertyDisplayMode> | null | undefined = null,
 ): MobilePropertyDisplay {
-  const kind = mobilePropertyValueKind(key, value)
+  const kind = mobilePropertyValueKind(key, value, displayModes)
 
   if (kind === 'list' && Array.isArray(value)) {
     return propertyDisplay(kind, value.join(', '), { listItems: value })

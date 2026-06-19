@@ -48,4 +48,16 @@ describe('mobile property display', () => {
       text: 'High',
     })
   })
+
+  it('honors persisted desktop display-mode overrides', () => {
+    expect(mobilePropertyDisplay('Priority', 'High', undefined, { Priority: 'status' })).toMatchObject({
+      kind: 'status',
+      text: 'High',
+    })
+    expect(mobilePropertyDisplay('People', ['Luca', 'Brian'], undefined, { People: 'tags' })).toMatchObject({
+      kind: 'list',
+      listItems: ['Luca', 'Brian'],
+      text: 'Luca, Brian',
+    })
+  })
 })

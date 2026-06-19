@@ -10,7 +10,7 @@ import { MobilePropertyRow } from '../../ui/MobilePropertyRow'
 import { desktopPanelParity, desktopPropertyParity, desktopRelationshipParity } from '../../ui/desktopParity'
 import { mobileColors, mobileRadius, mobileSpace, mobileType } from '../../ui/tokens'
 import { mobilePropertyDisplay, type MobilePropertyDisplay } from '../../workspace/mobilePropertyDisplay'
-import type { MobileNote, MobileProperty, MobilePropertyValue, MobileRelationship, MobileTone, MobileTypeDefinitions } from '../../workspace/mobileWorkspaceModel'
+import type { MobileNote, MobileProperty, MobilePropertyDisplayMode, MobilePropertyValue, MobileRelationship, MobileTone, MobileTypeDefinitions } from '../../workspace/mobileWorkspaceModel'
 import type { MobileNeighborhoodGroup } from '../../workspace/mobileNeighborhood'
 import {
   mobileInspectorPropertySlots,
@@ -34,6 +34,7 @@ export function MobilePropertiesPanel({
   onOpenChangeNoteType,
   onRemoveRelationship,
   onSelectNote,
+  propertyDisplayModes,
   referenceGroups = [],
   typeDefinitions,
 }: {
@@ -49,6 +50,7 @@ export function MobilePropertiesPanel({
   onOpenChangeNoteType: () => void
   onRemoveRelationship: (noteId: string, key: string, ref: string) => void
   onSelectNote: (noteId: string) => void
+  propertyDisplayModes?: Record<string, MobilePropertyDisplayMode> | null
   referenceGroups?: MobileNeighborhoodGroup[]
   typeDefinitions?: MobileTypeDefinitions
 }) {
@@ -80,6 +82,7 @@ export function MobilePropertiesPanel({
             onOpenChangeNoteType={onOpenChangeNoteType}
             onRemoveRelationship={onRemoveRelationship}
             onSelectNote={onSelectNote}
+            propertyDisplayModes={propertyDisplayModes}
             referenceGroups={referenceGroups}
             typeDefinitions={typeDefinitions}
           />
@@ -100,6 +103,7 @@ function NoteProperties({
   onOpenChangeNoteType,
   onRemoveRelationship,
   onSelectNote,
+  propertyDisplayModes,
   referenceGroups,
   typeDefinitions,
 }: {
@@ -113,6 +117,7 @@ function NoteProperties({
   onOpenChangeNoteType: () => void
   onRemoveRelationship: (noteId: string, key: string, ref: string) => void
   onSelectNote: (noteId: string) => void
+  propertyDisplayModes?: Record<string, MobilePropertyDisplayMode> | null
   referenceGroups: MobileNeighborhoodGroup[]
   typeDefinitions?: MobileTypeDefinitions
 }) {
@@ -143,10 +148,7 @@ function NoteProperties({
       <MobilePropertyRow label={mobileCopy.modified} layoutProbe={layoutProbe} layoutProbeId="properties.row.modified" testID="property-row-modified" value={note.modified} />
       <MobilePropertyRow label={mobileText('inspector.properties.workspace')} layoutProbe={layoutProbe} layoutProbeId="properties.row.workspace" testID="property-row-workspace" value={<WorkspaceBadge label={note.workspace} />} />
       <PropertySection label="Tags" layoutProbe={layoutProbe} layoutProbeId="properties.section.tags" testID="property-section-tags">
-        <EditableTagsValue
-          labels={note.tags}
-          onPress={() => onEditProperty(note.id, 'tags', note.tags)}
-        />
+        <EditableTagsValue labels={note.tags} onPress={() => onEditProperty(note.id, 'tags', note.tags)} />
       </PropertySection>
       <MobilePropertyRow label="Links" layoutProbe={layoutProbe} layoutProbeId="properties.row.links" testID="property-row-links" value={`${note.links}`} />
       {note.icon ? (
@@ -164,6 +166,7 @@ function NoteProperties({
           layoutProbe={layoutProbe}
           noteId={note.id}
           property={property}
+          propertyDisplayModes={propertyDisplayModes}
           onDeleteProperty={onDeleteProperty}
           onEditProperty={onEditProperty}
         />
@@ -244,19 +247,21 @@ function EditablePropertyRow({
   noteId,
   onDeleteProperty,
   onEditProperty,
+  propertyDisplayModes,
   property,
 }: {
   layoutProbe: MobileLayoutProbe
   noteId: string
   onDeleteProperty: (noteId: string, key: string) => void
   onEditProperty: (noteId: string, key: string, value: MobilePropertyValue) => void
+  propertyDisplayModes?: Record<string, MobilePropertyDisplayMode> | null
   property: MobileProperty
 }) {
   const testId = `property-row-${testIdSegment(property.key)}`
   const display = mobilePropertyDisplay(property.key, property.value, {
     false: mobileText('inspector.properties.no'),
     true: mobileText('inspector.properties.yes'),
-  })
+  }, propertyDisplayModes)
 
   return (
     <MobilePropertyRow

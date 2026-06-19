@@ -125,4 +125,31 @@ describe('primary note-list property overrides', () => {
       },
     })
   })
+
+  it('round-trips desktop property display modes through mobile vault config serialization', () => {
+    const serialized = serializeMobileVaultConfig({
+      propertyDisplayModes: {
+        Estimate: 'number',
+        People: 'tags',
+      },
+    })
+
+    expect(parseMobileVaultConfig(serialized)).toEqual({
+      propertyDisplayModes: {
+        Estimate: 'number',
+        People: 'tags',
+      },
+    })
+    expect(parseMobileVaultConfig(JSON.stringify({
+      property_display_modes: {
+        Deadline: 'date',
+        EmptyTextMode: 'text',
+        Invalid: 'rating',
+      },
+    }))).toEqual({
+      propertyDisplayModes: {
+        Deadline: 'date',
+      },
+    })
+  })
 })

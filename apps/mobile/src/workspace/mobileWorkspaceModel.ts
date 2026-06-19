@@ -53,6 +53,7 @@ export type MobileRelationshipValue = {
 }
 
 export type MobilePropertyValue = string | number | boolean | string[]
+export type MobilePropertyDisplayMode = 'boolean' | 'color' | 'date' | 'number' | 'status' | 'tags' | 'text' | 'url'
 
 export type MobileProperty = {
   key: string
@@ -219,6 +220,7 @@ export type MobileVaultConfig = {
   allNotes?: MobileVaultPrimaryNoteListConfig | null
   defaultNoteWidth?: MobileNoteWidth | null
   inbox?: MobileVaultPrimaryNoteListConfig | null
+  propertyDisplayModes?: Record<string, MobilePropertyDisplayMode> | null
 }
 
 export type MobileWorkspaceSnapshot = {

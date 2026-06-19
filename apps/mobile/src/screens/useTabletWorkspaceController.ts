@@ -41,11 +41,8 @@ import {
   mobileSortablePropertySuggestions,
 } from '../workspace/mobileWorkspaceSuggestions'
 import {
-  mobilePropertyValueFormText,
-  mobilePropertyValueKind,
   mobilePropertyValueKindForKey,
   mobilePropertyValueTextForKindChange,
-  parseMobilePropertyValue,
   type MobilePropertyValueKind,
 } from '../workspace/mobilePropertyValues'
 import { mobileFilenameStemForTitle } from '../workspace/mobileNotePaths'
@@ -83,6 +80,7 @@ import {
   typeSchemaSourceNote,
 } from './tabletWorkspaceTypeSchemaActions'
 import { typeDefinitionSaveEdit } from './tabletWorkspaceTypeDefinitionSave'
+import { editPropertyFields, propertyEditFromForm } from './tabletWorkspacePropertyActions'
 import { createViewInitialFilters } from './tabletWorkspaceViewHelpers'
 
 const emptyReadOnlyForm: TabletReadOnlyForm = {
@@ -206,6 +204,7 @@ export function useTabletWorkspaceController({
     saveSelectedEdit,
     setOpenAction,
     updateReadOnlyForm,
+    workspaceSnapshot,
   })
   const relationshipActions = relationshipWorkspaceActions({
     applyEdit,
@@ -733,23 +732,25 @@ function propertyWorkspaceActions({
   saveSelectedEdit,
   setOpenAction,
   updateReadOnlyForm,
+  workspaceSnapshot,
 }: {
   applyEdit: ApplyWorkspaceEdit
   readOnlyForm: TabletReadOnlyForm
   saveSelectedEdit: SaveSelectedEdit
   setOpenAction: SetOpenAction
   updateReadOnlyForm: ReadOnlyFormUpdater
+  workspaceSnapshot: MobileWorkspaceSnapshot
 }) {
   const openAction = workspaceActionOpener({ setOpenAction, updateReadOnlyForm })
 
   return {
     onDeleteProperty: (noteId: string, key: string) => applyEdit({ key, noteId, type: 'deleteProperty' }),
     onEditProperty: (_noteId: string, key: string, value: MobilePropertyValue) => {
-      openAction('editProperty', editPropertyFields(key, value))
+      openAction('editProperty', editPropertyFields(key, value, workspaceSnapshot.vaultConfig?.propertyDisplayModes))
     },
     onPropertyNameChange: (value: string) => {
       updateReadOnlyForm('propertyName', value)
-      updateReadOnlyForm('propertyValueKind', mobilePropertyValueKindForKey(value, readOnlyForm.propertyValueKind))
+      updateReadOnlyForm('propertyValueKind', mobilePropertyValueKindForKey(value, readOnlyForm.propertyValueKind, workspaceSnapshot.vaultConfig?.propertyDisplayModes))
     },
     onPropertyValueChange: (value: string) => updateReadOnlyForm('propertyValue', value),
     onPropertyValueKindChange: (value: MobilePropertyValueKind) => {
@@ -866,14 +867,6 @@ function filenameStemForNote(note: MobileNote | null): string {
   const path = note?.path ?? note?.id ?? ''
   const filename = path.split('/').filter(Boolean).at(-1) ?? path
   return filename.replace(/\.md$/u, '')
-}
-
-function editPropertyFields(key: string, value: MobilePropertyValue): ReadOnlyFormField[] {
-  return [
-    { key: 'propertyName', value: key },
-    { key: 'propertyValue', value: mobilePropertyValueFormText(value) },
-    { key: 'propertyValueKind', value: mobilePropertyValueKind(key, value) },
-  ]
 }
 
 function addPropertyFields(key?: string): ReadOnlyFormField[] {
@@ -1268,16 +1261,7 @@ function cloneFilterNode(node: MobileViewFilterNode): MobileViewFilterNode {
 }
 
 function propertyEdit(form: TabletReadOnlyForm, noteId: string): MobileWorkspaceEdit {
-  return {
-    key: form.propertyName,
-    noteId,
-    type: 'updateProperty',
-    value: parseMobilePropertyValue({
-      key: form.propertyName,
-      kind: form.propertyValueKind,
-      valueText: form.propertyValue,
-    }),
-  }
+  return propertyEditFromForm(form, noteId)
 }
 
 function relationshipEdit(form: TabletReadOnlyForm, noteId: string): MobileWorkspaceEdit {

@@ -23,6 +23,7 @@ import type {
   MobileAllNotesFileVisibility,
   MobileCreateNoteDefaults,
   MobileNote,
+  MobilePropertyDisplayMode,
   MobileNoteWidth,
   MobileProperty,
   MobilePropertyValue,
@@ -85,6 +86,7 @@ import {
   mobileVaultConfigWithDefaultNoteWidth,
   mobileVaultConfigWithPrimaryNoteListProperties,
 } from './mobileVaultConfig'
+import { applyMobilePropertyDisplayModeEdit } from './mobilePropertyDisplayModeEditing'
 import type { MobileTypeDefinitionPatch } from './mobileTypeDefinitions'
 import { applyMobileTypeEdit } from './mobileWorkspaceTypeEditing'
 import { applyMobileRestorationEdit } from './mobileWorkspaceRestoration'
@@ -139,6 +141,7 @@ export type MobileWorkspaceEdit =
   | { view: MobileSavedView; viewIndex?: number; type: 'restoreView' }
   | { direction: MobileViewMoveDirection; viewId: string; type: 'moveView' }
   | { allNotesFileVisibility?: MobileAllNotesFileVisibility; listPropertiesDisplay: string[]; target: 'allNotes' | 'inbox'; type: 'updatePrimaryNoteListProperties' }
+  | { key: FrontmatterKey; mode: MobilePropertyDisplayMode | null; type: 'updatePropertyDisplayMode' }
   | { direction: MobileViewMoveDirection; type: 'moveTypeSection'; typeName: NoteTitle }
   | { type: 'createTypeDefinition'; typeName: NoteTitle }
   | { type: 'deleteTypeDefinition'; typeName: NoteTitle }
@@ -149,7 +152,7 @@ type MobileViewEdit = Extract<MobileWorkspaceEdit, { type: 'createView' | 'delet
 type MobileTypeEdit = Extract<MobileWorkspaceEdit, { type: 'createTypeDefinition' | 'deleteTypeDefinition' | 'moveTypeSection' | 'renameTypeDefinition' | 'updateTypeDefinition' }>
 type MobileFolderEdit = Extract<MobileWorkspaceEdit, { type: 'createFolder' | 'deleteFolder' | 'renameFolder' }>
 type MobileFavoriteEdit = Extract<MobileWorkspaceEdit, { type: 'moveFavorite' }>
-type MobileVaultConfigEdit = Extract<MobileWorkspaceEdit, { type: 'setDefaultNoteWidth' | 'updatePrimaryNoteListProperties' }>
+type MobileVaultConfigEdit = Extract<MobileWorkspaceEdit, { type: 'setDefaultNoteWidth' | 'updatePrimaryNoteListProperties' | 'updatePropertyDisplayMode' }>
 type MobileRestorationEdit = Extract<MobileWorkspaceEdit, { type: 'restoreFolder' | 'restoreNote' | 'restoreTypeDefinition' | 'restoreView' }>
 type MobileSnapshotEdit = Extract<MobileWorkspaceEdit, { type: 'createRelationshipTarget' | 'deleteNote' | 'moveNoteToFolder' | 'renameNoteFile' }>
 type MobileNoteEdit = Exclude<MobileWorkspaceEdit, MobileFavoriteEdit | MobileFolderEdit | MobileRestorationEdit | MobileSnapshotEdit | MobileTypeEdit | MobileVaultConfigEdit | MobileViewEdit | { type: 'bulkEdit' | 'createNote' }>
@@ -291,6 +294,7 @@ const mobileWorkspaceResultHandlers: MobileWorkspaceResultHandlerMap = {
   restoreTypeDefinition: (snapshot, edit) => applyMobileRestorationEdit(snapshot, edit, rebuildSnapshot),
   restoreView: (snapshot, edit) => applyMobileRestorationEdit(snapshot, edit, rebuildSnapshot),
   setDefaultNoteWidth: (snapshot, edit) => setDefaultNoteWidth(snapshot, edit.mode),
+  updatePropertyDisplayMode: applyMobilePropertyDisplayModeEdit,
   updatePrimaryNoteListProperties: (snapshot, edit) => updatePrimaryNoteListProperties(snapshot, edit),
   updateTypeDefinition: (snapshot, edit) => applyMobileTypeEdit(snapshot, edit, rebuildSnapshot),
   updateProperty: (snapshot, edit) => updateMobileNoteProperty(snapshot, edit),

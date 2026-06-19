@@ -1,5 +1,6 @@
 import type {
   MobileAllNotesFileVisibility,
+  MobilePropertyDisplayMode,
   MobilePrimaryNoteListPropertyOverrides,
   MobileVaultConfig,
   MobileVaultPrimaryNoteListConfig,
@@ -13,6 +14,16 @@ type PrimaryNoteListSettings = {
   allNotesFileVisibility?: MobileAllNotesFileVisibility
   displayProperties: string[]
 }
+const mobilePropertyDisplayModeValues: ReadonlySet<string> = new Set<MobilePropertyDisplayMode>([
+  'boolean',
+  'color',
+  'date',
+  'number',
+  'status',
+  'tags',
+  'text',
+  'url',
+])
 
 export function normalizedDisplayProperties(displayProperties: string[]) {
   const seen = new Set<string>()
@@ -82,6 +93,28 @@ export function mobileVaultConfigWithDefaultNoteWidth(
   }
 }
 
+export function mobileVaultConfigWithPropertyDisplayMode(
+  config: MobileVaultConfig | null | undefined,
+  key: string,
+  mode: MobilePropertyDisplayMode | null,
+): MobileVaultConfig {
+  const normalizedConfig = normalizeMobileVaultConfig(config)
+  const trimmedKey = key.trim()
+  if (!trimmedKey) return normalizedConfig
+
+  const propertyDisplayModes = { ...(normalizedConfig.propertyDisplayModes ?? {}) }
+  if (mode === null || mode === 'text') {
+    Reflect.deleteProperty(propertyDisplayModes, trimmedKey)
+  } else {
+    propertyDisplayModes[trimmedKey] = mode
+  }
+
+  return {
+    ...normalizedConfig,
+    propertyDisplayModes: Object.keys(propertyDisplayModes).length > 0 ? propertyDisplayModes : null,
+  }
+}
+
 export function snapshotWithMobileVaultConfig(
   snapshot: MobileWorkspaceSnapshot,
   config: MobileVaultConfig | null | undefined,
@@ -114,11 +147,15 @@ export function normalizeMobileVaultConfig(value: unknown): MobileVaultConfig {
   const allNotes = normalizePrimaryNoteListConfig(value.allNotes)
   const defaultNoteWidth = normalizeMobileNoteWidth(value.defaultNoteWidth)
   const inbox = normalizePrimaryNoteListConfig(value.inbox)
+  const propertyDisplayModes = normalizePropertyDisplayModes(
+    value.propertyDisplayModes ?? value.property_display_modes,
+  )
   const config: MobileVaultConfig = {}
 
   if (allNotes) config.allNotes = allNotes
   if (defaultNoteWidth) config.defaultNoteWidth = defaultNoteWidth
   if (inbox) config.inbox = inbox
+  if (propertyDisplayModes) config.propertyDisplayModes = propertyDisplayModes
 
   return config
 }
@@ -160,6 +197,23 @@ function normalizeAllNotesFileVisibility(value: unknown): MobileAllNotesFileVisi
     pdfs: value.pdfs === true,
     unsupported: value.unsupported === true,
   }
+}
+
+function normalizePropertyDisplayModes(value: unknown): Record<string, MobilePropertyDisplayMode> | null {
+  if (!isRecord(value)) return null
+
+  const modes: Record<string, MobilePropertyDisplayMode> = {}
+  for (const [key, mode] of Object.entries(value)) {
+    const trimmedKey = key.trim()
+    if (!trimmedKey || !isMobilePropertyDisplayMode(mode)) continue
+    if (mode !== 'text') modes[trimmedKey] = mode
+  }
+
+  return Object.keys(modes).length > 0 ? modes : null
+}
+
+function isMobilePropertyDisplayMode(value: unknown): value is MobilePropertyDisplayMode {
+  return typeof value === 'string' && mobilePropertyDisplayModeValues.has(value)
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

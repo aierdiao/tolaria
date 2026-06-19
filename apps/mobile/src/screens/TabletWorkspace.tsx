@@ -345,6 +345,7 @@ function TabletPropertiesPanelHost({
         onEnterNeighborhood={onEnterNeighborhood}
         onSelectNote={onSelectNote}
         onRemoveRelationship={onRemoveRelationship}
+        propertyDisplayModes={snapshot.vaultConfig?.propertyDisplayModes}
         referenceGroups={referenceGroups}
         typeDefinitions={snapshot.typeDefinitions}
       />

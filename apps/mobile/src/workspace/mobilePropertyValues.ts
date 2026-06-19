@@ -1,4 +1,4 @@
-import type { MobilePropertyValue } from './mobileWorkspaceModel'
+import type { MobilePropertyDisplayMode, MobilePropertyValue } from './mobileWorkspaceModel'
 import {
   isMobileColorProperty,
   isMobileColorPropertyKey,
@@ -37,7 +37,10 @@ export function mobilePropertyValueFormText(value: MobilePropertyValue): string 
 export function mobilePropertyValueKind(
   key: MobilePropertyKey,
   value: MobilePropertyValue,
+  displayModes: Record<string, MobilePropertyDisplayMode> | null | undefined = null,
 ): MobilePropertyValueKind {
+  const configuredKind = mobilePropertyValueKindFromDisplayMode(displayModes?.[key])
+  if (configuredKind) return configuredKind
   if (isMobileListPropertyKey(key) || Array.isArray(value)) return 'list'
   if (typeof value === 'boolean') return 'boolean'
   if (typeof value === 'number') return 'number'
@@ -47,7 +50,10 @@ export function mobilePropertyValueKind(
 export function mobilePropertyValueKindForKey(
   key: MobilePropertyKey,
   currentKind: MobilePropertyValueKind,
+  displayModes: Record<string, MobilePropertyDisplayMode> | null | undefined = null,
 ): MobilePropertyValueKind {
+  const configuredKind = mobilePropertyValueKindFromDisplayMode(displayModes?.[key])
+  if (configuredKind) return configuredKind
   if (isMobileListPropertyKey(key)) return 'list'
   if (isMobileStatusPropertyKey(key)) return 'status'
   if (isMobileDatePropertyKey(key)) return 'date'
@@ -63,6 +69,14 @@ export function mobilePropertyValueTextForKindChange(
   if (nextKind !== 'boolean') return currentValueText
   if (isBooleanFalseText(currentValueText)) return 'false'
   return 'true'
+}
+
+export function mobilePropertyDisplayModeFromValueKind(
+  kind: MobilePropertyValueKind,
+): MobilePropertyDisplayMode | null {
+  if (kind === 'string') return null
+  if (kind === 'list') return 'tags'
+  return kind
 }
 
 export function parseMobilePropertyValue(input: MobilePropertyValueInput): MobilePropertyValue {
@@ -116,3 +130,11 @@ const stringPropertyValueKindDetectors: readonly {
   { kind: 'url', matches: (key, value) => isMobileUrlPropertyKey(key) || isMobileUrlPropertyValue(value) },
   { kind: 'color', matches: isMobileColorProperty },
 ]
+
+function mobilePropertyValueKindFromDisplayMode(
+  mode: MobilePropertyDisplayMode | null | undefined,
+): MobilePropertyValueKind | null {
+  if (!mode || mode === 'text') return null
+  if (mode === 'tags') return 'list'
+  return mode
+}

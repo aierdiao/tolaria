@@ -43,6 +43,18 @@ describe('mobile property values', () => {
     expect(mobilePropertyValueKindForKey('Priority', 'number')).toBe('number')
   })
 
+  it('uses persisted desktop display modes before heuristic value detection', () => {
+    const displayModes = {
+      Assignee: 'tags',
+      Estimate: 'number',
+      Priority: 'status',
+    } as const
+
+    expect(mobilePropertyValueKind('Priority', 'High', displayModes)).toBe('status')
+    expect(mobilePropertyValueKind('Estimate', '13', displayModes)).toBe('number')
+    expect(mobilePropertyValueKindForKey('Assignee', 'string', displayModes)).toBe('list')
+  })
+
   it('serializes typed values from form text', () => {
     expect(parseMobilePropertyValue({ key: 'tags', kind: 'string', valueText: 'AI, Design' })).toEqual(['AI', 'Design'])
     expect(parseMobilePropertyValue({ key: 'Estimate', kind: 'number', valueText: '13.5' })).toBe(13.5)

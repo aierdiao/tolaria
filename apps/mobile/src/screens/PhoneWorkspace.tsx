@@ -718,6 +718,7 @@ function PhonePropertiesScreen({
         onEnterNeighborhood={enterNeighborhood}
         onOpenChangeNoteType={controller.onOpenChangeNoteType}
         onRemoveRelationship={controller.onRemoveRelationship}
+        propertyDisplayModes={controller.snapshot.vaultConfig?.propertyDisplayModes}
         referenceGroups={referenceGroups}
         onSelectNote={openEditor}
       />
