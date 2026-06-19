@@ -15,7 +15,8 @@ type ExpoFileSystemModule = {
 
 declare const require: (moduleName: string) => ExpoFileSystemModule
 
-const createdNotePath = 'Writing/Drafts/Mobile Created.md'
+const createdNotePath = 'Writing/Drafts/mobile-created.md'
+const movedNoteFolderPath = 'Research'
 const movedNotePath = 'Research/Seed.md'
 const metadataNotePath = 'Metadata/Chrome State.md'
 const oldTypeName = 'Retired Proof'
@@ -127,35 +128,45 @@ function workspacePersistenceProbeRootUri(): string | null {
 
 function workspacePersistenceProbeWrites(seedSnapshot: MobileWorkspaceSnapshot) {
   return [
-    ...workspacePersistenceNoteWrites(),
+    ...workspacePersistenceNoteAndRelationshipWrites(seedSnapshot),
     ...workspacePersistenceMetadataWrites(seedSnapshot),
     ...workspacePersistenceViewWrites(),
     workspacePersistenceConfigWrite(),
     ...workspacePersistenceFolderWrites(),
     ...workspacePersistenceTypeWrites(),
-    ...workspacePersistenceRelationshipTargetWrites(seedSnapshot),
     ...workspacePersistenceTypeRenameWrites(seedSnapshot),
   ]
 }
 
-function workspacePersistenceNoteWrites() {
-  return [
+function workspacePersistenceNoteAndRelationshipWrites(seedSnapshot: MobileWorkspaceSnapshot) {
+  return workspacePersistenceEditWrites(seedSnapshot, [
     {
-      content: mobileCreatedNoteContent(),
-      kind: 'createNote' as const,
-      path: createdNotePath,
+      defaults: {
+        folderPath: 'Writing/Drafts',
+        status: 'Draft',
+        tags: ['Mobile'],
+        type: 'Essay',
+      },
+      title: 'Mobile Created',
+      type: 'createNote',
     },
     {
       content: seedNoteUpdatedContent(),
-      kind: 'saveNote' as const,
-      path: 'Writing/Seed.md',
+      noteId: 'Writing/Seed.md',
+      type: 'updateNoteContent',
     },
     {
-      kind: 'moveNote' as const,
-      path: 'Writing/Seed.md',
-      toPath: movedNotePath,
+      folderPath: movedNoteFolderPath,
+      noteId: 'Writing/Seed.md',
+      type: 'moveNoteToFolder',
     },
-  ]
+    {
+      key: 'related_to',
+      sourceNoteId: relationshipSourcePath,
+      targetTitle: 'Native Related Target',
+      type: 'createRelationshipTarget',
+    },
+  ])
 }
 
 type WorkspaceProbeEdit = Parameters<typeof applyMobileWorkspaceEditWithWrites>[1]
@@ -246,15 +257,6 @@ function workspacePersistenceTypeWrites() {
   ]
 }
 
-function workspacePersistenceRelationshipTargetWrites(seedSnapshot: MobileWorkspaceSnapshot) {
-  return applyMobileWorkspaceEditWithWrites(seedSnapshot, {
-    key: 'related_to',
-    sourceNoteId: relationshipSourcePath,
-    targetTitle: 'Native Related Target',
-    type: 'createRelationshipTarget',
-  }).writes
-}
-
 function workspacePersistenceTypeRenameWrites(seedSnapshot: MobileWorkspaceSnapshot) {
   return applyMobileWorkspaceEditWithWrites(seedSnapshot, {
     nextTypeName: renamedTypeName,
@@ -269,6 +271,10 @@ function seedWorkspacePersistenceProbeWrites() {
       content: seedNoteInitialContent(),
       kind: 'createNote' as const,
       path: 'Writing/Seed.md',
+    },
+    {
+      kind: 'createFolder' as const,
+      path: movedNoteFolderPath,
     },
     {
       content: metadataNoteInitialContent(),
@@ -332,6 +338,7 @@ function workspacePersistenceProof(
     noteChromeMetadataHydrated: noteChromeMetadataHydrated(snapshot, content.metadataContent),
     noteStateMetadataHydrated: noteStateMetadataHydrated(snapshot, content.metadataContent),
     persistedToNativeRepository: snapshot.source?.kind === 'localVault',
+    relationshipMovedRefHydrated: relationshipMovedRefHydrated(content.relationshipSourceContent),
     relationshipSourceRefHydrated: relationshipSourceRefHydrated(content.relationshipSourceContent),
     relationshipTargetHydrated: snapshotContainsNotePath(snapshot, relationshipTargetPath),
     renamedTypeAssignedNoteHydrated: renamedTypeAssignedNoteHydrated(snapshot, content.renamedAssignedContent),
@@ -406,6 +413,12 @@ function relationshipSourceRefHydrated(content: string | null) {
     && content.includes('native-related-target')
 }
 
+function relationshipMovedRefHydrated(content: string | null) {
+  return content?.includes('belongs_to:') === true
+    && content.includes('Research/Seed')
+    && !content.includes('Writing/Seed')
+}
+
 function renamedTypeDefinitionHydrated(snapshot: MobileWorkspaceSnapshot) {
   return snapshot.typeDefinitions?.[renamedTypeName]?.tone === 'purple'
     && snapshot.typeDefinitions?.[renamedTypeSourceName] === undefined
@@ -471,26 +484,13 @@ function metadataNoteInitialContent() {
   ].join('\n')
 }
 
-function mobileCreatedNoteContent() {
-  return [
-    '---',
-    'type: Essay',
-    'status: Draft',
-    'tags:',
-    '  - Mobile',
-    '---',
-    '# Mobile Created',
-    '',
-    'Created through native workspace persistence.',
-    '',
-  ].join('\n')
-}
-
 function relationshipSourceContent() {
   return [
     '---',
     'type: Essay',
     'status: Draft',
+    'belongs_to:',
+    '  - [[Writing/Seed]]',
     '---',
     '# Relationship Source',
     '',

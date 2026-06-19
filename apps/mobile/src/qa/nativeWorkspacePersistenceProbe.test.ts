@@ -40,11 +40,13 @@ describe('native workspace persistence probe', () => {
 
   it('reports incomplete relationship target persistence proofs', () => {
     expectProofFailures({
+      relationshipMovedRefHydrated: false,
       relationshipSourceRefHydrated: false,
       relationshipTargetHydrated: false,
     }, [
       'workspace.persistence.relationshipTarget',
       'workspace.persistence.relationshipSourceRef',
+      'workspace.persistence.relationshipMovedRef',
     ])
   })
 
@@ -98,6 +100,7 @@ function passingWorkspaceProof(): NativeWorkspacePersistenceProof {
     noteChromeMetadataHydrated: true,
     noteStateMetadataHydrated: true,
     persistedToNativeRepository: true,
+    relationshipMovedRefHydrated: true,
     relationshipSourceRefHydrated: true,
     relationshipTargetHydrated: true,
     renamedTypeAssignedNoteHydrated: true,

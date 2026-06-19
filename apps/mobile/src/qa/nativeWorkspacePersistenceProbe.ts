@@ -12,6 +12,7 @@ export type NativeWorkspacePersistenceProof = {
   noteStateMetadataHydrated: boolean
   persistedToNativeRepository: boolean
   relationshipSourceRefHydrated: boolean
+  relationshipMovedRefHydrated: boolean
   relationshipTargetHydrated: boolean
   renamedTypeAssignedNoteHydrated: boolean
   renamedTypeDefinitionHydrated: boolean
@@ -64,6 +65,7 @@ export function assertNativeWorkspacePersistenceProofs(
     proofFailure(latest.noteStateMetadataHydrated, 'workspace.persistence.noteStateMetadata', 'Note archive, organized, and favorite metadata rehydrate from native frontmatter writes'),
     proofFailure(latest.relationshipTargetHydrated, 'workspace.persistence.relationshipTarget', 'Relationship target creation rehydrates the reducer-created target note'),
     proofFailure(latest.relationshipSourceRefHydrated, 'workspace.persistence.relationshipSourceRef', 'Relationship target creation rehydrates the saved source note relationship ref'),
+    proofFailure(latest.relationshipMovedRefHydrated, 'workspace.persistence.relationshipMovedRef', 'Moved note relationship refs rehydrate from reducer-generated native rewrite writes'),
     proofFailure(latest.savedViewHydrated, 'workspace.persistence.saveView', 'Saved desktop-compatible views rehydrate from native views/*.yml'),
     proofFailure(latest.deletedViewRemoved, 'workspace.persistence.deleteView', 'Deleted native view files disappear from the mobile snapshot'),
     proofFailure(latest.folderRenameApplied, 'workspace.persistence.renameFolder', 'Renamed native folders rehydrate with the destination path'),
@@ -112,6 +114,7 @@ function parsedWorkspacePersistenceProof(value: unknown): NativeWorkspacePersist
     noteStateMetadataHydrated: value.noteStateMetadataHydrated,
     persistedToNativeRepository: value.persistedToNativeRepository,
     relationshipSourceRefHydrated: value.relationshipSourceRefHydrated,
+    relationshipMovedRefHydrated: value.relationshipMovedRefHydrated,
     relationshipTargetHydrated: value.relationshipTargetHydrated,
     renamedTypeAssignedNoteHydrated: value.renamedTypeAssignedNoteHydrated,
     renamedTypeDefinitionHydrated: value.renamedTypeDefinitionHydrated,
@@ -140,6 +143,7 @@ const workspacePersistenceProofKeys = [
   'noteStateMetadataHydrated',
   'persistedToNativeRepository',
   'relationshipSourceRefHydrated',
+  'relationshipMovedRefHydrated',
   'relationshipTargetHydrated',
   'renamedTypeAssignedNoteHydrated',
   'renamedTypeDefinitionHydrated',
