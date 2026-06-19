@@ -1,10 +1,10 @@
-import { useCallback, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import {
   CaretLeft,
   Info,
   List,
 } from 'phosphor-react-native'
-import { StyleSheet, useWindowDimensions, View } from 'react-native'
+import { Animated as NativeAnimated, Platform, StyleSheet, useWindowDimensions, View } from 'react-native'
 import { Text } from '../components/ui/text'
 import { MobileNoteListPanel } from '../components/workspace/MobileNoteListPanel'
 import { MobilePropertiesPanel } from '../components/workspace/MobilePropertiesPanel'
@@ -26,7 +26,12 @@ import type { EditorEditingMode } from './TabletEditorPanel'
 import { WorkspaceActionSheetHost } from './TabletWorkspace'
 import { PhoneWorkspaceTransition } from './PhoneWorkspaceTransition'
 import { useTabletWorkspaceController } from './useTabletWorkspaceController'
-import type { PhoneWorkspaceState } from './phoneWorkspaceTransitions'
+import {
+  phoneWorkspaceDragOffset,
+  phoneWorkspaceSwipeDestination,
+  type PhoneWorkspaceState,
+  type PhoneWorkspaceSwipeDirection,
+} from './phoneWorkspaceTransitions'
 
 export type { PhoneWorkspaceState } from './phoneWorkspaceTransitions'
 
@@ -49,6 +54,8 @@ export function PhoneWorkspace({
 }) {
   const controller = useTabletWorkspaceController({ repository, repositoryRequest, snapshot })
   const { phoneState, previousPhoneState, setPhoneState } = usePhoneState(initialState)
+  const { width } = useWindowDimensions()
+  const dragPreview = usePhoneDragPreview(phoneState, width)
   const openList = useCallback(() => setPhoneState('list'), [setPhoneState])
   const openSidebar = useCallback(() => setPhoneState('sidebar'), [setPhoneState])
   const openProperties = useCallback(() => setPhoneState('properties'), [setPhoneState])
@@ -64,13 +71,29 @@ export function PhoneWorkspace({
     phoneState,
   })
   const suggestionNotes = controller.snapshot.allNotes ?? controller.snapshot.notes
+  const preview = dragPreview.previewState ? (
+    <PhoneWorkspaceStateView
+      controller={controller}
+      initialEditorEditing={initialEditorEditing}
+      initialEditorEditingMode={initialEditorEditingMode}
+      openEditor={openEditor}
+      openList={openList}
+      openProperties={openProperties}
+      openSidebar={openSidebar}
+      phoneState={dragPreview.previewState}
+      phoneSwipePreview={dragPreview}
+      suggestionNotes={suggestionNotes}
+    />
+  ) : null
 
   return (
     <View style={styles.root}>
       <PhoneWorkspaceTransition
+        dragX={dragPreview.dragX}
+        preview={preview}
         previousState={previousPhoneState}
         state={phoneState}
-        swipeHandlers={transitionSwipeHandlers}
+        swipeHandlers={nativePhoneDragPreviewEnabled() ? undefined : transitionSwipeHandlers}
       >
         <PhoneWorkspaceStateView
           controller={controller}
@@ -81,6 +104,7 @@ export function PhoneWorkspace({
           openProperties={openProperties}
           openSidebar={openSidebar}
           phoneState={phoneState}
+          phoneSwipePreview={dragPreview}
           suggestionNotes={suggestionNotes}
         />
       </PhoneWorkspaceTransition>
@@ -140,7 +164,66 @@ function usePhoneSwipeHandlers({
   return listSwipe
 }
 
+function usePhoneDragPreview(phoneState: PhoneWorkspaceState, screenWidth: number) {
+  const enabled = nativePhoneDragPreviewEnabled()
+  const [dragX] = useState(() => new NativeAnimated.Value(0))
+  const [previewState, setPreviewState] = useState<PhoneWorkspaceState | null>(null)
+  const onSwipeProgress = useCallback(({ dx }: { dx: number }) => {
+    if (!enabled) return
+
+    const offset = phoneWorkspaceDragOffset(phoneState, dx, screenWidth)
+    dragX.stopAnimation()
+    if (offset === 0) {
+      dragX.setValue(0)
+      setPreviewState(null)
+      return
+    }
+
+    dragX.setValue(offset)
+    setPreviewState(phoneWorkspaceSwipeDestination(phoneState, swipeDirectionForOffset(offset)))
+  }, [dragX, enabled, phoneState, screenWidth])
+  const onSwipeEnd = useCallback((committed: boolean) => {
+    if (!enabled) return
+
+    dragX.stopAnimation()
+    if (committed) {
+      dragX.setValue(0)
+      setPreviewState(null)
+      return
+    }
+
+    NativeAnimated.timing(dragX, {
+      duration: 120,
+      toValue: 0,
+      useNativeDriver: true,
+    }).start(({ finished }) => {
+      if (finished) setPreviewState(null)
+    })
+  }, [dragX, enabled])
+
+  useEffect(() => () => {
+    dragX.stopAnimation()
+  }, [dragX])
+
+  return {
+    dragX,
+    enabled,
+    onSwipeEnd,
+    onSwipeProgress,
+    previewState,
+  }
+}
+
+function swipeDirectionForOffset(offset: number): PhoneWorkspaceSwipeDirection {
+  return offset < 0 ? 'left' : 'right'
+}
+
+function nativePhoneDragPreviewEnabled() {
+  return Platform.OS !== 'web'
+}
+
 type PhoneWorkspaceController = ReturnType<typeof useTabletWorkspaceController>
+type PhoneSwipePreview = ReturnType<typeof usePhoneDragPreview>
 type PhoneWorkspaceStateViewProps = {
   controller: PhoneWorkspaceController
   initialEditorEditing: boolean
@@ -150,6 +233,7 @@ type PhoneWorkspaceStateViewProps = {
   openProperties: () => void
   openSidebar: () => void
   phoneState: PhoneWorkspaceState
+  phoneSwipePreview: PhoneSwipePreview
   suggestionNotes: MobileNote[]
 }
 
@@ -160,12 +244,25 @@ function PhoneWorkspaceStateView(props: PhoneWorkspaceStateViewProps) {
   return <PhoneNoteListScreen {...props} />
 }
 
+function phoneSwipePreviewHandlers(phoneSwipePreview: PhoneSwipePreview) {
+  return phoneSwipePreview.enabled
+    ? {
+      onSwipeEnd: phoneSwipePreview.onSwipeEnd,
+      onSwipeProgress: phoneSwipePreview.onSwipeProgress,
+    }
+    : {}
+}
+
 function PhoneNoteListScreen({
   controller,
   openEditor,
   openSidebar,
+  phoneSwipePreview,
 }: PhoneWorkspaceStateViewProps) {
-  const swipeHandlers = useHorizontalSwipe({ onSwipeRight: openSidebar })
+  const swipeHandlers = useHorizontalSwipe({
+    ...phoneSwipePreviewHandlers(phoneSwipePreview),
+    onSwipeRight: openSidebar,
+  })
 
   return (
     <View {...swipeHandlers} style={styles.screen} testID="phone-note-list-screen">
@@ -202,10 +299,14 @@ function PhoneSidebarDrawer({
   controller,
   openEditor,
   openList,
+  phoneSwipePreview,
 }: PhoneWorkspaceStateViewProps) {
   const { width } = useWindowDimensions()
   const drawerWidth = Math.min(320, Math.round(width * 0.78))
-  const swipeHandlers = useHorizontalSwipe({ onSwipeLeft: openList })
+  const swipeHandlers = useHorizontalSwipe({
+    ...phoneSwipePreviewHandlers(phoneSwipePreview),
+    onSwipeLeft: openList,
+  })
   const selectFolder = useSelectAndOpenList(controller.onSelectFolder, openList)
   const selectItem = useSelectAndOpenList(controller.onSelectSidebarItem, openList)
 
@@ -255,9 +356,14 @@ function PhoneEditorScreen({
   initialEditorEditingMode,
   openList,
   openProperties,
+  phoneSwipePreview,
   suggestionNotes,
 }: PhoneWorkspaceStateViewProps) {
-  const swipeHandlers = useHorizontalSwipe({ onSwipeLeft: openProperties, onSwipeRight: openList })
+  const swipeHandlers = useHorizontalSwipe({
+    ...phoneSwipePreviewHandlers(phoneSwipePreview),
+    onSwipeLeft: openProperties,
+    onSwipeRight: openList,
+  })
   const handleNavigateWikilink = usePhoneWikilinkNavigation({ controller, suggestionNotes })
 
   return (
@@ -335,13 +441,17 @@ function PhonePropertiesScreen({
   controller,
   openEditor,
   openList,
+  phoneSwipePreview,
 }: PhoneWorkspaceStateViewProps) {
   const returnToEditor = useCallback(() => openEditor(), [openEditor])
   const enterNeighborhood = useCallback((noteId: string) => {
     controller.onEnterNeighborhood(noteId)
     openList()
   }, [controller, openList])
-  const swipeHandlers = useHorizontalSwipe({ onSwipeRight: returnToEditor })
+  const swipeHandlers = useHorizontalSwipe({
+    ...phoneSwipePreviewHandlers(phoneSwipePreview),
+    onSwipeRight: returnToEditor,
+  })
 
   return (
     <View {...swipeHandlers} style={styles.screen} testID="phone-properties-screen">

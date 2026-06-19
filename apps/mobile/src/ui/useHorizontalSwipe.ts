@@ -5,28 +5,82 @@ const MIN_DISTANCE = 56
 const MIN_CAPTURE_DISTANCE = 12
 const MAX_VERTICAL_DRIFT = 40
 
+type HorizontalSwipeProgress = {
+  dx: number
+  dy: number
+}
+
+type HorizontalSwipeOptions = {
+  disabled?: boolean
+  onSwipeEnd?: (committed: boolean) => void
+  onSwipeLeft?: () => void
+  onSwipeProgress?: (progress: HorizontalSwipeProgress) => void
+  onSwipeRight?: () => void
+}
+
+type NormalizedHorizontalSwipeOptions = HorizontalSwipeOptions & {
+  disabled: boolean
+}
+
 export function useHorizontalSwipe({
   disabled = false,
+  onSwipeEnd,
   onSwipeLeft,
+  onSwipeProgress,
   onSwipeRight,
-}: {
-  disabled?: boolean
-  onSwipeLeft?: () => void
-  onSwipeRight?: () => void
-}) {
+}: HorizontalSwipeOptions) {
   return useMemo(
-    () => PanResponder.create({
-      onMoveShouldSetPanResponder: (_, gesture) => shouldCapture(gesture, disabled),
-      onMoveShouldSetPanResponderCapture: (_, gesture) => shouldCapture(gesture, disabled),
-      onPanResponderRelease: (_, gesture) => {
-        if (!isCommittedSwipe(gesture)) return
-        if (gesture.dx < 0) onSwipeLeft?.()
-        if (gesture.dx > 0) onSwipeRight?.()
-      },
-      onPanResponderTerminationRequest: () => true,
-    }).panHandlers,
-    [disabled, onSwipeLeft, onSwipeRight],
+    () => createHorizontalSwipeHandlers({ disabled, onSwipeEnd, onSwipeLeft, onSwipeProgress, onSwipeRight }),
+    [disabled, onSwipeEnd, onSwipeLeft, onSwipeProgress, onSwipeRight],
   )
+}
+
+function createHorizontalSwipeHandlers(options: NormalizedHorizontalSwipeOptions) {
+  return PanResponder.create({
+    onMoveShouldSetPanResponder: (_, gesture) => shouldCapture(gesture, options.disabled),
+    onMoveShouldSetPanResponderCapture: (_, gesture) => shouldCapture(gesture, options.disabled),
+    onPanResponderRelease: (_, gesture) => releaseHorizontalSwipe(gesture, options),
+    onPanResponderTerminationRequest: () => true,
+    ...moveResponder(options.onSwipeProgress),
+    ...terminateResponder(options.onSwipeEnd),
+  }).panHandlers
+}
+
+function moveResponder(onSwipeProgress: HorizontalSwipeOptions['onSwipeProgress']) {
+  return onSwipeProgress
+    ? {
+      onPanResponderMove: (_: unknown, gesture: PanResponderGestureState) => {
+        onSwipeProgress({ dx: gesture.dx, dy: gesture.dy })
+      },
+    }
+    : {}
+}
+
+function terminateResponder(onSwipeEnd: HorizontalSwipeOptions['onSwipeEnd']) {
+  return onSwipeEnd
+    ? {
+      onPanResponderTerminate: () => {
+        onSwipeEnd(false)
+      },
+    }
+    : {}
+}
+
+function releaseHorizontalSwipe(
+  gesture: PanResponderGestureState,
+  options: NormalizedHorizontalSwipeOptions,
+) {
+  const committed = isCommittedSwipe(gesture)
+  if (committed) commitHorizontalSwipe(gesture, options)
+  options.onSwipeEnd?.(committed)
+}
+
+function commitHorizontalSwipe(
+  gesture: PanResponderGestureState,
+  options: Pick<HorizontalSwipeOptions, 'onSwipeLeft' | 'onSwipeRight'>,
+) {
+  const action = gesture.dx < 0 ? options.onSwipeLeft : options.onSwipeRight
+  action?.()
 }
 
 function shouldCapture(gesture: PanResponderGestureState, disabled: boolean) {
