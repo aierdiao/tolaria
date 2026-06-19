@@ -1,7 +1,8 @@
 import appCommandManifest from '../../../../src/shared/appCommandManifest.json'
 import { mobileText } from '../i18n/mobileText'
 import type { MobileSidebarItemSelection } from '../components/workspace/MobileWorkspaceSidebar'
-import type { MobileNote, MobileWorkspaceSnapshot } from './mobileWorkspaceModel'
+import type { MobileNote, MobileSidebarItem, MobileWorkspaceSnapshot } from './mobileWorkspaceModel'
+import type { MobileNoteListFilter } from './mobileNoteFilters'
 
 type DesktopCommandKey = keyof typeof appCommandManifest.commands
 
@@ -40,6 +41,7 @@ export type MobileCommandPaletteHandlers = {
   onOpenSearch: () => void
   onOpenSetNoteIcon?: () => void
   onOpenTableOfContents: () => void
+  onNoteListFilterChange?: (filter: MobileNoteListFilter) => void
   onPastePlainText?: () => void
   onCopyDeepLink?: () => void
   onDeleteNote: () => void
@@ -61,6 +63,8 @@ export type MobileCommandPaletteHandlers = {
   onViewAll?: () => void
   onViewEditorList?: () => void
   onViewEditorOnly?: () => void
+  noteListFilter?: MobileNoteListFilter
+  noteListFilterVisible?: boolean
   selectedNote: MobileNote | null
   snapshot: MobileWorkspaceSnapshot
 }
@@ -331,6 +335,28 @@ function navigationCommands(handlers: MobileCommandPaletteHandlers): MobileComma
     primaryNavigationCommand('goInbox', 'inbox', mobileText('command.navigation.goInbox'), handlers),
     primaryNavigationCommand('goAllNotes', 'all-notes', mobileText('command.navigation.goAllNotes'), handlers),
     primaryNavigationCommand('goArchived', 'archive', mobileText('command.navigation.goArchived'), handlers),
+    ...typeSectionNavigationCommands(handlers),
+    ...noteListFilterCommands(handlers),
+  ]
+}
+
+function typeSectionNavigationCommands(handlers: MobileCommandPaletteHandlers): MobileCommandPaletteCommand[] {
+  return typeSidebarItems(handlers.snapshot).map((item) => dynamicCommand({
+    enabled: true,
+    execute: () => handlers.onSelectSidebarItem(sidebarSelectionFromTypeItem(item)),
+    group: 'Navigation',
+    id: `list-${commandSlug(item.typeName ?? item.label)}`,
+    keywords: ['list', 'show', 'filter', item.label, item.typeName ?? 'type'],
+    label: mobileText('command.navigation.listType').replace('{type}', item.label),
+  }))
+}
+
+function noteListFilterCommands(handlers: MobileCommandPaletteHandlers): MobileCommandPaletteCommand[] {
+  if (!handlers.noteListFilterVisible || handlers.onNoteListFilterChange === undefined) return []
+
+  return [
+    noteListFilterCommand('open', mobileText('command.navigation.showOpenNotes'), handlers),
+    noteListFilterCommand('archived', mobileText('command.navigation.showArchivedNotes'), handlers),
   ]
 }
 
@@ -623,6 +649,44 @@ function primaryNavigationCommand(
     keywords: [itemId, 'go', 'navigate', 'sidebar'],
     label,
   })
+}
+
+function noteListFilterCommand(
+  filter: MobileNoteListFilter,
+  label: string,
+  handlers: MobileCommandPaletteHandlers,
+): MobileCommandPaletteCommand {
+  return dynamicCommand({
+    enabled: handlers.noteListFilter !== filter,
+    execute: () => handlers.onNoteListFilterChange?.(filter),
+    group: 'Navigation',
+    id: `filter-${filter}`,
+    keywords: ['filter', filter, 'notes', 'section', 'pill'],
+    label,
+  })
+}
+
+function typeSidebarItems(snapshot: MobileWorkspaceSnapshot): MobileSidebarItem[] {
+  return snapshot.sidebarSections
+    .find((section) => section.id === 'types')
+    ?.items
+    ?.filter((item) => item.typeName || item.label) ?? []
+}
+
+function sidebarSelectionFromTypeItem(item: MobileSidebarItem): MobileSidebarItemSelection {
+  return {
+    count: item.count,
+    id: item.id,
+    label: item.label,
+    noteId: item.noteId,
+    sectionId: 'types',
+    typeName: item.typeName,
+    viewId: item.viewId,
+  }
+}
+
+function commandSlug(value: string): string {
+  return value.trim().toLowerCase().replace(/\s+/g, '-')
 }
 
 function command(config: CommandConfig): MobileCommandPaletteCommand {

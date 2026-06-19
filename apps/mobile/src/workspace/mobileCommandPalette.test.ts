@@ -39,6 +39,42 @@ describe('mobile command palette', () => {
     )
   })
 
+  it('exposes desktop-style type section navigation commands', () => {
+    const handlers = commandHandlers()
+    const commands = buildMobileCommandPaletteCommands(handlers)
+    const essayCommand = commands.find((command) => command.id === 'list-essay')
+
+    expect(essayCommand).toMatchObject({
+      enabled: true,
+      group: 'Navigation',
+      label: 'List Essays',
+    })
+
+    essayCommand?.execute()
+
+    expect(handlers.onSelectSidebarItem).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: 'essays',
+        label: 'Essays',
+        sectionId: 'types',
+        typeName: 'Essay',
+      }),
+    )
+  })
+
+  it('exposes desktop-style section filter commands when note-list filters are visible', () => {
+    const handlers = commandHandlers({ noteListFilter: 'open', noteListFilterVisible: true })
+    const results = mobileCommandPaletteResults(buildMobileCommandPaletteCommands(handlers), '')
+    const commandIds = results.flatList.map((command) => command.id)
+
+    expect(commandIds).toContain('filter-archived')
+    expect(commandIds).not.toContain('filter-open')
+
+    enabledCommand(handlers, 'filter-archived').execute()
+
+    expect(handlers.onNoteListFilterChange).toHaveBeenCalledWith('archived')
+  })
+
   it('exposes selected markdown note utility commands through the palette', () => {
     const handlers = commandHandlers()
     const commandIds = mobileCommandPaletteResults(buildMobileCommandPaletteCommands(handlers), '')
@@ -163,6 +199,7 @@ function commandHandlers(
     onOpenSearch: vi.fn(),
     onOpenSetNoteIcon: vi.fn(),
     onOpenTableOfContents: vi.fn(),
+    onNoteListFilterChange: vi.fn(),
     onPastePlainText: vi.fn(),
     onRedoWorkspaceEdit: vi.fn(),
     onRemoveNoteIcon: vi.fn(),
@@ -179,6 +216,8 @@ function commandHandlers(
     onViewAll: vi.fn(),
     onViewEditorList: vi.fn(),
     onViewEditorOnly: vi.fn(),
+    noteListFilter: 'open',
+    noteListFilterVisible: false,
     selectedNote,
     snapshot: workspaceScenarios.default,
   }
