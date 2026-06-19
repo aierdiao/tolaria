@@ -92,9 +92,9 @@ export const mobileParityInventory = [
     surface: 'Note-list bulk action bar',
   },
   {
-    assertions: ['properties computed styles'],
+    assertions: ['properties computed styles', 'derived reference groups from inspector semantics'],
     contracts: ['desktopPanelParity', 'desktopPropertyParity', 'desktopRelationshipParity'],
-    desktopSource: 'InspectorHeader, propertyPanelLayout, RelationshipsPanel',
+    desktopSource: 'InspectorHeader, propertyPanelLayout, RelationshipsPanel, InstancesPanel, ReferencedByPanel, BacklinksPanel',
     mobileFile: 'src/components/workspace/MobilePropertiesPanel.tsx',
     surface: 'Properties panel',
   },

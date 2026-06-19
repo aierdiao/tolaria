@@ -6,7 +6,10 @@ export type MobileNeighborhoodGroup = {
   id: string
   label: string
   notes: MobileNote[]
+  source: MobileNeighborhoodGroupSource
 }
+
+export type MobileNeighborhoodGroupSource = 'backlinks' | 'direct' | 'instances' | 'inverse'
 
 export type MobileNeighborhood = {
   groups: MobileNeighborhoodGroup[]
@@ -25,6 +28,14 @@ export function buildMobileNeighborhood(source: MobileNote, notes: MobileNote[])
     ],
     source,
   }
+}
+
+export function buildMobileInspectorReferenceGroups(source: MobileNote, notes: MobileNote[]): MobileNeighborhoodGroup[] {
+  return [
+    ...instanceGroups(source, notes),
+    ...inverseRelationshipGroups(source, notes),
+    ...backlinkGroups(source, notes),
+  ]
 }
 
 export function filterMobileNeighborhood(
@@ -59,7 +70,7 @@ function instanceGroups(source: MobileNote, notes: MobileNote[]): MobileNeighbor
   if (source.type !== 'Type') return []
 
   return [
-    relationshipGroup('Instances', notes.filter((note) => note.type === source.title && note.id !== source.id)),
+    relationshipGroup('Instances', notes.filter((note) => note.type === source.title && note.id !== source.id), 'instances'),
   ].filter(hasNotes)
 }
 
@@ -70,6 +81,7 @@ function directRelationshipGroups(source: MobileNote, notes: MobileNote[]): Mobi
     .map((relationship) => relationshipGroup(
       relationshipLabel(relationship),
       relationship.values.flatMap((value) => noteById(notes, value.id)),
+      'direct',
       source.id,
     ))
     .filter(hasNotes)
@@ -87,20 +99,26 @@ function inverseRelationshipGroups(source: MobileNote, notes: MobileNote[]): Mob
     }
   }
 
-  return orderInverseLabels(inverseGroups.keys()).map((label) => relationshipGroup(label, inverseGroups.get(label) ?? []))
+  return orderInverseLabels(inverseGroups.keys()).map((label) => relationshipGroup(label, inverseGroups.get(label) ?? [], 'inverse'))
 }
 
 function backlinkGroups(source: MobileNote, notes: MobileNote[]): MobileNeighborhoodGroup[] {
   return [
-    relationshipGroup('Backlinks', notes.filter((note) => noteLinksToSource(note, source, notes))),
+    relationshipGroup('Backlinks', notes.filter((note) => noteLinksToSource(note, source, notes)), 'backlinks'),
   ].filter(hasNotes)
 }
 
-function relationshipGroup(label: string, candidates: MobileNote[], sourceId?: string): MobileNeighborhoodGroup {
+function relationshipGroup(
+  label: string,
+  candidates: MobileNote[],
+  groupSource: MobileNeighborhoodGroupSource,
+  sourceId?: string,
+): MobileNeighborhoodGroup {
   return {
     id: groupId(label),
     label,
     notes: sortNotesByModified(dedupeNotes(candidates, sourceId)),
+    source: groupSource,
   }
 }
 

@@ -10,6 +10,7 @@ import { desktopPanelParity, desktopPropertyParity, desktopRelationshipParity } 
 import { mobileColors, mobileRadius, mobileSpace, mobileType } from '../../ui/tokens'
 import { mobilePropertyDisplay, type MobilePropertyDisplay } from '../../workspace/mobilePropertyDisplay'
 import type { MobileNote, MobileProperty, MobilePropertyValue, MobileRelationship, MobileTone, MobileTypeDefinitions } from '../../workspace/mobileWorkspaceModel'
+import type { MobileNeighborhoodGroup } from '../../workspace/mobileNeighborhood'
 import {
   mobileInspectorPropertySlots,
   mobileInspectorRelationshipSlots,
@@ -31,6 +32,7 @@ export function MobilePropertiesPanel({
   onOpenChangeNoteType,
   onRemoveRelationship,
   onSelectNote,
+  referenceGroups = [],
   typeDefinitions,
 }: {
   compact: boolean
@@ -44,6 +46,7 @@ export function MobilePropertiesPanel({
   onOpenChangeNoteType: () => void
   onRemoveRelationship: (noteId: string, key: string, ref: string) => void
   onSelectNote: (noteId: string) => void
+  referenceGroups?: MobileNeighborhoodGroup[]
   typeDefinitions?: MobileTypeDefinitions
 }) {
   return (
@@ -63,6 +66,7 @@ export function MobilePropertiesPanel({
             onOpenChangeNoteType={onOpenChangeNoteType}
             onRemoveRelationship={onRemoveRelationship}
             onSelectNote={onSelectNote}
+            referenceGroups={referenceGroups}
             typeDefinitions={typeDefinitions}
           />
         ) : <PropertiesEmptyState />}
@@ -81,6 +85,7 @@ function NoteProperties({
   onOpenChangeNoteType,
   onRemoveRelationship,
   onSelectNote,
+  referenceGroups,
   typeDefinitions,
 }: {
   note: MobileNote
@@ -92,6 +97,7 @@ function NoteProperties({
   onOpenChangeNoteType: () => void
   onRemoveRelationship: (noteId: string, key: string, ref: string) => void
   onSelectNote: (noteId: string) => void
+  referenceGroups: MobileNeighborhoodGroup[]
   typeDefinitions?: MobileTypeDefinitions
 }) {
   const propertySlots = mobileInspectorPropertySlots(note, typeDefinitions)
@@ -167,6 +173,7 @@ function NoteProperties({
       ))}
       <PropertyActionRow label={mobileText('inspector.properties.addProperty')} testID="property-action-add-property" onPress={() => onAddProperty()} />
       <PropertyActionRow label={mobileText('inspector.relationship.addRelationship')} testID="property-action-add-relationship" onPress={() => onAddRelationship()} />
+      <ReferenceGroups groups={referenceGroups} onSelectNote={onSelectNote} />
     </>
   )
 }
@@ -447,6 +454,62 @@ function RelationshipValues({
   )
 }
 
+function ReferenceGroups({
+  groups,
+  onSelectNote,
+}: {
+  groups: MobileNeighborhoodGroup[]
+  onSelectNote: (noteId: string) => void
+}) {
+  if (groups.length === 0) return null
+
+  return (
+    <View style={referenceStyles.container} testID="inspector-reference-groups">
+      {groups.map((group) => (
+        <PropertySection
+          key={`${group.source}-${group.id}`}
+          label={referenceGroupLabel(group)}
+          testID={`inspector-reference-group-${group.id}`}
+        >
+          <ReferenceValues group={group} onSelectNote={onSelectNote} />
+        </PropertySection>
+      ))}
+    </View>
+  )
+}
+
+function ReferenceValues({
+  group,
+  onSelectNote,
+}: {
+  group: MobileNeighborhoodGroup
+  onSelectNote: (noteId: string) => void
+}) {
+  return (
+    <View style={relationshipStyles.values}>
+      {group.notes.map((note) => (
+        <Pressable
+          key={`${group.id}-${note.id}`}
+          accessibilityLabel={note.title}
+          accessibilityRole="button"
+          style={({ pressed }) => [referenceStyles.row, pressed ? propertyStyles.editableValuePressed : null]}
+          testID={`inspector-reference-row-${testIdSegment(note.title)}`}
+          onPress={() => onSelectNote(note.id)}
+        >
+          <MobileTypeIcon fileKind={note.fileKind} size={desktopRelationshipParity.iconSize} tone={note.typeTone} type={note.type} />
+          <Text numberOfLines={1} style={[referenceStyles.text, relationshipTextTone(note.typeTone)]}>
+            {note.title}
+          </Text>
+        </Pressable>
+      ))}
+    </View>
+  )
+}
+
+function referenceGroupLabel(group: MobileNeighborhoodGroup) {
+  return group.source === 'instances' ? `${group.label} (${group.notes.length})` : group.label
+}
+
 function relationshipHeading(relationship: MobileRelationship): string {
   if (relationship.kind === 'custom') {
     return relationship.label ?? 'Custom'
@@ -553,6 +616,31 @@ const relationshipStyles = StyleSheet.create({
   values: {
     alignItems: 'stretch',
     gap: mobileSpace.xs,
+  },
+})
+
+const referenceStyles = StyleSheet.create({
+  container: {
+    marginTop: mobileSpace.sm,
+    borderTopColor: mobileColors.border,
+    borderTopWidth: StyleSheet.hairlineWidth,
+  },
+  row: {
+    minHeight: desktopPropertyParity.rowMinHeight,
+    minWidth: 0,
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: desktopRelationshipParity.rowGap,
+    borderRadius: desktopRelationshipParity.rowRadius,
+    paddingHorizontal: 0,
+    paddingVertical: 4,
+    width: '100%',
+  },
+  text: {
+    minWidth: 0,
+    flex: 1,
+    fontSize: desktopRelationshipParity.textFontSize,
+    fontWeight: desktopRelationshipParity.textFontWeight,
   },
 })
 

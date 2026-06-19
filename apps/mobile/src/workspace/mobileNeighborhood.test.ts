@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  buildMobileInspectorReferenceGroups,
   buildMobileNeighborhood,
   filterMobileNeighborhood,
   flattenMobileNeighborhoodNotes,
@@ -86,6 +87,35 @@ describe('mobile neighborhood', () => {
 
     expect(neighborhood.groups.map((group) => group.label)).toEqual(['Children', 'Backlinks'])
     expect(neighborhood.groups.find((group) => group.label === 'Backlinks')?.notes.map((item) => item.id)).toEqual(['backlink', 'path-backlink'])
+  })
+
+  it('builds inspector reference groups without duplicating direct relationships', () => {
+    const source = note({
+      id: 'source',
+      relationships: [relationship('related_to', [{ id: 'direct', ref: '[[direct]]', title: 'Direct Target' }])],
+      title: 'Source',
+    })
+    const direct = note({ id: 'direct', modifiedAt: 10, title: 'Direct Target' })
+    const inverse = note({
+      id: 'inverse',
+      modifiedAt: 30,
+      relationships: [relationship('belongs_to', [{ id: 'source', ref: '[[Source]]', title: 'Source' }])],
+      title: 'Inverse Target',
+    })
+    const backlink = note({
+      id: 'backlink',
+      modifiedAt: 20,
+      outgoingLinks: ['Source'],
+      title: 'Backlink Target',
+    })
+
+    const groups = buildMobileInspectorReferenceGroups(source, [source, direct, inverse, backlink])
+
+    expect(groups.map((group) => [group.label, group.source])).toEqual([
+      ['Children', 'inverse'],
+      ['Backlinks', 'backlinks'],
+    ])
+    expect(groups.flatMap((group) => group.notes.map((item) => item.id))).toEqual(['inverse', 'backlink'])
   })
 
   it('filters relationship groups using note-list search fields', () => {

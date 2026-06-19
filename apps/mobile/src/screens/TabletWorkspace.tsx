@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { Dimensions, Platform, StyleSheet, useWindowDimensions, View } from 'react-native'
 import { MobileNoteListPanel } from '../components/workspace/MobileNoteListPanel'
 import { MobilePropertiesPanel } from '../components/workspace/MobilePropertiesPanel'
@@ -13,6 +13,7 @@ import {
 } from '../workspace/readOnlyWorkspaceRepository'
 import { mobileColors } from '../ui/tokens'
 import { useHorizontalSwipe } from '../ui/useHorizontalSwipe'
+import { buildMobileInspectorReferenceGroups } from '../workspace/mobileNeighborhood'
 import { mobileNoteIdForWikilinkTarget } from '../workspace/mobileWikilinks'
 import { TabletEditorPanel } from './TabletEditorPanel'
 import type { TabletPanel, TabletWorkspaceChromeProps } from './tabletWorkspaceTypes'
@@ -291,6 +292,10 @@ function TabletPropertiesPanelHost({
   selectedNote,
   snapshot,
 }: TabletPanelHostProps) {
+  const referenceGroups = useMemo(() => (
+    selectedNote ? buildMobileInspectorReferenceGroups(selectedNote, snapshot.allNotes ?? snapshot.notes) : []
+  ), [selectedNote, snapshot.allNotes, snapshot.notes])
+
   if (!gestures.propertiesVisible) return <SwipeRail edge="right" swipeHandlers={gestures.propertiesRevealSwipe} />
 
   return (
@@ -306,6 +311,7 @@ function TabletPropertiesPanelHost({
         onEnterNeighborhood={onEnterNeighborhood}
         onSelectNote={onSelectNote}
         onRemoveRelationship={onRemoveRelationship}
+        referenceGroups={referenceGroups}
         typeDefinitions={snapshot.typeDefinitions}
       />
     </View>

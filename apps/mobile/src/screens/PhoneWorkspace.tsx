@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import {
   CaretLeft,
   Info,
@@ -15,6 +15,7 @@ import { probeProps, useMobileLayoutProbe, type MobileLayoutProbe } from '../qa/
 import { MobileIconButton } from '../ui/MobileIconButton'
 import { mobileColors, mobileSpace } from '../ui/tokens'
 import { useHorizontalSwipe } from '../ui/useHorizontalSwipe'
+import { buildMobileInspectorReferenceGroups } from '../workspace/mobileNeighborhood'
 import { mobileNoteIdForWikilinkTarget } from '../workspace/mobileWikilinks'
 import type { MobileNote, MobileWorkspaceSnapshot } from '../workspace/mobileWorkspaceModel'
 import {
@@ -589,6 +590,11 @@ function PhonePropertiesScreen({
     controller.onEnterNeighborhood(noteId)
     openList()
   }, [controller, openList])
+  const referenceGroups = useMemo(() => (
+    controller.selectedNote
+      ? buildMobileInspectorReferenceGroups(controller.selectedNote, controller.snapshot.allNotes ?? controller.snapshot.notes)
+      : []
+  ), [controller.selectedNote, controller.snapshot.allNotes, controller.snapshot.notes])
   const swipeHandlers = useHorizontalSwipe({
     ...phoneSwipePreviewHandlers(phoneSwipePreview),
     onSwipeRight: returnToEditor,
@@ -609,6 +615,7 @@ function PhonePropertiesScreen({
         onEnterNeighborhood={enterNeighborhood}
         onOpenChangeNoteType={controller.onOpenChangeNoteType}
         onRemoveRelationship={controller.onRemoveRelationship}
+        referenceGroups={referenceGroups}
         onSelectNote={openEditor}
       />
     </View>
