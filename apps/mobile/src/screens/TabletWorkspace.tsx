@@ -457,6 +457,7 @@ function actionSheetHandlers(props: ActionSheetHostProps) {
     onNoteIconChange: props.onNoteIconChange,
     onOpenChangeNoteType: props.onOpenChangeNoteType,
     onOpenCreateChildFolder: props.onOpenCreateChildFolder,
+    onOpenCreateNoteInFolder: props.onOpenCreateNoteInFolder,
     onOpenFileInDefaultApp: props.onOpenFileInDefaultApp,
     onOpenFindInNote: props.onOpenFindInNote,
     onOpenMoveNoteToFolder: props.onOpenMoveNoteToFolder,

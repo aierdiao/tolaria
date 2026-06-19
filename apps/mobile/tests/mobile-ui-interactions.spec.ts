@@ -1055,6 +1055,14 @@ async function createRenameAndDeleteSidebarFolder(page: PageLike) {
   await expect(page.getByTestId('note-list-toolbar-title')).toHaveText('Mobile Renamed Folder')
 
   await longPressRoleButton(page, 'Mobile Renamed Folder')
+  await page.getByTestId('workspace-action-create-note-in-folder').click()
+  await expect(page.getByTestId('workspace-create-note-title-input')).toBeVisible()
+  await page.getByTestId('workspace-create-note-title-input').fill('Folder Context Draft')
+  await page.getByTestId('workspace-action-sheet-createNote').getByRole('button', { exact: true, name: 'Create' }).click()
+  await expect(page.getByTestId('note-list-toolbar-title')).toHaveText('Mobile Renamed Folder')
+  await expect(page.getByTestId('note-row-Mobile Renamed Folder/folder-context-draft.md')).toBeVisible()
+
+  await longPressRoleButton(page, 'Mobile Renamed Folder')
   await page.getByTestId('workspace-action-create-child-folder').click()
   await page.getByTestId('workspace-create-folder-name-input').fill('Child Folder')
   await page.getByTestId('workspace-action-sheet-createFolder').getByRole('button', { exact: true, name: 'Create' }).click()

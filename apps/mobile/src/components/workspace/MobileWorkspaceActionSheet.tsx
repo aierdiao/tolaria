@@ -138,6 +138,7 @@ type MobileWorkspaceActionSheetProps = {
   onNoteIconChange: (value: string) => void
   onOpenChangeNoteType: () => void
   onOpenCreateChildFolder: () => void
+  onOpenCreateNoteInFolder: () => void
   onOpenFileInDefaultApp: () => void
   onOpenFindInNote: () => void
   onOpenMoveNoteToFolder: () => void
@@ -603,6 +604,12 @@ function FolderActionsContent(props: MobileWorkspaceActionSheetProps) {
         testID="workspace-rename-folder-input"
         value={props.folderName}
         onChangeText={props.onFolderNameChange}
+      />
+      <ActionRow
+        icon={<FilePlus color={mobileColors.textMuted} size={desktopToolbarActionParity.iconSize} />}
+        label={mobileText('sidebar.action.createNodeInFolderMenu')}
+        testID="workspace-action-create-note-in-folder"
+        onPress={props.onOpenCreateNoteInFolder}
       />
       <ActionRow
         icon={<FolderOpen color={mobileColors.textMuted} size={desktopToolbarActionParity.iconSize} />}

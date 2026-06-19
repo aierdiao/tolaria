@@ -22,6 +22,14 @@ test.describe('phone folder action parity', () => {
     await expect(page.getByTestId('note-list-toolbar-title')).toHaveText('Phone Renamed Folder')
 
     await longPressRoleButton(page, 'Phone Renamed Folder')
+    await page.getByTestId('workspace-action-create-note-in-folder').click()
+    await expect(page.getByTestId('workspace-create-note-title-input')).toBeVisible()
+    await page.getByTestId('workspace-create-note-title-input').fill('Phone Folder Draft')
+    await page.getByTestId('workspace-action-sheet-createNote').getByRole('button', { exact: true, name: 'Create' }).click()
+    await expect(page.getByTestId('note-list-toolbar-title')).toHaveText('Phone Renamed Folder')
+    await expect(page.getByTestId('note-row-Phone Renamed Folder/phone-folder-draft.md')).toBeVisible()
+
+    await longPressRoleButton(page, 'Phone Renamed Folder')
     await page.getByTestId('workspace-action-create-child-folder').click()
     await page.getByTestId('workspace-create-folder-name-input').fill('Phone Child Folder')
     await page.getByTestId('workspace-action-sheet-createFolder').getByRole('button', { exact: true, name: 'Create' }).click()

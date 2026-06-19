@@ -1,7 +1,7 @@
 import type { MobileWorkspaceAction } from '../components/workspace/MobileWorkspaceActionSheet'
 import type { MobileSidebarFolderSelection } from '../components/workspace/MobileWorkspaceSidebar'
 import type { MobileWorkspaceEdit } from '../workspace/mobileWorkspaceEditing'
-import { mobileFolderParentPath } from '../workspace/mobileWorkspaceFolders'
+import { mobileFolderName, mobileFolderParentPath } from '../workspace/mobileWorkspaceFolders'
 import type { TabletReadOnlyForm } from './tabletWorkspaceTypes'
 import type { TabletSidebarSelection } from './tabletWorkspaceNavigation'
 
@@ -9,6 +9,7 @@ type ApplyWorkspaceEdit = (edit: MobileWorkspaceEdit) => void
 type CloseWorkspaceAction = () => void
 type ReadOnlyFormUpdater = <Key extends keyof TabletReadOnlyForm>(key: Key, value: TabletReadOnlyForm[Key]) => void
 type SetOpenAction = (action: MobileWorkspaceAction | null) => void
+type SelectFolder = (selection: MobileSidebarFolderSelection) => void
 type ReadOnlyFormField = {
   [Key in keyof TabletReadOnlyForm]: { key: Key; value: TabletReadOnlyForm[Key] }
 }[keyof TabletReadOnlyForm]
@@ -17,12 +18,14 @@ export function folderWorkspaceActions({
   applyEdit,
   closeAction,
   readOnlyForm,
+  selectFolder,
   setOpenAction,
   updateReadOnlyForm,
 }: {
   applyEdit: ApplyWorkspaceEdit
   closeAction: CloseWorkspaceAction
   readOnlyForm: TabletReadOnlyForm
+  selectFolder: SelectFolder
   setOpenAction: SetOpenAction
   updateReadOnlyForm: ReadOnlyFormUpdater
 }) {
@@ -44,6 +47,13 @@ export function folderWorkspaceActions({
     onFolderNameChange: (value: string) => updateReadOnlyForm('folderName', value),
     onOpenCreateChildFolder: () => openCreateFolderAction({
       parentPath: readOnlyForm.editingFolderPath,
+      setOpenAction,
+      updateReadOnlyForm,
+    }),
+    onOpenCreateNoteInFolder: () => openCreateNoteInFolder({
+      folderPath: readOnlyForm.editingFolderPath,
+      folderName: readOnlyForm.folderName,
+      selectFolder,
       setOpenAction,
       updateReadOnlyForm,
     }),
@@ -92,6 +102,25 @@ function openCreateFolderAction({
     updateReadOnlyForm(field.key, field.value)
   }
   setOpenAction('createFolder')
+}
+
+function openCreateNoteInFolder({
+  folderPath,
+  folderName,
+  selectFolder,
+  setOpenAction,
+  updateReadOnlyForm,
+}: {
+  folderPath: string
+  folderName: string
+  selectFolder: SelectFolder
+  setOpenAction: SetOpenAction
+  updateReadOnlyForm: ReadOnlyFormUpdater
+}) {
+  if (!folderPath) return
+  updateReadOnlyForm('createTitle', '')
+  selectFolder({ id: folderPath, name: folderName || mobileFolderName(folderPath) })
+  setOpenAction('createNote')
 }
 
 function commitFolderEdit({

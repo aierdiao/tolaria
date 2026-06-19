@@ -143,6 +143,7 @@ export type TabletWorkspaceChromeProps = {
   onNoteIconChange: (value: ReadOnlyFormValue) => void
   onOpenChangeNoteType: () => void
   onOpenCreateChildFolder: () => void
+  onOpenCreateNoteInFolder: () => void
   onOpenCreateFolder: () => void
   onOpenCreateNote: () => void
   onOpenCreateType: () => void
