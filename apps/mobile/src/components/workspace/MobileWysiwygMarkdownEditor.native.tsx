@@ -6,6 +6,10 @@ import {
   mobileMarkdownBodyToTentapHtml,
   mobileNoteEditableContent,
 } from '../../workspace/mobileDocumentContent'
+import {
+  useRegisteredMobileEditorCommands,
+  type RegisterMobileEditorCommands,
+} from '../../workspace/mobileEditorCommands'
 import { nativeWysiwygDocumentWithInputTransforms } from '../../workspace/mobileWysiwygInputTransforms'
 import { readMobileClipboardText } from '../../workspace/mobileClipboard'
 import { mobileHtmlWithResolvedAttachmentUris } from '../../workspace/mobileAttachmentUris'
@@ -76,6 +80,7 @@ type MobileWysiwygMarkdownEditorProps = {
   note: MobileNote
   notes: MobileNote[]
   onImportAttachment?: () => Promise<NativeWysiwygAttachmentPayload | null>
+  onRegisterEditorCommands?: RegisterMobileEditorCommands
   onUpdateContent: (noteId: string, content: string) => void
   vaultRootUri?: string | null
   wysiwygAutocompleteProbe?: boolean
@@ -129,6 +134,7 @@ type NativeTentapEditorSurfaceProps = {
   onCloseWikilinkPicker: () => void
   onImportAttachment?: () => Promise<NativeWysiwygAttachmentPayload | null>
   onOpenToolbarWikilinkPicker: () => void
+  onRegisterEditorCommands?: RegisterMobileEditorCommands
   pickerState: NativeWysiwygPickerState | null
   sourceNote: MobileNote
 }
@@ -175,6 +181,7 @@ export function MobileWysiwygMarkdownEditor({
   note,
   notes,
   onImportAttachment,
+  onRegisterEditorCommands,
   onUpdateContent,
   vaultRootUri = null,
   wysiwygAutocompleteProbe = false,
@@ -221,6 +228,7 @@ export function MobileWysiwygMarkdownEditor({
       layoutProbe={layoutProbe}
       notes={notes}
       onImportAttachment={onImportAttachment}
+      onRegisterEditorCommands={onRegisterEditorCommands}
       pickerState={pickerState}
       sourceNote={note}
       onCloseWikilinkPicker={handleCloseWikilinkPicker}
@@ -241,6 +249,7 @@ function NativeTentapEditorSurface({
   onCloseWikilinkPicker,
   onImportAttachment,
   onOpenToolbarWikilinkPicker,
+  onRegisterEditorCommands,
   pickerState,
   sourceNote,
 }: NativeTentapEditorSurfaceProps) {
@@ -251,6 +260,11 @@ function NativeTentapEditorSurface({
     insertPlainText,
     onImportAttachment,
     onOpenToolbarWikilinkPicker,
+  })
+  useRegisteredMobileEditorCommands(onRegisterEditorCommands, {
+    pastePlainText: () => {
+      void handleFormat('pastePlainText')
+    },
   })
   const handleInsertWikilink = useCallback((payload: NativeWysiwygWikilinkPayload) => {
     insertWikilink(payload, pickerState?.replacementRange)

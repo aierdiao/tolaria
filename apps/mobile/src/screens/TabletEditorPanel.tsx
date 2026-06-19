@@ -30,6 +30,7 @@ import {
   useMobileAttachmentLinkOpener,
   type MobileAttachmentLinkOpener,
 } from '../workspace/mobileAttachmentOpen'
+import type { RegisterMobileEditorCommands } from '../workspace/mobileEditorCommands'
 import { shouldRenderEditorDocumentTitle } from './tabletEditorDocumentTitle'
 
 type TabletEditorPanelProps = {
@@ -43,6 +44,7 @@ type TabletEditorPanelProps = {
   notes: MobileNote[]
   onNavigateWikilink: (target: string) => void
   onOpenMoreActions: () => void
+  onRegisterEditorCommands?: RegisterMobileEditorCommands
   onToggleFavorite: () => void
   onUpdateContent: (noteId: string, content: string) => void
   sourceSelectionProbe?: boolean
@@ -86,6 +88,7 @@ type EditorContentProps = {
   onNavigateWikilink: (target: string) => void
   onImportAttachment?: MobileAttachmentImporter
   onOpenLink: MobileAttachmentLinkOpener
+  onRegisterEditorCommands?: RegisterMobileEditorCommands
   onUpdateContent: (noteId: string, content: string) => void
   sourceSelectionProbe?: boolean
   vaultRootUri?: string | null
@@ -112,6 +115,7 @@ export function TabletEditorPanel(props: TabletEditorPanelProps) {
     notes,
     onNavigateWikilink,
     onOpenMoreActions,
+    onRegisterEditorCommands,
     onToggleFavorite,
     onUpdateContent,
     sourceSelectionProbe = false,
@@ -163,6 +167,7 @@ export function TabletEditorPanel(props: TabletEditorPanelProps) {
     onImportAttachment: importAttachment,
     onNavigateWikilink,
     onOpenLink: openLink,
+    onRegisterEditorCommands,
     onUpdateContent,
     plainText,
     sourceSelectionProbe,
@@ -350,6 +355,7 @@ function EditorContent({
   onImportAttachment,
   onNavigateWikilink,
   onOpenLink,
+  onRegisterEditorCommands,
   onUpdateContent,
   sourceSelectionProbe = false,
   vaultRootUri = null,
@@ -371,6 +377,7 @@ function EditorContent({
           note={note}
           notes={notes}
           onImportAttachment={onImportAttachment}
+          onRegisterEditorCommands={onRegisterEditorCommands}
           onUpdateContent={onUpdateContent}
           plainText={plainText}
           sourceSelectionProbe={sourceSelectionProbe}
@@ -388,6 +395,7 @@ function EditorContent({
         note={note}
         notes={notes}
         onImportAttachment={onImportAttachment}
+        onRegisterEditorCommands={onRegisterEditorCommands}
         onUpdateContent={onUpdateContent}
         vaultRootUri={vaultRootUri}
         wysiwygAutocompleteProbe={wysiwygAutocompleteProbe}

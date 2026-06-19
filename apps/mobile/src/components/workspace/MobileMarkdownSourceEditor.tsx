@@ -26,6 +26,10 @@ import {
   type MobileAttachmentImport,
 } from '../../workspace/mobileAttachments'
 import {
+  useRegisteredMobileEditorCommands,
+  type RegisterMobileEditorCommands,
+} from '../../workspace/mobileEditorCommands'
+import {
   mobileMarkdownSelectionAfterTextChange,
   type MobileMarkdownTextSelection,
 } from '../../workspace/mobileMarkdownSourceSelection'
@@ -51,6 +55,7 @@ export type MobileMarkdownSourceEditorProps = {
   note: MobileNote
   notes: MobileNote[]
   onImportAttachment?: () => Promise<MobileAttachmentImport | null>
+  onRegisterEditorCommands?: RegisterMobileEditorCommands
   onUpdateContent: (noteId: string, content: string) => void
   plainText?: boolean
   sourceSelectionProbe?: boolean
@@ -67,6 +72,7 @@ export function MobileMarkdownSourceEditor(props: MobileMarkdownSourceEditorProp
     note,
     notes,
     onImportAttachment,
+    onRegisterEditorCommands,
     onUpdateContent,
     plainText = false,
     sourceSelectionProbe = false,
@@ -91,6 +97,7 @@ export function MobileMarkdownSourceEditor(props: MobileMarkdownSourceEditorProp
       note={note}
       notes={notes}
       onImportAttachment={onImportAttachment}
+      onRegisterEditorCommands={onRegisterEditorCommands}
       onUpdateContent={onUpdateContent}
       sourceSelectionProbe={sourceSelectionProbe}
     />
@@ -105,6 +112,7 @@ function MarkdownSourceEditor(props: Omit<MobileMarkdownSourceEditorProps, 'plai
     note,
     notes,
     onImportAttachment,
+    onRegisterEditorCommands,
     onUpdateContent,
     sourceSelectionProbe,
   } = props
@@ -126,6 +134,11 @@ function MarkdownSourceEditor(props: Omit<MobileMarkdownSourceEditorProps, 'plai
     onImportAttachment,
     sourceNote: note,
     onUpdateContent: editorDraft.updateContent,
+  })
+  useRegisteredMobileEditorCommands(onRegisterEditorCommands, {
+    pastePlainText: () => {
+      void autocomplete.applyFormat('pastePlainText')
+    },
   })
   useNativeSourceSelectionProbe(sourceSelectionProbe === true)
 

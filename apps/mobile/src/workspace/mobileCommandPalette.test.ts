@@ -16,6 +16,7 @@ describe('mobile command palette', () => {
 
     expect(commandIds).toContain(appCommandManifest.commands.fileQuickOpen.id)
     expect(commandIds).toContain(appCommandManifest.commands.fileNewNote.id)
+    expect(commandIds).toContain(appCommandManifest.commands.editPastePlainText.id)
     expect(commandIds).toContain(appCommandManifest.commands.viewToggleProperties.id)
     expect(commandIds).toContain(appCommandManifest.commands.vaultOpen.id)
     expect(commandIds).not.toContain(appCommandManifest.commands.vaultCommitPush.id)
@@ -103,6 +104,22 @@ describe('mobile command palette', () => {
     expect(commandIds).toContain(appCommandManifest.commands.fileNewNote.id)
   })
 
+  it('dispatches paste-without-formatting only when the active editor registers it', () => {
+    const handlers = commandHandlers()
+    const command = enabledCommand(handlers, appCommandManifest.commands.editPastePlainText.id)
+
+    command.execute()
+
+    expect(handlers.onPastePlainText).toHaveBeenCalledOnce()
+
+    const commandIdsWithoutEditor = mobileCommandPaletteResults(
+      buildMobileCommandPaletteCommands(commandHandlers({ onPastePlainText: undefined })),
+      '',
+    ).flatList.map((candidate) => candidate.id)
+
+    expect(commandIdsWithoutEditor).not.toContain(appCommandManifest.commands.editPastePlainText.id)
+  })
+
   it('normalizes primary sidebar selections from the snapshot', () => {
     expect(mobilePrimarySidebarSelection(workspaceScenarios.default, 'inbox')).toEqual(
       expect.objectContaining({
@@ -146,6 +163,7 @@ function commandHandlers(
     onOpenSearch: vi.fn(),
     onOpenSetNoteIcon: vi.fn(),
     onOpenTableOfContents: vi.fn(),
+    onPastePlainText: vi.fn(),
     onRedoWorkspaceEdit: vi.fn(),
     onRemoveNoteIcon: vi.fn(),
     onRenameNoteFileToTitle: vi.fn(),

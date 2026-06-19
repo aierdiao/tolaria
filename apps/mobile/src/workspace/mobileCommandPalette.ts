@@ -40,6 +40,7 @@ export type MobileCommandPaletteHandlers = {
   onOpenSearch: () => void
   onOpenSetNoteIcon?: () => void
   onOpenTableOfContents: () => void
+  onPastePlainText?: () => void
   onCopyDeepLink?: () => void
   onDeleteNote: () => void
   onEnterNeighborhood?: (noteId: string) => void
@@ -369,6 +370,14 @@ function noteHistoryCommands(handlers: MobileCommandPaletteHandlers): MobileComm
       group: 'Note',
       keywords: ['redo', 'history', 'repeat'],
       label: mobileText('command.note.redo'),
+    }),
+    command({
+      desktopCommand: 'editPastePlainText',
+      enabled: textLikeSelectedNoteCommandEnabled(handlers.selectedNote, handlers.onPastePlainText),
+      execute: handlers.onPastePlainText,
+      group: 'Note',
+      keywords: ['paste', 'plain', 'formatting', 'clipboard', 'match style'],
+      label: mobileText('command.note.pastePlainText'),
     }),
   ]
 }

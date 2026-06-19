@@ -29,7 +29,7 @@ const parityDefinitions = {
   editFindInNote: implemented('mobile Find in Note sheet'),
   editReplaceInNote: implemented('mobile Replace in Note sheet'),
   editFindInVault: implemented('mobile quick-open/search sheet with vault-wide candidates'),
-  editPastePlainText: implemented('source and native WYSIWYG paste-without-formatting toolbar action'),
+  editPastePlainText: implemented('source and native WYSIWYG paste-without-formatting toolbar and command palette action'),
   editToggleRawEditor: implemented('editor toolbar source/WYSIWYG toggle'),
   editToggleDiff: outOfScope('desktop diff chrome is not part of the mobile editing foundation'),
   viewEditorOnly: adapted('tablet swipe chrome and phone editor screen replace desktop panel modes'),

@@ -14,6 +14,7 @@ import {
 } from '../workspace/readOnlyWorkspaceRepository'
 import { mobileColors } from '../ui/tokens'
 import { useHorizontalSwipe } from '../ui/useHorizontalSwipe'
+import { useMobileEditorCommandRegistry, type RegisterMobileEditorCommands } from '../workspace/mobileEditorCommands'
 import { mobileNoteIdForWikilinkTarget } from '../workspace/mobileWikilinks'
 import { buildMobileCommandPaletteCommands } from '../workspace/mobileCommandPalette'
 import { TabletEditorPanel } from './TabletEditorPanel'
@@ -93,6 +94,7 @@ function useTabletScreenMode() {
 function TabletWorkspaceChrome(props: TabletWorkspaceChromeProps) {
   const { compactTablet, defaultPropertiesVisible, onOpenNativeVault, onSelectNote, snapshot } = props
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false)
+  const editorCommandRegistry = useMobileEditorCommandRegistry()
   const gestures = useTabletPanelGestures(compactTablet, defaultPropertiesVisible)
   const suggestionNotes = snapshot.allNotes ?? snapshot.notes
   const openCommandPalette = useCallback(() => setCommandPaletteOpen(true), [])
@@ -101,11 +103,12 @@ function TabletWorkspaceChrome(props: TabletWorkspaceChromeProps) {
     ...props,
     onOpenBacklinks: gestures.showProperties,
     onOpenNativeVault,
+    onPastePlainText: editorCommandRegistry.commands.pastePlainText,
     onToggleProperties: gestures.toggleProperties,
     onViewAll: gestures.showAllPanels,
     onViewEditorList: gestures.showEditorList,
     onViewEditorOnly: gestures.showEditorOnly,
-  }), [gestures, onOpenNativeVault, props])
+  }), [editorCommandRegistry.commands.pastePlainText, gestures, onOpenNativeVault, props])
   const handleNavigateWikilink = useCallback((target: string) => {
     const noteId = mobileNoteIdForWikilinkTarget(suggestionNotes, target)
     if (noteId) onSelectNote(noteId)
@@ -118,6 +121,7 @@ function TabletWorkspaceChrome(props: TabletWorkspaceChromeProps) {
       <TabletEditorPanelHost
         {...props}
         suggestionNotes={suggestionNotes}
+        onRegisterEditorCommands={editorCommandRegistry.register}
         onNavigateWikilink={handleNavigateWikilink}
       />
       <TabletPropertiesPanelHost {...props} gestures={gestures} />
@@ -254,6 +258,7 @@ type TabletEditorPanelHostProps = Pick<
   | 'wysiwygMutationProbe'
 > & {
   onNavigateWikilink: (target: string) => void
+  onRegisterEditorCommands?: RegisterMobileEditorCommands
   suggestionNotes: MobileNote[]
 }
 
@@ -266,6 +271,7 @@ function TabletEditorPanelHost({
   layoutProbe,
   onNavigateWikilink,
   onOpenMoreActions,
+  onRegisterEditorCommands,
   onToggleFavorite,
   onUpdateNoteContent,
   selectedNote,
@@ -291,6 +297,7 @@ function TabletEditorPanelHost({
       notes={suggestionNotes}
       onNavigateWikilink={onNavigateWikilink}
       onOpenMoreActions={onOpenMoreActions}
+      onRegisterEditorCommands={onRegisterEditorCommands}
       onToggleFavorite={onToggleFavorite}
       onUpdateContent={onUpdateNoteContent}
       sourceSelectionProbe={sourceSelectionProbe}

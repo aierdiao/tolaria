@@ -16,6 +16,7 @@ import { probeProps, useMobileLayoutProbe, type MobileLayoutProbe } from '../qa/
 import { MobileIconButton } from '../ui/MobileIconButton'
 import { mobileColors, mobileSpace } from '../ui/tokens'
 import { useHorizontalSwipe } from '../ui/useHorizontalSwipe'
+import { useMobileEditorCommandRegistry, type RegisterMobileEditorCommands } from '../workspace/mobileEditorCommands'
 import { mobileNoteIdForWikilinkTarget } from '../workspace/mobileWikilinks'
 import type { MobileNote, MobileWorkspaceSnapshot } from '../workspace/mobileWorkspaceModel'
 import {
@@ -77,6 +78,7 @@ export function PhoneWorkspace({
   const { phoneState, previousPhoneState, setPhoneState } = usePhoneState(initialState)
   const { width } = useWindowDimensions()
   const dragPreview = usePhoneDragPreview(phoneState, width)
+  const editorCommandRegistry = useMobileEditorCommandRegistry()
   const phoneLayoutProbe = useMobileLayoutProbe(layoutProbe)
   const openList = useCallback(() => setPhoneState('list'), [setPhoneState])
   const openSidebar = useCallback(() => setPhoneState('sidebar'), [setPhoneState])
@@ -92,6 +94,7 @@ export function PhoneWorkspace({
   const commandPalette = usePhoneCommandPalette({
     controller,
     onOpenNativeVault,
+    onPastePlainText: editorCommandRegistry.commands.pastePlainText,
     openEditor,
     openList,
     openNeighborhoodList,
@@ -145,6 +148,7 @@ export function PhoneWorkspace({
           phoneLayoutProbe={phoneLayoutProbe.probe}
           phoneState={phoneState}
           phoneSwipePreview={dragPreview}
+          onRegisterEditorCommands={editorCommandRegistry.register}
           sourceSelectionProbe={sourceSelectionProbe}
           suggestionNotes={suggestionNotes}
           wysiwygAutocompleteProbe={wysiwygAutocompleteProbe}
@@ -174,6 +178,7 @@ export function PhoneWorkspace({
 function usePhoneCommandPalette({
   controller,
   onOpenNativeVault,
+  onPastePlainText,
   openEditor,
   openList,
   openNeighborhoodList,
@@ -183,6 +188,7 @@ function usePhoneCommandPalette({
 }: {
   controller: PhoneWorkspaceController
   onOpenNativeVault?: () => void
+  onPastePlainText?: () => void
   openEditor: (noteId?: string) => void
   openList: () => void
   openNeighborhoodList: (noteId: string) => void
@@ -202,11 +208,12 @@ function usePhoneCommandPalette({
     onOpenBacklinks: openProperties,
     onOpenNativeVault,
     onEnterNeighborhood: openNeighborhoodList,
+    onPastePlainText,
     onToggleProperties: toggleProperties,
     onViewAll: openSidebar,
     onViewEditorList: openList,
     onViewEditorOnly: openEditor,
-  }), [controller, onOpenNativeVault, openEditor, openList, openNeighborhoodList, openProperties, openSidebar, toggleProperties])
+  }), [controller, onOpenNativeVault, onPastePlainText, openEditor, openList, openNeighborhoodList, openProperties, openSidebar, toggleProperties])
 
   return {
     element: visible ? <MobileCommandPalette commands={commands} onClose={close} /> : null,
@@ -382,6 +389,7 @@ type PhoneWorkspaceStateViewProps = {
   phoneLayoutProbe: MobileLayoutProbe
   phoneState: PhoneWorkspaceState
   phoneSwipePreview: PhoneSwipePreview
+  onRegisterEditorCommands?: RegisterMobileEditorCommands
   sourceSelectionProbe: boolean
   suggestionNotes: MobileNote[]
   wysiwygAutocompleteProbe: boolean
@@ -542,6 +550,7 @@ function PhoneEditorScreen({
   openList,
   openCommandPalette,
   openProperties,
+  onRegisterEditorCommands,
   phoneLayoutProbe,
   phoneSwipePreview,
   sourceSelectionProbe,
@@ -575,6 +584,7 @@ function PhoneEditorScreen({
         layoutProbe={layoutProbe}
         notes={suggestionNotes}
         onNavigateWikilink={handleNavigateWikilink}
+        onRegisterEditorCommands={onRegisterEditorCommands}
         sourceSelectionProbe={sourceSelectionProbe}
         wysiwygAutocompleteProbe={wysiwygAutocompleteProbe}
         wysiwygFormatCommandProbe={wysiwygFormatCommandProbe}
@@ -619,6 +629,7 @@ function PhoneEditorBody({
   layoutProbe,
   notes,
   onNavigateWikilink,
+  onRegisterEditorCommands,
   sourceSelectionProbe,
   wysiwygAutocompleteProbe,
   wysiwygFormatCommandProbe,
@@ -633,6 +644,7 @@ function PhoneEditorBody({
   layoutProbe: boolean
   notes: MobileNote[]
   onNavigateWikilink: (target: string) => void
+  onRegisterEditorCommands?: RegisterMobileEditorCommands
   sourceSelectionProbe: boolean
   wysiwygAutocompleteProbe: boolean
   wysiwygFormatCommandProbe: boolean
@@ -653,6 +665,7 @@ function PhoneEditorBody({
       notes={notes}
       onNavigateWikilink={onNavigateWikilink}
       onOpenMoreActions={controller.onOpenMoreActions}
+      onRegisterEditorCommands={onRegisterEditorCommands}
       onToggleFavorite={controller.onToggleFavorite}
       onUpdateContent={controller.onUpdateNoteContent}
       sourceSelectionProbe={sourceSelectionProbe}
