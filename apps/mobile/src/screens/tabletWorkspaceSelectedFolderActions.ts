@@ -1,6 +1,6 @@
 import type { MobileSidebarFolderSelection } from '../components/workspace/MobileWorkspaceSidebar'
 import type { MobileWorkspaceEdit } from '../workspace/mobileWorkspaceEditing'
-import { copyMobileFolderPath } from './tabletWorkspaceFolderActions'
+import { copyMobileFolderPath, revealMobileFolder } from './tabletWorkspaceFolderActions'
 import type { TabletSidebarSelection } from './tabletWorkspaceNavigation'
 
 type ApplyWorkspaceEdit = (edit: MobileWorkspaceEdit) => void
@@ -24,6 +24,10 @@ export function selectedFolderCommandActions({
     onDeleteSelectedFolder: () => {
       if (!folder) return
       applyEdit({ folderPath: folder.id, type: 'deleteFolder' })
+    },
+    onRevealSelectedFolder: () => {
+      if (!folder) return
+      revealMobileFolder({ folderPath: folder.id, vaultRootUri })
     },
   }
 }

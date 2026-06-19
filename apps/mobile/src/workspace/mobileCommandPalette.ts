@@ -72,6 +72,7 @@ export type MobileCommandPaletteHandlers = {
   onRemoveNoteIcon?: () => void
   onRenameNoteFileToTitle?: () => void
   onRedoWorkspaceEdit: () => void
+  onRevealSelectedFolder?: () => void
   onRevealFile?: () => void
   onSelectSidebarItem: (selection: MobileSidebarItemSelection) => void
   onSetArchived: (archived: boolean) => void
@@ -368,6 +369,14 @@ function folderNavigationCommands(handlers: MobileCommandPaletteHandlers): Mobil
   const folder = activeSidebarFolder(handlers)
 
   return [
+    dynamicCommand({
+      enabled: Boolean(folder && handlers.onRevealSelectedFolder),
+      execute: handlers.onRevealSelectedFolder,
+      group: 'Navigation',
+      id: 'reveal-selected-folder',
+      keywords: ['folder', 'directory', 'finder', 'reveal', 'show', 'filesystem'],
+      label: mobileText('sidebar.action.revealFolderMenu'),
+    }),
     dynamicCommand({
       enabled: Boolean(folder && handlers.onCopySelectedFolderPath),
       execute: handlers.onCopySelectedFolderPath,

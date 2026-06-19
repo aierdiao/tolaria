@@ -511,6 +511,7 @@ function actionSheetHandlers(props: ActionSheetHostProps) {
     onRelationshipNoteSelect: props.onRelationshipNoteSelect,
     onRelationshipNoteTitleChange: props.onRelationshipNoteTitleChange,
     onRenameFolder: props.onRenameFolder,
+    onRevealFolder: props.onRevealFolder,
     onRenameNoteFile: props.onRenameNoteFile,
     onRenameNoteFileToTitle: props.onRenameNoteFileToTitle,
     onRedoWorkspaceEdit: props.onRedoWorkspaceEdit,

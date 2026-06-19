@@ -3,6 +3,7 @@ import { workspaceScenarioForId } from '../fixtures/workspaceFixtures'
 import {
   MOBILE_FILE_REVEAL_ATTEMPTS_GLOBAL_KEY,
   MOBILE_FILE_REVEALS_GLOBAL_KEY,
+  revealMobileFolderPath,
   revealMobileNoteFile,
   type MobileFileRevealer,
 } from './mobileNoteFileReveal'
@@ -66,7 +67,48 @@ describe('mobile note file reveal', () => {
     expect(globalValue(MOBILE_FILE_REVEALS_GLOBAL_KEY)).toBeUndefined()
   })
 
-  it('does not call the revealer without a safe selected note', async () => {
+  it('reveals a selected folder through the same native revealer boundary', async () => {
+    const revealer: MobileFileRevealer = vi.fn().mockResolvedValue({ opened: true, shared: true })
+
+    await expect(revealMobileFolderPath({
+      folderPath: 'Tolaria/Mobile UI',
+      revealer,
+      vaultRootUri: 'file:///vault/root',
+    })).resolves.toEqual({
+      ok: true,
+      opened: true,
+      path: 'file:///vault/root/Tolaria/Mobile%20UI',
+      shared: true,
+    })
+
+    expect(revealer).toHaveBeenCalledWith('file:///vault/root/Tolaria/Mobile%20UI')
+    expect(globalValue(MOBILE_FILE_REVEAL_ATTEMPTS_GLOBAL_KEY)).toEqual([{
+      folderPath: 'Tolaria/Mobile UI',
+      path: 'file:///vault/root/Tolaria/Mobile%20UI',
+    }])
+  })
+
+  it('records browser folder reveal attempts without calling the native revealer', async () => {
+    const revealer: MobileFileRevealer = vi.fn()
+
+    await expect(withBrowserRuntime(() => revealMobileFolderPath({
+      folderPath: 'Tolaria/Mobile UI',
+      revealer,
+    }))).resolves.toEqual({
+      ok: true,
+      opened: false,
+      path: 'Tolaria/Mobile UI',
+      shared: false,
+    })
+
+    expect(revealer).not.toHaveBeenCalled()
+    expect(globalValue(MOBILE_FILE_REVEAL_ATTEMPTS_GLOBAL_KEY)).toEqual([{
+      folderPath: 'Tolaria/Mobile UI',
+      path: 'Tolaria/Mobile UI',
+    }])
+  })
+
+  it('does not call the revealer without safe selected targets', async () => {
     const revealer: MobileFileRevealer = vi.fn()
 
     await expect(revealMobileNoteFile({ note: null, revealer })).resolves.toEqual({
@@ -77,6 +119,15 @@ describe('mobile note file reveal', () => {
       note: { ...workspaceScenarioForId('default').notes[0]!, id: '../secret.md', path: '' },
       revealer,
     })).resolves.toEqual({
+      ok: false,
+      reason: 'unsafePath',
+    })
+
+    await expect(revealMobileFolderPath({ folderPath: '', revealer })).resolves.toEqual({
+      ok: false,
+      reason: 'missingPath',
+    })
+    await expect(revealMobileFolderPath({ folderPath: '../secret', revealer })).resolves.toEqual({
       ok: false,
       reason: 'unsafePath',
     })

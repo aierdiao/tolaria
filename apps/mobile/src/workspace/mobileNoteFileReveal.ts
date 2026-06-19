@@ -1,13 +1,13 @@
 import type { SharingOptions } from 'expo-sharing'
 import type { MobileNote } from './mobileWorkspaceModel'
-import { buildMobileFilePathForNote } from './mobileNoteFilePath'
+import { buildMobileFilePathForNote, buildMobileFilePathForRelativePath } from './mobileNoteFilePath'
 
 export const MOBILE_FILE_REVEAL_ATTEMPTS_GLOBAL_KEY = '__TOLARIA_MOBILE_FILE_REVEAL_ATTEMPTS__'
 export const MOBILE_FILE_REVEALS_GLOBAL_KEY = '__TOLARIA_MOBILE_FILE_REVEALS__'
 
 export type MobileFileRevealResult =
   | { ok: true; opened: boolean; path: string; shared: boolean }
-  | { ok: false; reason: 'missingNote' | 'unsafePath' }
+  | { ok: false; reason: 'missingNote' | 'missingPath' | 'unsafePath' }
 
 export type MobileFileRevealer = (path: string) => Promise<MobileFileRevealerResult>
 export type MobileFileRevealerResult = boolean | void | {
@@ -24,26 +24,63 @@ type LinkingModule = {
     openURL: (url: string) => Promise<unknown>
   }
 }
-
-declare const require: (moduleName: string) => unknown
-
-export async function revealMobileNoteFile({
-  note,
-  revealer = revealNativeMobileFile,
-  vaultRootUri,
-}: {
+type MobileNoteRevealInput = {
   note: MobileNote | null
   revealer?: MobileFileRevealer
   vaultRootUri?: string | null
-}): Promise<MobileFileRevealResult> {
-  const result = buildMobileFilePathForNote({ note, vaultRootUri })
+}
+type MobileFolderRevealInput = {
+  folderPath: string | null | undefined
+  revealer?: MobileFileRevealer
+  vaultRootUri?: string | null
+}
+type MobileRevealInput = MobileFolderRevealInput | MobileNoteRevealInput
+
+declare const require: (moduleName: string) => unknown
+
+export const revealMobileNoteFile: (input: MobileNoteRevealInput) => Promise<MobileFileRevealResult> = revealMobileFile
+
+export const revealMobileFolderPath: (input: MobileFolderRevealInput) => Promise<MobileFileRevealResult> = revealMobileFile
+
+async function revealMobileFile(input: MobileRevealInput): Promise<MobileFileRevealResult> {
+  if ('note' in input) return revealNoteTarget(input)
+  return revealFolderTarget(input)
+}
+
+async function revealNoteTarget(input: MobileNoteRevealInput): Promise<MobileFileRevealResult> {
+  const result = buildMobileFilePathForNote({ note: input.note, vaultRootUri: input.vaultRootUri })
   if (!result.ok) return { ok: false, reason: result.error === 'missing_note' ? 'missingNote' : 'unsafePath' }
+  return revealMobileSafePath({
+    evidence: revealEvidence(result.path, input.note),
+    path: result.path,
+    revealer: input.revealer ?? revealNativeMobileFile,
+  })
+}
 
-  recordGlobalValue(MOBILE_FILE_REVEAL_ATTEMPTS_GLOBAL_KEY, revealEvidence(result.path, note))
-  if (isBrowserRuntime()) return { ok: true, opened: false, path: result.path, shared: false }
+async function revealFolderTarget(input: MobileFolderRevealInput): Promise<MobileFileRevealResult> {
+  const result = buildMobileFilePathForRelativePath({ path: input.folderPath, vaultRootUri: input.vaultRootUri })
+  if (!result.ok) return { ok: false, reason: result.error === 'missing_path' ? 'missingPath' : 'unsafePath' }
+  return revealMobileSafePath({
+    evidence: revealFolderEvidence({ folderPath: input.folderPath, path: result.path }),
+    path: result.path,
+    revealer: input.revealer ?? revealNativeMobileFile,
+  })
+}
 
-  const revealResult = await revealer(result.path)
-  const revealed = revealedMobileFileResult(result.path, revealResult)
+async function revealMobileSafePath({
+  evidence,
+  path,
+  revealer,
+}: {
+  evidence: unknown
+  path: string
+  revealer: MobileFileRevealer
+}): Promise<MobileFileRevealResult> {
+  recordGlobalValue(MOBILE_FILE_REVEAL_ATTEMPTS_GLOBAL_KEY, evidence)
+  if (isBrowserRuntime()) return { ok: true, opened: false, path, shared: false }
+
+  const revealResult = await revealer(path)
+  const revealed = revealedMobileFileResult(path, revealResult)
   recordGlobalValue(MOBILE_FILE_REVEALS_GLOBAL_KEY, revealed)
   return revealed
 }
@@ -83,6 +120,19 @@ function revealEvidence(path: string, note: MobileNote | null) {
     noteId: note?.id ?? null,
     path,
     title: note?.title ?? null,
+  }
+}
+
+function revealFolderEvidence({
+  folderPath,
+  path,
+}: {
+  folderPath: string | null | undefined
+  path: string
+}) {
+  return {
+    folderPath: folderPath ?? null,
+    path,
   }
 }
 

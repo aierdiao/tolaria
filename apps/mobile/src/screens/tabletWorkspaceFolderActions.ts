@@ -4,6 +4,7 @@ import { writeMobileClipboardText } from '../workspace/mobileClipboard'
 import type { MobileWorkspaceEdit } from '../workspace/mobileWorkspaceEditing'
 import { mobileFolderName, mobileFolderParentPath } from '../workspace/mobileWorkspaceFolders'
 import { buildMobileFilePathForRelativePath } from '../workspace/mobileNoteFilePath'
+import { revealMobileFolderPath } from '../workspace/mobileNoteFileReveal'
 import type { TabletReadOnlyForm } from './tabletWorkspaceTypes'
 import type { TabletSidebarSelection } from './tabletWorkspaceNavigation'
 
@@ -34,9 +35,14 @@ export function folderWorkspaceActions({
   vaultRootUri?: string | null
 }) {
   return {
-    onCopyFolderPath: () => copyFolderPath({
-      closeAction,
+    onCopyFolderPath: () => copyMobileFolderPath({
       folderPath: readOnlyForm.editingFolderPath,
+      onCopied: closeAction,
+      vaultRootUri,
+    }),
+    onRevealFolder: () => revealMobileFolder({
+      folderPath: readOnlyForm.editingFolderPath,
+      onRevealed: closeAction,
       vaultRootUri,
     }),
     onCreateFolder: () => commitFolderEdit({
@@ -150,16 +156,20 @@ export function copyMobileFolderPath({
   })
 }
 
-function copyFolderPath({
-  closeAction,
+export function revealMobileFolder({
   folderPath,
+  onRevealed,
   vaultRootUri,
 }: {
-  closeAction: CloseWorkspaceAction
   folderPath: string
+  onRevealed?: () => void
   vaultRootUri?: string | null
 }) {
-  copyMobileFolderPath({ folderPath, onCopied: closeAction, vaultRootUri })
+  void revealMobileFolderPath({ folderPath, vaultRootUri }).then((result) => {
+    if (result.ok) onRevealed?.()
+  }).catch((error) => {
+    console.warn('[mobile-folder-reveal] Failed to reveal folder:', error)
+  })
 }
 
 function commitFolderEdit({

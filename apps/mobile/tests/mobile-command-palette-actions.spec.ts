@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test'
 
 const mobileClipboardAttemptsGlobalKey = '__TOLARIA_MOBILE_CLIPBOARD_ATTEMPTS__'
+const mobileFileRevealAttemptsGlobalKey = '__TOLARIA_MOBILE_FILE_REVEAL_ATTEMPTS__'
 
 test.describe('mobile command palette actions', () => {
   test('dispatches selected-note utility commands from the tablet command palette', async ({ page }, testInfo) => {
@@ -59,6 +60,15 @@ test.describe('mobile command palette actions', () => {
     await expect(page.getByTestId('note-list-toolbar-title')).toHaveText('Mobile UI')
 
     await openCommandPalette(page)
+    await runCommand(page, 'reveal', 'reveal-selected-folder')
+
+    await expect(page.getByTestId('mobile-command-palette')).toBeHidden()
+    await expect.poll(() => latestGlobalAttempt(page, mobileFileRevealAttemptsGlobalKey)).toEqual({
+      folderPath: 'Tolaria/Mobile UI',
+      path: 'Tolaria/Mobile UI',
+    })
+
+    await openCommandPalette(page)
     await runCommand(page, 'copy folder path', 'copy-selected-folder-path')
 
     await expect(page.getByTestId('mobile-command-palette')).toBeHidden()
@@ -70,6 +80,11 @@ test.describe('mobile command palette actions', () => {
     await expect(page.getByTestId('mobile-command-palette')).toBeHidden()
     await expect(page.getByTestId('workspace-action-sheet-editFolder')).toBeVisible()
     await expect(page.getByTestId('workspace-rename-folder-input')).toHaveValue('Mobile UI')
+
+    await page.getByTestId('workspace-action-reveal-folder').click()
+
+    await expect(page.getByTestId('workspace-action-sheet-editFolder')).toBeHidden()
+    await expect.poll(() => globalAttemptCount(page, mobileFileRevealAttemptsGlobalKey)).toBe(2)
   })
 })
 
@@ -85,8 +100,20 @@ async function runCommand(page: Page, query: string, commandId: string) {
 }
 
 async function latestClipboardAttempt(page: Page) {
-  return page.evaluate((key) => {
-    const attempts = (window as unknown as Record<string, unknown>)[key]
-    return Array.isArray(attempts) ? attempts.at(-1) : null
-  }, mobileClipboardAttemptsGlobalKey)
+  return latestGlobalAttempt(page, mobileClipboardAttemptsGlobalKey)
+}
+
+async function latestGlobalAttempt(page: Page, key: string) {
+  return globalAttempts(page, key).then((attempts) => attempts.at(-1) ?? null)
+}
+
+async function globalAttemptCount(page: Page, key: string) {
+  return globalAttempts(page, key).then((attempts) => attempts.length)
+}
+
+async function globalAttempts(page: Page, key: string) {
+  return page.evaluate((globalKey) => {
+    const attempts = (window as unknown as Record<string, unknown>)[globalKey]
+    return Array.isArray(attempts) ? attempts : []
+  }, key)
 }

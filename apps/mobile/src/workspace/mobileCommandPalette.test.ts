@@ -94,10 +94,15 @@ describe('mobile command palette', () => {
 
   it('exposes desktop-style selected folder commands', () => {
     const handlers = commandHandlers({ activeFolderId: 'Tolaria/Mobile UI' })
+    const reveal = enabledCommand(handlers, 'reveal-selected-folder')
     const copyPath = enabledCommand(handlers, 'copy-selected-folder-path')
     const rename = enabledCommand(handlers, 'rename-folder')
     const deleteFolder = enabledCommand(handlers, 'delete-folder')
 
+    expect(reveal).toMatchObject({
+      group: 'Navigation',
+      label: 'Reveal in Finder',
+    })
     expect(copyPath).toMatchObject({
       group: 'Navigation',
       label: 'Copy folder path',
@@ -105,10 +110,12 @@ describe('mobile command palette', () => {
     expect(rename).toMatchObject({ label: 'Rename Folder' })
     expect(deleteFolder).toMatchObject({ label: 'Delete Folder' })
 
+    reveal.execute()
     copyPath.execute()
     rename.execute()
     deleteFolder.execute()
 
+    expect(handlers.onRevealSelectedFolder).toHaveBeenCalledOnce()
     expect(handlers.onCopySelectedFolderPath).toHaveBeenCalledOnce()
     expect(handlers.onOpenFolderActions).toHaveBeenCalledWith({
       id: 'Tolaria/Mobile UI',
@@ -325,6 +332,7 @@ function commandHandlers(
     onRemoveNoteIcon: vi.fn(),
     onRenameNoteFileToTitle: vi.fn(),
     onRevealFile: vi.fn(),
+    onRevealSelectedFolder: vi.fn(),
     onSelectSidebarItem: vi.fn(),
     onSetArchived: vi.fn(),
     onSetOrganized: vi.fn(),

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { Pressable, ScrollView, StyleSheet, View, type NativeSyntheticEvent, type TextInputKeyPressEventData } from 'react-native'
-import { CheckCircle, ClipboardText, FilePlus, FolderOpen, Trash } from 'phosphor-react-native'
+import { ArrowSquareOut, CheckCircle, ClipboardText, FilePlus, FolderOpen, Trash } from 'phosphor-react-native'
 import { Text } from '../ui/text'
 import { mobileText } from '../../i18n/mobileText'
 import { MobileButton } from '../../ui/MobileButton'
@@ -163,6 +163,7 @@ export type MobileWorkspaceActionSheetProps = {
   onSaveRelationship: () => void
   onSaveTypeDefinition: () => void
   onRenameFolder: () => void
+  onRevealFolder: () => void
   onRevealFile: () => void
   onRenameNoteFile: () => void
   onRenameNoteFileToTitle: () => void
@@ -623,6 +624,12 @@ function FolderActionsContent(props: MobileWorkspaceActionSheetProps) {
         label={mobileText('sidebar.action.copyFolderPathMenu')}
         testID="workspace-action-copy-folder-path"
         onPress={props.onCopyFolderPath}
+      />
+      <ActionRow
+        icon={<ArrowSquareOut color={mobileColors.textMuted} size={desktopToolbarActionParity.iconSize} />}
+        label={mobileText('sidebar.action.revealFolderMenu')}
+        testID="workspace-action-reveal-folder"
+        onPress={props.onRevealFolder}
       />
       <ActionRow
         destructive
