@@ -62,8 +62,10 @@ describe('native workspace persistence probe', () => {
 
   it('reports incomplete vault config persistence proofs', () => {
     expectProofFailures({
+      propertyDisplayModesHydrated: false,
       vaultConfigHydrated: false,
     }, [
+      'workspace.persistence.propertyDisplayModes',
       'workspace.persistence.vaultConfig',
     ])
   })
@@ -100,6 +102,7 @@ function passingWorkspaceProof(): NativeWorkspacePersistenceProof {
     noteChromeMetadataHydrated: true,
     noteStateMetadataHydrated: true,
     persistedToNativeRepository: true,
+    propertyDisplayModesHydrated: true,
     relationshipMovedRefHydrated: true,
     relationshipSourceRefHydrated: true,
     relationshipTargetHydrated: true,

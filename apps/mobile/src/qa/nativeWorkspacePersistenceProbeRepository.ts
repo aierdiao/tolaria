@@ -1,6 +1,6 @@
 import type { Directory, Paths } from 'expo-file-system'
 import { applyMobileWorkspaceEditWithWrites } from '../workspace/mobileWorkspaceEditing'
-import type { MobileWorkspaceSnapshot } from '../workspace/mobileWorkspaceModel'
+import type { MobilePropertyDisplayMode, MobileWorkspaceSnapshot } from '../workspace/mobileWorkspaceModel'
 import type { ReadOnlyWorkspaceRepository, ReadOnlyWorkspaceRequest } from '../workspace/readOnlyWorkspaceRepository'
 import {
   nativeWorkspacePersistenceLogLine,
@@ -31,6 +31,10 @@ const renamedTypeSourceName = 'Rename Source'
 const renamedTypeSourcePath = 'rename-source.md'
 const renamedFolderPath = 'Folders/Proof Queue'
 const typeName = 'Proof Decision'
+const workspacePersistencePropertyDisplayModes = {
+  Priority: 'number',
+  Website: 'url',
+} satisfies Record<string, MobilePropertyDisplayMode>
 const workspaceProbeStartedRootUris = new Set<string>()
 
 export function nativeWorkspacePersistenceProbeRepository(
@@ -220,6 +224,7 @@ function workspacePersistenceConfigWrite() {
     config: {
       allNotes: { noteListProperties: ['status', 'belongs_to'] },
       inbox: { explicitOrganization: true, noteListProperties: ['tags'] },
+      propertyDisplayModes: workspacePersistencePropertyDisplayModes,
     },
     kind: 'saveVaultConfig' as const,
   }
@@ -338,6 +343,7 @@ function workspacePersistenceProof(
     noteChromeMetadataHydrated: noteChromeMetadataHydrated(snapshot, content.metadataContent),
     noteStateMetadataHydrated: noteStateMetadataHydrated(snapshot, content.metadataContent),
     persistedToNativeRepository: snapshot.source?.kind === 'localVault',
+    propertyDisplayModesHydrated: propertyDisplayModesHydrated(snapshot),
     relationshipMovedRefHydrated: relationshipMovedRefHydrated(content.relationshipSourceContent),
     relationshipSourceRefHydrated: relationshipSourceRefHydrated(content.relationshipSourceContent),
     relationshipTargetHydrated: snapshotContainsNotePath(snapshot, relationshipTargetPath),
@@ -371,6 +377,11 @@ function vaultConfigHydrated(snapshot: MobileWorkspaceSnapshot) {
   return joinedProperties(snapshot.noteListPropertyOverrides?.allNotes) === 'status|belongs_to'
     && joinedProperties(snapshot.noteListPropertyOverrides?.inbox) === 'tags'
     && snapshot.vaultConfig?.inbox?.explicitOrganization === true
+}
+
+function propertyDisplayModesHydrated(snapshot: MobileWorkspaceSnapshot) {
+  return snapshot.vaultConfig?.propertyDisplayModes?.Priority === 'number'
+    && snapshot.vaultConfig.propertyDisplayModes.Website === 'url'
 }
 
 function joinedProperties(properties: string[] | undefined) {

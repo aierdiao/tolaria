@@ -11,6 +11,7 @@ export type NativeWorkspacePersistenceProof = {
   noteChromeMetadataHydrated: boolean
   noteStateMetadataHydrated: boolean
   persistedToNativeRepository: boolean
+  propertyDisplayModesHydrated: boolean
   relationshipSourceRefHydrated: boolean
   relationshipMovedRefHydrated: boolean
   relationshipTargetHydrated: boolean
@@ -63,6 +64,7 @@ export function assertNativeWorkspacePersistenceProofs(
     proofFailure(latest.movedNoteContentPreserved, 'workspace.persistence.moveNote', 'Saved and moved note content is read back from the native repository'),
     proofFailure(latest.noteChromeMetadataHydrated, 'workspace.persistence.noteChromeMetadata', 'Note icon and width metadata rehydrate from native frontmatter writes'),
     proofFailure(latest.noteStateMetadataHydrated, 'workspace.persistence.noteStateMetadata', 'Note archive, organized, and favorite metadata rehydrate from native frontmatter writes'),
+    proofFailure(latest.propertyDisplayModesHydrated, 'workspace.persistence.propertyDisplayModes', 'Property display modes rehydrate from native vault-scoped config storage'),
     proofFailure(latest.relationshipTargetHydrated, 'workspace.persistence.relationshipTarget', 'Relationship target creation rehydrates the reducer-created target note'),
     proofFailure(latest.relationshipSourceRefHydrated, 'workspace.persistence.relationshipSourceRef', 'Relationship target creation rehydrates the saved source note relationship ref'),
     proofFailure(latest.relationshipMovedRefHydrated, 'workspace.persistence.relationshipMovedRef', 'Moved note relationship refs rehydrate from reducer-generated native rewrite writes'),
@@ -113,6 +115,7 @@ function parsedWorkspacePersistenceProof(value: unknown): NativeWorkspacePersist
     noteChromeMetadataHydrated: value.noteChromeMetadataHydrated,
     noteStateMetadataHydrated: value.noteStateMetadataHydrated,
     persistedToNativeRepository: value.persistedToNativeRepository,
+    propertyDisplayModesHydrated: value.propertyDisplayModesHydrated,
     relationshipSourceRefHydrated: value.relationshipSourceRefHydrated,
     relationshipMovedRefHydrated: value.relationshipMovedRefHydrated,
     relationshipTargetHydrated: value.relationshipTargetHydrated,
@@ -142,6 +145,7 @@ const workspacePersistenceProofKeys = [
   'noteChromeMetadataHydrated',
   'noteStateMetadataHydrated',
   'persistedToNativeRepository',
+  'propertyDisplayModesHydrated',
   'relationshipSourceRefHydrated',
   'relationshipMovedRefHydrated',
   'relationshipTargetHydrated',
