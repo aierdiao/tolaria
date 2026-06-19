@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
+import { longPressTestId } from './mobile-phone-test-gestures'
 
 test.describe('phone bulk note action parity', () => {
   test('applies phone note-list bulk actions', async ({ page }, testInfo) => {
@@ -43,7 +44,7 @@ test.describe('phone bulk note action parity', () => {
 })
 
 async function bulkSelectDefaultNotes(page: Page) {
-  await longPress(page, 'note-row-workflow-orchestration')
+  await longPressTestId(page, 'note-row-workflow-orchestration')
   await page.getByTestId('note-row-open-source-project').click()
   await expect(page.getByTestId('note-list-bulk-action-bar')).toBeVisible()
 }
@@ -53,23 +54,4 @@ async function openPhoneSidebar(page: Page) {
 
   await page.getByTestId('phone-sidebar-action').click()
   await expect(page.getByTestId('phone-sidebar-screen')).toBeVisible()
-}
-
-async function longPress(page: Page, testId: string) {
-  const target = page.getByTestId(testId)
-  await target.scrollIntoViewIfNeeded()
-  const box = await target.boundingBox()
-  if (!box) throw new Error(`Cannot long-press missing target: ${testId}`)
-
-  const client = await page.context().newCDPSession(page)
-  await client.send('Input.dispatchTouchEvent', {
-    touchPoints: [{ x: box.x + box.width / 2, y: box.y + box.height / 2 }],
-    type: 'touchStart',
-  })
-  await page.waitForTimeout(700)
-  await client.send('Input.dispatchTouchEvent', {
-    touchPoints: [],
-    type: 'touchEnd',
-  })
-  await client.detach()
 }

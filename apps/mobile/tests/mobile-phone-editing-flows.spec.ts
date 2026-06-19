@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
+import { longPressTestId } from './mobile-phone-test-gestures'
 
 test.describe('phone workspace editing parity', () => {
   test('exercises saved-view and type-section editing flows', async ({ page }, testInfo) => {
@@ -31,7 +32,7 @@ async function createEditAndDeletePhoneSavedView(page: Page) {
   await openPhoneSidebar(page)
   await expect(page.getByTestId('sidebar-item-view-phone-inbox-view')).toContainText('Phone Inbox View')
 
-  await longPress(page, 'sidebar-item-view-phone-inbox-view')
+  await longPressTestId(page, 'sidebar-item-view-phone-inbox-view')
   await expect(page.getByTestId('workspace-edit-view-name-input')).toHaveValue('Phone Inbox View')
   await page.getByTestId('workspace-edit-view-name-input').fill('Phone Active Work')
   await page.getByTestId('workspace-view-icon-star').click()
@@ -46,7 +47,7 @@ async function createEditAndDeletePhoneSavedView(page: Page) {
   await expect(page.getByTestId('note-list-toolbar-title')).toHaveText('Phone Active Work')
 
   await openPhoneSidebar(page)
-  await longPress(page, 'sidebar-item-view-phone-inbox-view')
+  await longPressTestId(page, 'sidebar-item-view-phone-inbox-view')
   await page.getByTestId('workspace-delete-view-action').click()
   await expect(page.getByTestId('workspace-action-sheet')).toBeHidden()
   await expect(page.getByTestId('sidebar-item-view-phone-inbox-view')).toBeHidden()
@@ -54,7 +55,7 @@ async function createEditAndDeletePhoneSavedView(page: Page) {
 
 async function customizePhoneTypeSectionAndCreateTemplateNote(page: Page) {
   await openPhoneSidebar(page)
-  await longPress(page, 'sidebar-item-procedures')
+  await longPressTestId(page, 'sidebar-item-procedures')
   const sheet = page.getByTestId('workspace-action-sheet-editTypeSection')
   await expect(sheet).toBeVisible()
   await page.getByTestId('workspace-type-section-label-input').fill('Phone Runbooks')
@@ -153,23 +154,4 @@ async function openPhoneSidebar(page: Page) {
 
   await page.getByTestId('phone-sidebar-action').click()
   await expect(page.getByTestId('phone-sidebar-screen')).toBeVisible()
-}
-
-async function longPress(page: Page, testId: string) {
-  const target = page.getByTestId(testId)
-  await target.scrollIntoViewIfNeeded()
-  const box = await target.boundingBox()
-  if (!box) throw new Error(`Cannot long-press missing target: ${testId}`)
-
-  const client = await page.context().newCDPSession(page)
-  await client.send('Input.dispatchTouchEvent', {
-    touchPoints: [{ x: box.x + box.width / 2, y: box.y + box.height / 2 }],
-    type: 'touchStart',
-  })
-  await page.waitForTimeout(700)
-  await client.send('Input.dispatchTouchEvent', {
-    touchPoints: [],
-    type: 'touchEnd',
-  })
-  await client.detach()
 }
