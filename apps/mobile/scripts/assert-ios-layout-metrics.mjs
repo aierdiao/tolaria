@@ -38,6 +38,7 @@ Options:
   --last <duration>     log show window when no URL is opened, such as 90s or 5m. Defaults to ${defaultLogWindow}.
   --open-url <url>      Open a simulator URL before collecting logs. Use Expo deep links with layoutProbe=1.
                        http(s) URLs are rejected because they open Mobile Safari, not the native app.
+  --phone               Prefer a booted iPhone simulator when --device is not provided.
   --phone-state <state> Assert compact phone layout metrics for list, sidebar, editor, or properties.
   --require-wysiwyg     Also require WYSIWYG editor layout metrics from editorMode=wysiwyg QA URLs.
   --require-wysiwyg-mutation
@@ -67,12 +68,14 @@ function readOption(args, name, fallback) {
 
 function parseOptions(args) {
   if (args.includes('--help')) return { help: true }
+  const phoneState = readPhoneState(args)
 
   return {
     help: false,
     last: readOption(args, '--last', defaultLogWindow),
     openUrl: readOption(args, '--open-url', undefined),
-    phoneState: readPhoneState(args),
+    phoneState,
+    preferPhone: args.includes('--phone') || phoneState !== undefined,
     requestedDevice: readOption(args, '--device', process.env.MOBILE_QA_SIMULATOR_UDID),
     requireWysiwyg: args.includes('--require-wysiwyg'),
     requireWysiwygMutation: args.includes('--require-wysiwyg-mutation'),
@@ -118,12 +121,13 @@ function listBootedDevices() {
   return Object.values(parsed.devices ?? {}).flat()
 }
 
-function selectDevice(requestedDevice) {
+function selectDevice(requestedDevice, preferPhone) {
   if (requestedDevice) return requestedDevice
 
   const bootedDevices = listBootedDevices()
-  const iPad = bootedDevices.find((device) => device.name?.toLowerCase().includes('ipad'))
-  const selected = iPad ?? bootedDevices[0]
+  const preferredName = preferPhone ? 'iphone' : 'ipad'
+  const preferredDevice = bootedDevices.find((device) => device.name?.toLowerCase().includes(preferredName))
+  const selected = preferredDevice ?? bootedDevices[0]
   if (!selected?.udid) {
     throw new Error('No booted iOS Simulator found. Start one with `pnpm mobile:ios` first.')
   }
@@ -292,7 +296,7 @@ async function main() {
 }
 
 async function runNativeQa(options) {
-  const device = selectDevice(options.requestedDevice)
+  const device = selectDevice(options.requestedDevice, options.preferPhone)
   const metricSink = options.openUrl ? await startMetricSinkServer() : null
 
   try {

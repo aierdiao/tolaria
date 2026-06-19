@@ -22,6 +22,7 @@ Options:
   --device <udid>   Simulator UDID. Defaults to MOBILE_QA_SIMULATOR_UDID, then the booted iPad.
   --last <duration> log show window when no URL is opened. Defaults to ${defaultLogWindow}.
   --open-url <url>  Open an Expo native URL before collecting logs.
+  --phone           Prefer a booted iPhone simulator when --device is not provided.
   --wait <ms>       Delay after opening a URL before collecting logs. Defaults to 4500.
   --help            Show this help.
 `)
@@ -33,6 +34,7 @@ function readConfig(args) {
     help: args.includes('--help'),
     last: readOption(args, '--last', defaultLogWindow),
     openUrl: readOption(args, '--open-url', undefined),
+    phone: args.includes('--phone'),
     waitMs: Number(readOption(args, '--wait', '4500')),
   }
 }
@@ -59,12 +61,13 @@ function tryRun(command, args) {
   spawnSync(command, args, { encoding: 'utf8' })
 }
 
-function selectDevice(requestedDevice) {
+function selectDevice(requestedDevice, preferPhone) {
   if (requestedDevice) return requestedDevice
 
   const json = run('xcrun', ['simctl', 'list', 'devices', 'booted', '--json'])
   const devices = Object.values(JSON.parse(json).devices ?? {}).flat()
-  const selected = devices.find((device) => device.name?.toLowerCase().includes('ipad')) ?? devices[0]
+  const preferredName = preferPhone ? 'iphone' : 'ipad'
+  const selected = devices.find((device) => device.name?.toLowerCase().includes(preferredName)) ?? devices[0]
   if (!selected?.udid) throw new Error('No booted iOS Simulator found.')
 
   return selected.udid
@@ -128,7 +131,7 @@ async function main() {
     return
   }
 
-  const device = selectDevice(config.device)
+  const device = selectDevice(config.device, config.phone)
   const logStart = config.openUrl ? simulatorLogTimestamp(new Date(Date.now() - 1000)) : undefined
   if (config.openUrl) await openProbeUrl(device, config.openUrl, config.waitMs)
 
