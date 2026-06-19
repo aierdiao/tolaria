@@ -431,6 +431,7 @@ function actionSheetHandlers(props: ActionSheetHostProps) {
     onChangeNoteTypeInputChange: props.onChangeNoteTypeInputChange,
     onClose: props.onCloseAction,
     onCopyDeepLink: props.onCopyDeepLink,
+    onCopyFilePath: props.onCopyFilePath,
     onCreateFolder: props.onCreateFolder,
     onCreateNote: props.onCreateNote,
     onCreateRelationshipTarget: props.onCreateRelationshipTarget,

@@ -7,6 +7,7 @@ import {
   ArrowsInLineHorizontal,
   ArrowsOutLineHorizontal,
   CheckCircle,
+  ClipboardText,
   FolderOpen,
   MagnifyingGlass,
   MapTrifold,
@@ -30,6 +31,7 @@ export function NoteMoreActionRows(props: {
   onClose: () => void
   onDeleteNote: () => void
   onEnterNeighborhood: (noteId: string) => void
+  onCopyFilePath: () => void
   onOpenChangeNoteType: () => void
   onOpenFindInNote: () => void
   onOpenMoveNoteToFolder: () => void
@@ -233,12 +235,14 @@ function NoteIconActionRows({
 
 function NoteFileActionRows({
   onClose,
+  onCopyFilePath,
   onOpenChangeNoteType,
   onOpenMoveNoteToFolder,
   onOpenRenameNoteFile,
   onRenameNoteFileToTitle,
 }: {
   onClose: () => void
+  onCopyFilePath: () => void
   onOpenChangeNoteType: () => void
   onOpenMoveNoteToFolder: () => void
   onOpenRenameNoteFile: () => void
@@ -272,6 +276,15 @@ function NoteFileActionRows({
         label={mobileText('command.note.moveToFolder')}
         testID="workspace-action-move-note-folder"
         onPress={onOpenMoveNoteToFolder}
+      />
+      <ActionRow
+        icon={<ClipboardText color={mobileColors.textMuted} size={desktopToolbarActionParity.iconSize} />}
+        label={mobileText('editor.toolbar.copyFilePath')}
+        testID="workspace-action-copy-file-path"
+        onPress={() => {
+          onCopyFilePath()
+          onClose()
+        }}
       />
     </>
   )

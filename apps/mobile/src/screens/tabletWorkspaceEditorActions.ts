@@ -1,6 +1,7 @@
 import type { MobileNote, MobileWorkspaceSnapshot } from '../workspace/mobileWorkspaceModel'
 import { writeMobileClipboardText } from '../workspace/mobileClipboard'
 import { buildMobileDeepLinkForNote } from '../workspace/mobileDeepLinks'
+import { buildMobileFilePathForNote } from '../workspace/mobileNoteFilePath'
 import { exportMobileNoteAsPdf } from '../workspace/mobilePdfExport'
 import { toggleMobileNoteWidth } from '../workspace/mobileNoteWidth'
 import type { MobileWorkspaceEdit } from '../workspace/mobileWorkspaceEditing'
@@ -27,11 +28,14 @@ export function editorWorkspaceActions({
         source: workspaceSnapshot.source,
         vaultRootUri: repositoryRequest?.vaultRootUri,
       })
-      if (!result.ok) return
-
-      void writeMobileClipboardText(result.url).catch((error) => {
-        console.warn('[mobile-deep-link] Failed to copy deep link:', error)
+      copyEditorClipboardText(result.ok ? result.url : null, 'mobile-deep-link', 'deep link')
+    },
+    onCopyFilePath: () => {
+      const result = buildMobileFilePathForNote({
+        note: selectedNote,
+        vaultRootUri: repositoryRequest?.vaultRootUri,
       })
+      copyEditorClipboardText(result.ok ? result.path : null, 'mobile-file-path', 'file path')
     },
     onDeleteNote: () => {
       if (selectedNote) applyEdit({ noteId: selectedNote.id, type: 'deleteNote' })
@@ -63,6 +67,14 @@ export function editorWorkspaceActions({
     },
     ...tabletWorkspaceBulkNoteActions(applyEdit),
   }
+}
+
+function copyEditorClipboardText(text: string | null, source: string, label: string) {
+  if (!text) return
+
+  void writeMobileClipboardText(text).catch((error) => {
+    console.warn(`[${source}] Failed to copy ${label}:`, error)
+  })
 }
 
 function editorContentUpdate(

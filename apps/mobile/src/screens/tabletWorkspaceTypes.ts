@@ -115,6 +115,7 @@ export type TabletWorkspaceChromeProps = {
   onChangeNoteTypeInputChange: (value: ReadOnlyFormValue) => void
   onCloseAction: () => void
   onCopyDeepLink: () => void
+  onCopyFilePath: () => void
   onCreateFolder: () => void
   onCreateNote: () => void
   onCreateRelationshipTarget: () => void

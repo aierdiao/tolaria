@@ -1,0 +1,33 @@
+import { describe, expect, it } from 'vitest'
+import { workspaceScenarioForId } from '../fixtures/workspaceFixtures'
+import { buildMobileFilePathForNote } from './mobileNoteFilePath'
+
+describe('mobile note file paths', () => {
+  it('copies native vault URIs with encoded path segments', () => {
+    const note = workspaceScenarioForId('default').notes[0]!
+
+    expect(buildMobileFilePathForNote({
+      note,
+      vaultRootUri: 'file:///vault/root',
+    })).toEqual({
+      ok: true,
+      path: 'file:///vault/root/Tolaria/Mobile%20UI/Workflow%20Orchestration%20Essay.md',
+    })
+  })
+
+  it('falls back to portable paths when no native vault root is available', () => {
+    const note = workspaceScenarioForId('default').notes[0]!
+
+    expect(buildMobileFilePathForNote({ note, vaultRootUri: null })).toEqual({
+      ok: true,
+      path: 'Tolaria/Mobile UI/Workflow Orchestration Essay.md',
+    })
+  })
+
+  it('rejects missing notes and unsafe paths', () => {
+    expect(buildMobileFilePathForNote({ note: null })).toEqual({ error: 'missing_note', ok: false })
+    expect(buildMobileFilePathForNote({
+      note: { ...workspaceScenarioForId('default').notes[0]!, id: '../secret.md', path: '' },
+    })).toEqual({ error: 'unsafe_path', ok: false })
+  })
+})

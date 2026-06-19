@@ -116,6 +116,7 @@ type MobileWorkspaceActionSheetProps = {
   onCreateRelationshipTarget: () => void
   onCreateTitleChange: (value: string) => void
   onCopyDeepLink: () => void
+  onCopyFilePath: () => void
   onCreateType: () => void
   onCreateView: () => void
   onDeleteFolder: () => void
@@ -1028,6 +1029,7 @@ function MoreActionsContent(props: MobileWorkspaceActionSheetProps) {
           canRedoWorkspaceEdit={props.canRedoWorkspaceEdit}
           canUndoWorkspaceEdit={props.canUndoWorkspaceEdit}
           onClose={props.onClose}
+          onCopyFilePath={props.onCopyFilePath}
           onDeleteNote={props.onDeleteNote}
           onEnterNeighborhood={props.onEnterNeighborhood}
           onOpenChangeNoteType={props.onOpenChangeNoteType}
