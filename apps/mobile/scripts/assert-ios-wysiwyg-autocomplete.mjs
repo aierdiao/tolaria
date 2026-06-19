@@ -2,6 +2,7 @@
 /* global console, process, setTimeout */
 
 import { spawnSync } from 'node:child_process'
+import { waitForNativeProof } from './native-ios-proof-logs.mjs'
 import { assertNativeQaOpenUrl } from '../src/qa/nativeQaUrls.ts'
 import {
   assertNativeWysiwygAutocompleteProofs,
@@ -13,6 +14,7 @@ import {
 const defaultExpoGoBundleId = 'host.exp.Exponent'
 const defaultLogWindow = '90s'
 const minimumOpenWaitMs = 12000
+const proofPollTimeoutMs = 12000
 
 function printHelp() {
   console.log(`Assert native iOS Simulator WYSIWYG autocomplete.
@@ -137,11 +139,15 @@ async function main() {
   const logStart = config.openUrl ? simulatorLogTimestamp(new Date(Date.now() - 1000)) : undefined
   if (config.openUrl) await openProbeUrl(device, config.openUrl, config.waitMs)
 
-  const proofs = parseNativeWysiwygAutocompleteProofs(collectSimulatorLogs(device, {
-    last: config.last,
-    start: logStart,
-  }))
-  const failures = assertNativeWysiwygAutocompleteProofs(proofs)
+  const { failures } = await waitForNativeProof({
+    assertProofs: assertNativeWysiwygAutocompleteProofs,
+    collectLogs: () => collectSimulatorLogs(device, {
+      last: config.last,
+      start: logStart,
+    }),
+    parseProofs: parseNativeWysiwygAutocompleteProofs,
+    timeoutMs: config.openUrl ? proofPollTimeoutMs : 0,
+  })
   if (failures.length > 0) {
     throw new Error(`Native WYSIWYG autocomplete proof failed:\n${formatNativeWysiwygAutocompleteFailures(failures)}`)
   }

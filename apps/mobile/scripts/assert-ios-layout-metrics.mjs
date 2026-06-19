@@ -26,6 +26,8 @@ import {
 
 const defaultLogWindow = '5m'
 const defaultExpoGoBundleId = 'host.exp.Exponent'
+const nativeQaPollIntervalMs = 1000
+const nativeQaPollTimeoutMs = 12000
 
 function printHelp() {
   console.log(`Assert native iOS Simulator layout metrics for mobile UI QA.
@@ -301,21 +303,41 @@ async function runNativeQa(options) {
 
   try {
     const logStart = await openProbeIfRequested({ device, metricSink, options })
-    const evidence = collectNativeQaEvidence({ device, logStart, metricSink, options })
-    const metrics = latestNativeLayoutMetrics(parseNativeLayoutMetrics(layoutLogText(evidence.layoutLogs, options)))
-    const { failures, mutationFailures, persistenceFailures } = nativeQaFailures({
+    const result = await collectPassingNativeQaResult({ device, logStart, metricSink, options })
+
+    if (hasNativeQaFailures(result)) {
+      throw new Error(formatNativeQaFailures(result))
+    }
+
+    console.log(`Native iOS layout metrics passed (${Object.keys(result.metrics).length} metrics).`)
+  } finally {
+    await metricSink?.close()
+  }
+}
+
+async function collectPassingNativeQaResult({ device, logStart, metricSink, options }) {
+  const deadline = Date.now() + (options.openUrl ? nativeQaPollTimeoutMs : 0)
+  let result = collectNativeQaResult({ device, logStart, metricSink, options })
+
+  while (hasNativeQaFailures(result) && Date.now() < deadline) {
+    await sleep(Math.min(nativeQaPollIntervalMs, deadline - Date.now()))
+    result = collectNativeQaResult({ device, logStart, metricSink, options })
+  }
+
+  return result
+}
+
+function collectNativeQaResult({ device, logStart, metricSink, options }) {
+  const evidence = collectNativeQaEvidence({ device, logStart, metricSink, options })
+  const metrics = latestNativeLayoutMetrics(parseNativeLayoutMetrics(layoutLogText(evidence.layoutLogs, options)))
+
+  return {
+    ...nativeQaFailures({
       metrics,
       options,
       proofLogs: evidence.proofLogs,
-    })
-
-    if (hasNativeQaFailures({ failures, mutationFailures, persistenceFailures })) {
-      throw new Error(formatNativeQaFailures({ failures, mutationFailures, persistenceFailures }))
-    }
-
-    console.log(`Native iOS layout metrics passed (${Object.keys(metrics).length} metrics).`)
-  } finally {
-    await metricSink?.close()
+    }),
+    metrics,
   }
 }
 

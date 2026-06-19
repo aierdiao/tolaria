@@ -2,6 +2,7 @@
 /* global console, process, setTimeout */
 
 import { spawnSync } from 'node:child_process'
+import { waitForNativeProof } from './native-ios-proof-logs.mjs'
 import { assertNativeQaOpenUrl } from '../src/qa/nativeQaUrls.ts'
 import {
   assertNativeSourceSelectionProofs,
@@ -11,6 +12,7 @@ import {
 
 const defaultExpoGoBundleId = 'host.exp.Exponent'
 const defaultLogWindow = '90s'
+const proofPollTimeoutMs = 12000
 
 function printHelp() {
   console.log(`Assert native iOS Simulator source-editor selection behavior.
@@ -135,11 +137,15 @@ async function main() {
   const logStart = config.openUrl ? simulatorLogTimestamp(new Date(Date.now() - 1000)) : undefined
   if (config.openUrl) await openProbeUrl(device, config.openUrl, config.waitMs)
 
-  const proofs = parseNativeSourceSelectionProofs(collectSimulatorLogs(device, {
-    last: config.last,
-    start: logStart,
-  }))
-  const failures = assertNativeSourceSelectionProofs(proofs)
+  const { failures } = await waitForNativeProof({
+    assertProofs: assertNativeSourceSelectionProofs,
+    collectLogs: () => collectSimulatorLogs(device, {
+      last: config.last,
+      start: logStart,
+    }),
+    parseProofs: parseNativeSourceSelectionProofs,
+    timeoutMs: config.openUrl ? proofPollTimeoutMs : 0,
+  })
   if (failures.length > 0) throw new Error(`Native source selection proof failed:\n${formatNativeSourceSelectionFailures(failures)}`)
 
   console.log('Native iOS source selection proof passed.')

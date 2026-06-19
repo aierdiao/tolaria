@@ -2,6 +2,7 @@
 /* global console, process, setTimeout */
 
 import { spawnSync } from 'node:child_process'
+import { waitForNativeProof } from './native-ios-proof-logs.mjs'
 import { assertNativeQaOpenUrl } from '../src/qa/nativeQaUrls.ts'
 import {
   assertNativeWorkspacePersistenceProofs,
@@ -12,6 +13,7 @@ import {
 
 const defaultExpoGoBundleId = 'host.exp.Exponent'
 const defaultLogWindow = '90s'
+const proofPollTimeoutMs = 12000
 
 function printHelp() {
   console.log(`Assert native iOS Simulator workspace persistence.
@@ -136,11 +138,15 @@ async function main() {
   const logStart = config.openUrl ? simulatorLogTimestamp(new Date(Date.now() - 1000)) : undefined
   if (config.openUrl) await openProbeUrl(device, config.openUrl, config.waitMs)
 
-  const proofs = parseNativeWorkspacePersistenceProofs(collectSimulatorLogs(device, {
-    last: config.last,
-    start: logStart,
-  }))
-  const failures = assertNativeWorkspacePersistenceProofs(proofs)
+  const { failures } = await waitForNativeProof({
+    assertProofs: assertNativeWorkspacePersistenceProofs,
+    collectLogs: () => collectSimulatorLogs(device, {
+      last: config.last,
+      start: logStart,
+    }),
+    parseProofs: parseNativeWorkspacePersistenceProofs,
+    timeoutMs: config.openUrl ? proofPollTimeoutMs : 0,
+  })
   if (failures.length > 0) {
     throw new Error(`Native workspace persistence proof failed:\n${formatNativeWorkspacePersistenceFailures(failures)}`)
   }
