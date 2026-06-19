@@ -181,6 +181,50 @@ filters:
     ]).map((candidate) => candidate.id)).toEqual(['match'])
   })
 
+  it('filters relationship fields by desktop frontmatter key instead of relationship category', () => {
+    const hasView = parseMobileSavedViewFile({
+      relativePath: 'views/has-roadmap.yml',
+      content: `name: Has Roadmap
+filters:
+  all:
+    - field: has
+      op: contains
+      value: Roadmap
+`,
+    }, 0)
+    const customHasView = parseMobileSavedViewFile({
+      relativePath: 'views/has-part-roadmap.yml',
+      content: `name: Has Part Roadmap
+filters:
+  all:
+    - field: has_part
+      op: contains
+      value: Roadmap
+`,
+    }, 1)
+    const notes = [
+      note({
+        id: 'canonical-has',
+        relationships: [{
+          key: 'has',
+          kind: 'has',
+          values: [{ title: 'Roadmap', type: 'Note', typeTone: 'gray' }],
+        }],
+      }),
+      note({
+        id: 'custom-has-part',
+        relationships: [{
+          key: 'has_part',
+          kind: 'has',
+          values: [{ title: 'Roadmap', type: 'Note', typeTone: 'gray' }],
+        }],
+      }),
+    ]
+
+    expect(evaluateMobileSavedView(hasView!, notes).map((candidate) => candidate.id)).toEqual(['canonical-has'])
+    expect(evaluateMobileSavedView(customHasView!, notes).map((candidate) => candidate.id)).toEqual(['custom-has-part'])
+  })
+
   it('evaluates discoverable desktop built-in saved-view fields', () => {
     const view = parseMobileSavedViewFile({
       relativePath: 'views/procedure-docs.yml',

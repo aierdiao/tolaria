@@ -910,13 +910,18 @@ function isFilterGroup(node: MobileViewFilterNode): node is MobileViewFilterGrou
 }
 
 function relationshipKeys(relationship: MobileNote['relationships'][number]) {
-  return [
-    relationship.key,
-    relationship.label,
-    relationship.kind,
-    relationship.kind === 'belongsTo' ? 'belongs_to' : null,
-    relationship.kind === 'relatedTo' ? 'related_to' : null,
-  ].filter((value): value is string => Boolean(value)).map((value) => value.toLowerCase())
+  const explicitKeys = [relationship.key, relationship.label]
+    .filter((value): value is string => Boolean(value))
+    .map((value) => value.toLowerCase())
+
+  return explicitKeys.length > 0 ? explicitKeys : fallbackRelationshipKeys(relationship.kind)
+}
+
+function fallbackRelationshipKeys(kind: MobileNote['relationships'][number]['kind']) {
+  if (kind === 'belongsTo') return ['belongs_to']
+  if (kind === 'relatedTo') return ['related_to']
+  if (kind === 'has') return ['has']
+  return []
 }
 
 function scalarField(value: string | number | boolean | null): ResolvedMobileField {
