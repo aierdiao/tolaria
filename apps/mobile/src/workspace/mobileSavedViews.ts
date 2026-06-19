@@ -7,6 +7,7 @@ import type {
   MobileViewFilterNode,
   MobileViewFilterOp,
 } from './mobileWorkspaceModel'
+import { evaluateArrayFieldCondition } from '../../../../src/utils/viewFilterArrayFields'
 import safeRegex from 'safe-regex2'
 
 type ViewFileSource = {
@@ -407,52 +408,13 @@ function evaluateArrayCondition(
   field: Extract<ResolvedMobileField, { kind: 'array' }>,
   regex: RegExp | null,
 ) {
-  if (field.arrayKind === 'relationship') return evaluateRelationshipArrayCondition(condition, field.values, regex)
-  return evaluatePropertyArrayCondition(condition, field.values, regex)
-}
-
-function evaluatePropertyArrayCondition(
-  condition: MobileViewFilterCondition,
-  values: string[],
-  regex: RegExp | null,
-) {
-  const target = textValue(condition.value)
-  const normalizedValues = new Set(values.map(normalizedText))
-  const contains = normalizedValues.has(target.toLowerCase())
-  const equals = values.length === 1 && contains
-  const matchesAny = conditionTextList(condition.value)?.some((value) => normalizedValues.has(value.toLowerCase())) ?? false
-  const regexMatched = regex ? values.some((value) => regex.test(value)) : false
-
-  if (regex) return textMatchResult(condition.op, regexMatched)
-  return arrayMatchResult(condition.op, { contains, equals, matchesAny })
-}
-
-function evaluateRelationshipArrayCondition(
-  condition: MobileViewFilterCondition,
-  values: string[],
-  regex: RegExp | null,
-) {
-  const field = relationshipArrayField(values)
-  const contains = relationshipContains(field, textValue(condition.value))
-  const equals = field.length === 1 && relationshipEquals(field[0] ?? '', textValue(condition.value))
-  const matchesAny = conditionTextList(condition.value)?.some((value) => field.some((ref) => relationshipEquals(ref, value))) ?? false
-  const regexMatched = regex ? field.some((ref) => relationshipRegexCandidates(ref).some((candidate) => regex.test(candidate))) : false
-
-  if (regex) return textMatchResult(condition.op, regexMatched)
-  return arrayMatchResult(condition.op, { contains, equals, matchesAny })
-}
-
-function arrayMatchResult(
-  op: MobileViewFilterOp,
-  result: { contains: boolean; equals: boolean; matchesAny: boolean },
-) {
-  if (op === 'contains') return result.contains
-  if (op === 'not_contains') return !result.contains
-  if (op === 'equals') return result.equals
-  if (op === 'not_equals') return !result.equals
-  if (op === 'any_of') return result.matchesAny
-  if (op === 'none_of') return !result.matchesAny
-  return false
+  return evaluateArrayFieldCondition({
+    arrayKind: field.arrayKind,
+    cond: condition,
+    condVal: textValue(condition.value),
+    regex,
+    values: field.values,
+  })
 }
 
 function textMatchResult(op: MobileViewFilterOp, matched: boolean): boolean {
@@ -477,10 +439,6 @@ function conditionRegex(condition: MobileViewFilterCondition): RegExp | null {
 
 function usesRegex(condition: MobileViewFilterCondition): boolean {
   return condition.regex === true && regexFilterOps.has(condition.op)
-}
-
-function relationshipArrayField(values: string[]) {
-  return values.map((value) => value.trim()).filter(Boolean)
 }
 
 function evaluateScalarCondition(
@@ -907,10 +865,6 @@ function textValue(value: unknown) {
   return String(value).trim()
 }
 
-function conditionTextList(value: unknown): string[] | null {
-  return Array.isArray(value) ? value.map(textValue) : null
-}
-
 function fallbackViewName(filename: ViewFilename, index: ViewIndex) {
   const fallback = filename.replace(/\.[^.]+$/, '').replaceAll('-', ' ').trim()
   return fallback ? titleCase(fallback) : `View ${index + 1}`
@@ -1071,42 +1025,6 @@ function shiftCalendarYear(value: Date, amount: number): Date {
 
 function daysInMonth(year: number, month: number): number {
   return new Date(year, month + 1, 0).getDate()
-}
-
-function relationshipContains(values: string[], targetValue: string): boolean {
-  const target = relationshipValue(targetValue)
-  return values.some((value) => {
-    const candidate = relationshipValue(value)
-    return target.bracketed
-      ? relationshipEquals(value, targetValue)
-      : candidate.stem.toLowerCase().includes(target.stem.toLowerCase())
-  })
-}
-
-function relationshipEquals(value: string, targetValue: string): boolean {
-  const candidateParts = relationshipValue(value).parts
-  const targetParts = relationshipValue(targetValue).parts
-  return candidateParts.some((candidate) => targetParts.includes(candidate))
-}
-
-function relationshipRegexCandidates(value: string): string[] {
-  const trimmed = value.trim()
-  const parsed = relationshipValue(trimmed)
-  return [trimmed, parsed.stem, ...parsed.parts].filter(Boolean)
-}
-
-function relationshipValue(value: string) {
-  const trimmed = value.trim()
-  const inner = trimmed.replace(/^\[\[/u, '').replace(/\]\]$/u, '')
-  const pipeIndex = inner.indexOf('|')
-  const stem = pipeIndex >= 0 ? inner.slice(0, pipeIndex) : inner
-  const alias = pipeIndex >= 0 ? inner.slice(pipeIndex + 1) : null
-
-  return {
-    bracketed: trimmed.startsWith('[['),
-    parts: [stem, alias].filter((part): part is string => Boolean(part)).map((part) => part.toLowerCase()),
-    stem,
-  }
 }
 
 function serializedFilterGroup(group: MobileViewFilterGroup, indent: number): string[] {
