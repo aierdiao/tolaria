@@ -15,6 +15,8 @@ export type NativeWorkspacePersistenceProof = {
   relationshipSourceRefHydrated: boolean
   relationshipMovedRefHydrated: boolean
   relationshipTargetHydrated: boolean
+  reorderedTypeSectionHydrated: boolean
+  reorderedViewHydrated: boolean
   renamedTypeAssignedNoteHydrated: boolean
   renamedTypeDefinitionHydrated: boolean
   renamedTypeSchemaRefsHydrated: boolean
@@ -72,6 +74,7 @@ export function assertNativeWorkspacePersistenceProofs(
     proofFailure(latest.relationshipMovedRefHydrated, 'workspace.persistence.relationshipMovedRef', 'Moved note relationship refs rehydrate from reducer-generated native rewrite writes'),
     proofFailure(latest.savedViewHydrated, 'workspace.persistence.saveView', 'Saved desktop-compatible views rehydrate from native views/*.yml'),
     proofFailure(latest.updatedViewHydrated, 'workspace.persistence.updateView', 'Updated desktop-compatible views rehydrate from reducer-generated native view writes'),
+    proofFailure(latest.reorderedViewHydrated, 'workspace.persistence.moveView', 'Moved saved-view order rehydrates from reducer-generated native view order writes'),
     proofFailure(latest.deletedViewRemoved, 'workspace.persistence.deleteView', 'Deleted native view files disappear from the mobile snapshot'),
     proofFailure(latest.folderRenameApplied, 'workspace.persistence.renameFolder', 'Renamed native folders rehydrate with the destination path'),
     proofFailure(latest.folderDeleteApplied, 'workspace.persistence.deleteFolder', 'Deleted native folders are absent from the mobile snapshot'),
@@ -81,6 +84,7 @@ export function assertNativeWorkspacePersistenceProofs(
     proofFailure(latest.renamedTypeAssignedNoteHydrated, 'workspace.persistence.renameType.assignedNote', 'Assigned notes rehydrate with renamed Type frontmatter and retargeted links'),
     proofFailure(latest.renamedTypeSchemaRefsHydrated, 'workspace.persistence.renameType.schemaRefs', 'Type schema relationship refs rehydrate with renamed Type wikilinks'),
     proofFailure(latest.updatedTypeDefinitionHydrated, 'workspace.persistence.updateType', 'Updated Type section metadata, schema, and templates rehydrate from reducer-generated native writes'),
+    proofFailure(latest.reorderedTypeSectionHydrated, 'workspace.persistence.moveTypeSection', 'Moved Type section order rehydrates from reducer-generated native Type order writes'),
     proofFailure(latest.vaultConfigHydrated, 'workspace.persistence.vaultConfig', 'Primary note-list config rehydrates from native vault-scoped config storage'),
   ].filter((failure): failure is NativeWorkspacePersistenceAssertionFailure => failure !== null)
 }
@@ -123,6 +127,8 @@ function parsedWorkspacePersistenceProof(value: unknown): NativeWorkspacePersist
     relationshipSourceRefHydrated: value.relationshipSourceRefHydrated,
     relationshipMovedRefHydrated: value.relationshipMovedRefHydrated,
     relationshipTargetHydrated: value.relationshipTargetHydrated,
+    reorderedTypeSectionHydrated: value.reorderedTypeSectionHydrated,
+    reorderedViewHydrated: value.reorderedViewHydrated,
     renamedTypeAssignedNoteHydrated: value.renamedTypeAssignedNoteHydrated,
     renamedTypeDefinitionHydrated: value.renamedTypeDefinitionHydrated,
     renamedTypeSchemaRefsHydrated: value.renamedTypeSchemaRefsHydrated,
@@ -155,6 +161,8 @@ const workspacePersistenceProofKeys = [
   'relationshipSourceRefHydrated',
   'relationshipMovedRefHydrated',
   'relationshipTargetHydrated',
+  'reorderedTypeSectionHydrated',
+  'reorderedViewHydrated',
   'renamedTypeAssignedNoteHydrated',
   'renamedTypeDefinitionHydrated',
   'renamedTypeSchemaRefsHydrated',

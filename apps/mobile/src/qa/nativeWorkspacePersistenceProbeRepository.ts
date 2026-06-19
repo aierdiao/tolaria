@@ -24,6 +24,10 @@ const oldTypeName = 'Retired Proof'
 const oldViewName = 'Old Native Proof'
 const relationshipSourcePath = 'Relationships/Source.md'
 const relationshipTargetPath = 'Relationships/native-related-target.md'
+const reorderedTypeAlphaName = 'Order Alpha'
+const reorderedTypeBetaName = 'Order Beta'
+const reorderedViewAlphaName = 'Order Alpha View'
+const reorderedViewBetaName = 'Order Beta View'
 const renamedTypeAssignedNotePath = 'Writing/Type Rename Assigned.md'
 const renamedTypeName = 'Rename Target'
 const renamedTypePath = 'rename-target.md'
@@ -142,6 +146,7 @@ function workspacePersistenceProbeWrites(seedSnapshot: MobileWorkspaceSnapshot) 
     ...workspacePersistenceViewWrites(seedSnapshot),
     workspacePersistenceConfigWrite(),
     ...workspacePersistenceFolderWrites(),
+    ...workspacePersistenceTypeMoveWrites(seedSnapshot),
     ...workspacePersistenceTypeWrites(),
     ...workspacePersistenceTypeUpdateWrites(seedSnapshot),
     ...workspacePersistenceTypeRenameWrites(seedSnapshot),
@@ -213,6 +218,7 @@ function workspacePersistenceEditWrites(
 
 function workspacePersistenceViewWrites(seedSnapshot: MobileWorkspaceSnapshot) {
   return [
+    ...workspacePersistenceViewMoveWrites(seedSnapshot),
     ...workspacePersistenceViewUpdateWrites(seedSnapshot),
     {
       content: mobilePersistenceViewContent(),
@@ -224,6 +230,17 @@ function workspacePersistenceViewWrites(seedSnapshot: MobileWorkspaceSnapshot) {
       path: 'views/old-native-proof.yml',
     },
   ]
+}
+
+function workspacePersistenceViewMoveWrites(seedSnapshot: MobileWorkspaceSnapshot) {
+  const view = seedSnapshot.views?.find((candidate) => candidate.definition.name === reorderedViewBetaName)
+  if (!view) return []
+
+  return applyMobileWorkspaceEditWithWrites(seedSnapshot, {
+    direction: 'up',
+    type: 'moveView',
+    viewId: view.id,
+  }).writes
 }
 
 function workspacePersistenceViewUpdateWrites(seedSnapshot: MobileWorkspaceSnapshot) {
@@ -299,6 +316,14 @@ function workspacePersistenceTypeUpdateWrites(seedSnapshot: MobileWorkspaceSnaps
   }).writes
 }
 
+function workspacePersistenceTypeMoveWrites(seedSnapshot: MobileWorkspaceSnapshot) {
+  return applyMobileWorkspaceEditWithWrites(seedSnapshot, {
+    direction: 'up',
+    type: 'moveTypeSection',
+    typeName: reorderedTypeBetaName,
+  }).writes
+}
+
 function updatedTypeDefinitionPatch(): MobileTypeDefinitionPatch {
   return {
     icon: 'sparkles',
@@ -331,6 +356,14 @@ function workspacePersistenceTypeRenameWrites(seedSnapshot: MobileWorkspaceSnaps
 
 function seedWorkspacePersistenceProbeWrites() {
   return [
+    ...seedWorkspaceNoteWrites(),
+    ...seedWorkspaceViewWrites(),
+    ...seedWorkspaceTypeWrites(),
+  ]
+}
+
+function seedWorkspaceNoteWrites() {
+  return [
     {
       content: seedNoteInitialContent(),
       kind: 'createNote' as const,
@@ -351,6 +384,21 @@ function seedWorkspacePersistenceProbeWrites() {
       path: 'Folders/Queue/Keep.md',
     },
     {
+      content: relationshipSourceContent(),
+      kind: 'createNote' as const,
+      path: relationshipSourcePath,
+    },
+    {
+      content: renamedTypeAssignedNoteContent(),
+      kind: 'createNote' as const,
+      path: renamedTypeAssignedNotePath,
+    },
+  ]
+}
+
+function seedWorkspaceViewWrites() {
+  return [
+    {
       content: oldNativeProofViewContent(),
       kind: 'saveView' as const,
       path: 'views/old-native-proof.yml',
@@ -360,6 +408,21 @@ function seedWorkspacePersistenceProbeWrites() {
       kind: 'saveView' as const,
       path: 'views/update-native-proof.yml',
     },
+    {
+      content: orderedNativeProofViewContent(reorderedViewAlphaName, 30),
+      kind: 'saveView' as const,
+      path: 'views/order-alpha.yml',
+    },
+    {
+      content: orderedNativeProofViewContent(reorderedViewBetaName, 31),
+      kind: 'saveView' as const,
+      path: 'views/order-beta.yml',
+    },
+  ]
+}
+
+function seedWorkspaceTypeWrites() {
+  return [
     {
       content: typeDefinitionContent(oldTypeName, 'gray'),
       kind: 'createNote' as const,
@@ -376,19 +439,19 @@ function seedWorkspacePersistenceProbeWrites() {
       path: 'section-proof.md',
     },
     {
-      content: relationshipSourceContent(),
+      content: typeDefinitionContent(reorderedTypeAlphaName, 'green', 30),
       kind: 'createNote' as const,
-      path: relationshipSourcePath,
+      path: 'type-order-alpha.md',
+    },
+    {
+      content: typeDefinitionContent(reorderedTypeBetaName, 'purple', 31),
+      kind: 'createNote' as const,
+      path: 'type-order-beta.md',
     },
     {
       content: renamedTypeSchemaCarrierContent(),
       kind: 'createNote' as const,
       path: 'schema-carrier.md',
-    },
-    {
-      content: renamedTypeAssignedNoteContent(),
-      kind: 'createNote' as const,
-      path: renamedTypeAssignedNotePath,
     },
   ]
 }
@@ -416,6 +479,8 @@ function workspacePersistenceProof(
     relationshipMovedRefHydrated: relationshipMovedRefHydrated(content.relationshipSourceContent),
     relationshipSourceRefHydrated: relationshipSourceRefHydrated(content.relationshipSourceContent),
     relationshipTargetHydrated: snapshotContainsNotePath(snapshot, relationshipTargetPath),
+    reorderedTypeSectionHydrated: reorderedTypeSectionHydrated(snapshot),
+    reorderedViewHydrated: reorderedViewHydrated(snapshot),
     renamedTypeAssignedNoteHydrated: renamedTypeAssignedNoteHydrated(snapshot, content.renamedAssignedContent),
     renamedTypeDefinitionHydrated: renamedTypeDefinitionHydrated(snapshot),
     renamedTypeSchemaRefsHydrated: renamedTypeSchemaRefsHydrated(snapshot),
@@ -444,8 +509,20 @@ function viewExists(snapshot: MobileWorkspaceSnapshot, name: string) {
   return snapshot.views?.some((view) => view.definition.name === name) === true
 }
 
+function reorderedViewHydrated(snapshot: MobileWorkspaceSnapshot) {
+  const alpha = viewByName(snapshot, reorderedViewAlphaName)
+  const beta = viewByName(snapshot, reorderedViewBetaName)
+  return typeof alpha?.definition.order === 'number'
+    && typeof beta?.definition.order === 'number'
+    && beta.definition.order < alpha.definition.order
+}
+
+function viewByName(snapshot: MobileWorkspaceSnapshot, name: string) {
+  return snapshot.views?.find((view) => view.definition.name === name)
+}
+
 function updatedViewHydrated(snapshot: MobileWorkspaceSnapshot) {
-  const view = snapshot.views?.find((candidate) => candidate.definition.name === updatedViewName)
+  const view = viewByName(snapshot, updatedViewName)
   return view?.filename === 'update-native-proof.yml'
     && view.definition.color === 'purple'
     && view.definition.icon === 'folder'
@@ -505,6 +582,19 @@ function updatedTypeRawContentHydrated(rawContent: string | null) {
     'template: |',
     'visible: false',
   ])
+}
+
+function reorderedTypeSectionHydrated(snapshot: MobileWorkspaceSnapshot) {
+  const alpha = snapshot.typeDefinitions?.[reorderedTypeAlphaName]
+  const beta = snapshot.typeDefinitions?.[reorderedTypeBetaName]
+  return typeOrderHydrated(alpha)
+    && typeOrderHydrated(beta)
+    && beta.order < alpha.order
+}
+
+function typeOrderHydrated(definition: MobileTypeDefinition | undefined): definition is MobileTypeDefinition & { order: number } {
+  return typeof definition?.order === 'number'
+    && textContainsAll(definition.rawContent ?? null, ['_order:'])
 }
 
 function vaultConfigHydrated(snapshot: MobileWorkspaceSnapshot) {
@@ -671,14 +761,28 @@ function renamedTypeSchemaCarrierContent() {
   ].join('\n')
 }
 
-function typeDefinitionContent(name: string, color: string) {
+function typeDefinitionContent(name: string, color: string, order?: number) {
   return [
     '---',
     'type: Type',
     `color: ${color}`,
     'icon: file-text',
+    ...(order === undefined ? [] : [`_order: ${order}`]),
     '---',
     `# ${name}`,
+    '',
+  ].join('\n')
+}
+
+function orderedNativeProofViewContent(name: string, order: number) {
+  return [
+    `name: ${name}`,
+    'icon: file-text',
+    'color: gray',
+    'sort: null',
+    `order: ${order}`,
+    'filters:',
+    '  all: []',
     '',
   ].join('\n')
 }

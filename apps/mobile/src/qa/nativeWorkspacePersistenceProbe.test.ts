@@ -78,6 +78,16 @@ describe('native workspace persistence probe', () => {
     expectProofFailures({ updatedViewHydrated: false }, ['workspace.persistence.updateView'])
   })
 
+  it('reports incomplete section ordering persistence proofs', () => {
+    expectProofFailures({
+      reorderedTypeSectionHydrated: false,
+      reorderedViewHydrated: false,
+    }, [
+      'workspace.persistence.moveView',
+      'workspace.persistence.moveTypeSection',
+    ])
+  })
+
   it('ignores malformed and incomplete proof lines', () => {
     const logText = [
       'TOLARIA_MOBILE_WORKSPACE_PERSISTENCE_PROBE not-json',
@@ -114,6 +124,8 @@ function passingWorkspaceProof(): NativeWorkspacePersistenceProof {
     relationshipMovedRefHydrated: true,
     relationshipSourceRefHydrated: true,
     relationshipTargetHydrated: true,
+    reorderedTypeSectionHydrated: true,
+    reorderedViewHydrated: true,
     renamedTypeAssignedNoteHydrated: true,
     renamedTypeDefinitionHydrated: true,
     renamedTypeSchemaRefsHydrated: true,
