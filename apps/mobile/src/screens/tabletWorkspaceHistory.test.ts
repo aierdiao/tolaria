@@ -400,10 +400,18 @@ describe('tablet workspace editing history', () => {
     expect(undoneSource.rawContent).toContain('title: Workflow Orchestration Essay')
     expect(undoneRef.rawContent).toContain('[[Workflow Orchestration Essay]]')
     expect(undoneRef.rawContent).toContain('[[Tolaria/Mobile UI/Workflow Orchestration Essay|Workflow]]')
+    expect(relationshipRefs(undoneRef)).toMatchObject({
+      belongs_to: [{ ref: '[[Tolaria/Mobile UI/Workflow Orchestration Essay|Workflow]]', title: 'Workflow Orchestration Essay' }],
+      related_to: [{ ref: '[[Workflow Orchestration Essay]]', title: 'Workflow Orchestration Essay' }],
+    })
     expect(redoneSource.path).toBe('Tolaria/Mobile UI/renamed-workflow-essay.md')
     expect(redoneSource.rawContent).toContain('title: Renamed Workflow Essay')
     expect(redoneRef.rawContent).toContain('[[Tolaria/Mobile UI/renamed-workflow-essay]]')
     expect(redoneRef.rawContent).toContain('[[Tolaria/Mobile UI/renamed-workflow-essay|Workflow]]')
+    expect(relationshipRefs(redoneRef)).toMatchObject({
+      belongs_to: [{ ref: '[[Tolaria/Mobile UI/renamed-workflow-essay|Workflow]]', title: 'Renamed Workflow Essay' }],
+      related_to: [{ ref: '[[Tolaria/Mobile UI/renamed-workflow-essay]]', title: 'Renamed Workflow Essay' }],
+    })
   })
 
   it('undoes and redoes folder subtree renames through folder edits', () => {
@@ -749,7 +757,14 @@ function titleRenameHistorySnapshot(): MobileWorkspaceSnapshot {
 }
 
 function pathHistoryRefContent(): string {
-  return '# Ref\n\n[[Workflow Orchestration Essay]] and [[Tolaria/Mobile UI/Workflow Orchestration Essay|Workflow]]\n'
+  return '---\nrelated_to:\n  - [[Workflow Orchestration Essay]]\nbelongs_to:\n  - [[Tolaria/Mobile UI/Workflow Orchestration Essay|Workflow]]\n---\n# Ref\n\n[[Workflow Orchestration Essay]] and [[Tolaria/Mobile UI/Workflow Orchestration Essay|Workflow]]\n'
+}
+
+function relationshipRefs(note: MobileNote) {
+  return Object.fromEntries(note.relationships.map((relationship) => [
+    relationship.key,
+    relationship.values.map((value) => ({ ref: value.ref, title: value.title })),
+  ]))
 }
 
 function snapshotWithEditableNotes(notesById: Array<[string, string]>): MobileWorkspaceSnapshot {
