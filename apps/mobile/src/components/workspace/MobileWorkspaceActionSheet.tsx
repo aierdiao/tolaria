@@ -160,6 +160,7 @@ type MobileWorkspaceActionSheetProps = {
   onSaveRelationship: () => void
   onSaveTypeDefinition: () => void
   onRenameFolder: () => void
+  onRevealFile: () => void
   onRenameNoteFile: () => void
   onRenameNoteFileToTitle: () => void
   onRedoWorkspaceEdit: () => void
@@ -1038,6 +1039,7 @@ function MoreActionsContent(props: MobileWorkspaceActionSheetProps) {
           onOpenReplaceInNote={props.onOpenReplaceInNote}
           onOpenRenameNoteFile={props.onOpenRenameNoteFile}
           onOpenSetNoteIcon={props.onOpenSetNoteIcon}
+          onRevealFile={props.onRevealFile}
           onRenameNoteFileToTitle={props.onRenameNoteFileToTitle}
           onRedoWorkspaceEdit={props.onRedoWorkspaceEdit}
           onRemoveNoteIcon={props.onRemoveNoteIcon}

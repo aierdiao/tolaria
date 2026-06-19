@@ -2,6 +2,7 @@ import type { MobileNote, MobileWorkspaceSnapshot } from '../workspace/mobileWor
 import { writeMobileClipboardText } from '../workspace/mobileClipboard'
 import { buildMobileDeepLinkForNote } from '../workspace/mobileDeepLinks'
 import { buildMobileFilePathForNote } from '../workspace/mobileNoteFilePath'
+import { revealMobileNoteFile } from '../workspace/mobileNoteFileReveal'
 import { exportMobileNoteAsPdf } from '../workspace/mobilePdfExport'
 import { toggleMobileNoteWidth } from '../workspace/mobileNoteWidth'
 import type { MobileWorkspaceEdit } from '../workspace/mobileWorkspaceEditing'
@@ -43,6 +44,14 @@ export function editorWorkspaceActions({
     onExportNoteAsPdf: () => {
       void exportMobileNoteAsPdf(selectedNote).catch((error) => {
         console.warn('[mobile-pdf-export] Failed to export PDF:', error)
+      })
+    },
+    onRevealFile: () => {
+      void revealMobileNoteFile({
+        note: selectedNote,
+        vaultRootUri: repositoryRequest?.vaultRootUri,
+      }).catch((error) => {
+        console.warn('[mobile-file-reveal] Failed to reveal file:', error)
       })
     },
     onSetArchived: (archived: boolean) => {

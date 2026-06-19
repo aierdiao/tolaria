@@ -167,6 +167,7 @@ export type TabletWorkspaceChromeProps = {
   onPrimaryAllNotesShowUnsupportedChange: (value: boolean) => void
   onRemoveRelationship: (noteId: NoteId, key: string, ref: string) => void
   onRenameFolder: () => void
+  onRevealFile: () => void
   onSaveTypeDefinition: () => void
   onRedoWorkspaceEdit: () => void
   onSavePrimaryNoteListProperties: () => void

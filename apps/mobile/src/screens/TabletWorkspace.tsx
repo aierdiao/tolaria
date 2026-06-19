@@ -471,6 +471,7 @@ function actionSheetHandlers(props: ActionSheetHostProps) {
     onPropertyNameChange: props.onPropertyNameChange,
     onPropertyValueChange: props.onPropertyValueChange,
     onPropertyValueKindChange: props.onPropertyValueKindChange,
+    onRevealFile: props.onRevealFile,
     onRelationshipNameChange: props.onRelationshipNameChange,
     onRelationshipNoteSelect: props.onRelationshipNoteSelect,
     onRelationshipNoteTitleChange: props.onRelationshipNoteTitleChange,

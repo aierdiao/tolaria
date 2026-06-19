@@ -4,6 +4,7 @@ import {
   Archive,
   ArrowClockwise,
   ArrowCounterClockwise,
+  ArrowSquareOut,
   ArrowsInLineHorizontal,
   ArrowsOutLineHorizontal,
   CheckCircle,
@@ -38,6 +39,7 @@ export function NoteMoreActionRows(props: {
   onOpenReplaceInNote: () => void
   onOpenRenameNoteFile: () => void
   onOpenSetNoteIcon: () => void
+  onRevealFile: () => void
   onRenameNoteFileToTitle: () => void
   onRedoWorkspaceEdit: () => void
   onRemoveNoteIcon: () => void
@@ -239,6 +241,7 @@ function NoteFileActionRows({
   onOpenChangeNoteType,
   onOpenMoveNoteToFolder,
   onOpenRenameNoteFile,
+  onRevealFile,
   onRenameNoteFileToTitle,
 }: {
   onClose: () => void
@@ -246,6 +249,7 @@ function NoteFileActionRows({
   onOpenChangeNoteType: () => void
   onOpenMoveNoteToFolder: () => void
   onOpenRenameNoteFile: () => void
+  onRevealFile: () => void
   onRenameNoteFileToTitle: () => void
 }) {
   return (
@@ -283,6 +287,15 @@ function NoteFileActionRows({
         testID="workspace-action-copy-file-path"
         onPress={() => {
           onCopyFilePath()
+          onClose()
+        }}
+      />
+      <ActionRow
+        icon={<ArrowSquareOut color={mobileColors.textMuted} size={desktopToolbarActionParity.iconSize} />}
+        label={mobileText('editor.toolbar.revealFile')}
+        testID="workspace-action-reveal-file"
+        onPress={() => {
+          onRevealFile()
           onClose()
         }}
       />
