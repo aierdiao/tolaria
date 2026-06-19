@@ -465,5 +465,13 @@ function indentedBlockScalarLine(line: string): string {
 }
 
 function shouldQuoteFrontmatterScalar(value: string): boolean {
-  return value === '' || /[:#\n\r]/u.test(value) || /^[\s[{]/u.test(value) || /\s$/u.test(value)
+  return value === ''
+    || /[:#\n\r]/u.test(value)
+    || /^[\s[{]/u.test(value)
+    || /\s$/u.test(value)
+    || isAmbiguousPlainScalar(value)
+}
+
+function isAmbiguousPlainScalar(value: string): boolean {
+  return /^(?:true|false|null)$/u.test(value) || isNumericScalar(value)
 }

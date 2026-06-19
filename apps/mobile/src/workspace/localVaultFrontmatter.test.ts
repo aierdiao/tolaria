@@ -156,6 +156,13 @@ Body.
     expect(serializeLocalVaultFrontmatterScalar('## Objective\n\n## Timeline\n')).toBe('|\n  ## Objective\n\n  ## Timeline')
   })
 
+  it.each(['true', 'false', 'null', '42', '3.5'])(
+    'quotes ambiguous desktop string scalar %s instead of changing its type',
+    (value) => {
+      expect(serializeLocalVaultFrontmatterScalar(value)).toBe(JSON.stringify(value))
+    },
+  )
+
   it('reads desktop numeric boolean frontmatter flags', () => {
     const document = parseLocalVaultDocument(`---
 _archived: 1
