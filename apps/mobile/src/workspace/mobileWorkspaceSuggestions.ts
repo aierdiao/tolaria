@@ -1,4 +1,5 @@
 import type { MobileNote, MobileRelationship, MobileTypeDefinitions } from './mobileWorkspaceModel'
+import { mobileCommaListTextParts } from './mobileCommaListText'
 import { mobileNoteIdentityMatchesQuery, normalizedMobileSearchQuery } from './mobileNoteSearch'
 import { mobilePropertyValueKindForKey, type MobilePropertyValueKind } from './mobilePropertyValues'
 import { mobileNoteForWikilinkTarget, parseMobileWikilink } from './mobileWikilinks'
@@ -461,7 +462,7 @@ function propertyListQuery(
 ): { query: SuggestionQuery; selected: Set<NormalizedSuggestionKey> } {
   if (kind !== 'list') return { query, selected: new Set() }
 
-  const parts = query.split(',').map((part) => part.trim())
+  const parts = mobileCommaListTextParts(query)
   const activeQuery = parts.at(-1) ?? ''
   return {
     query: activeQuery,

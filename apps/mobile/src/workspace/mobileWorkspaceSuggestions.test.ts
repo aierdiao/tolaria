@@ -115,6 +115,16 @@ describe('mobile workspace suggestions', () => {
     expect(mobilePropertyValueSuggestions(withAreas.notes, 'Areas', 'Design, res', 'list')).toEqual(['Research'])
     expect(mobilePropertyValueSuggestions(withAreas.notes, 'Areas', 'Design, de', 'list')).toEqual([])
     expect(mobilePropertyValueSuggestions(withAreas.notes, 'Areas', 'Design, res', 'string')).toEqual([])
+
+    const withCommaArea = applyMobileWorkspaceEdit(workspaceScenarioForId('default'), {
+      key: 'Areas',
+      noteId: 'workflow-orchestration',
+      type: 'updateProperty',
+      value: ['AI, UX', 'Research'],
+    })
+
+    expect(mobilePropertyValueSuggestions(withCommaArea.notes, 'Areas', '"AI, UX", res', 'list')).toEqual(['Research'])
+    expect(mobilePropertyValueSuggestions(withCommaArea.notes, 'Areas', '"AI, UX", ai', 'list')).toEqual([])
   })
 
   it('suggests canonical relationship keys plus custom vault relationship keys', () => {

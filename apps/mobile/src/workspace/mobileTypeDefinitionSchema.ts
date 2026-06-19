@@ -3,6 +3,7 @@ import type {
   MobilePropertyValue,
   MobileTypeDefinition,
 } from './mobileWorkspaceModel'
+import { parseMobileCommaListText } from './mobileCommaListText'
 import {
   mobileRelationshipTargetSuggestions,
   normalizeRelationshipKey,
@@ -287,7 +288,7 @@ function placeholderValueText(value: MobilePropertyValue | undefined): FormValue
 function parsePropertyValueText(value: FormValueText): MobilePropertyValue {
   const trimmed = value.trim()
   if (!trimmed) return ''
-  if (trimmed.includes(',')) return trimmed.split(',').map((item) => item.trim()).filter(Boolean)
+  if (trimmed.includes(',')) return parseMobileCommaListText(trimmed)
   if (isBooleanText(trimmed)) return ['true', 'yes'].includes(trimmed.toLowerCase())
   if (/^-?\d+(?:\.\d+)?$/u.test(trimmed)) return Number(trimmed)
   return trimmed

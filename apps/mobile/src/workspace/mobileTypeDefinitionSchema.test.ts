@@ -62,6 +62,9 @@ describe('mobile type definition schema helpers', () => {
     expect(properties).toEqual([{ key: 'Stage', value: ['Design', 'Build'] }])
     expect(relationships).toEqual([{ key: 'belongs_to', refs: ['[[Tolaria/Mobile UI/How I Run an Open Source Project]]'] }])
     expect(mobileTypeSchemaRelationshipValueText(relationships[0], notes)).toBe('How I Run an Open Source Project')
+    expect(addTypeSchemaProperty([], 'Audience', '"AI, UX", Design')).toEqual([
+      { key: 'Audience', value: ['AI, UX', 'Design'] },
+    ])
   })
 
   it('searches and saves type relationship targets through desktop note identities', () => {
