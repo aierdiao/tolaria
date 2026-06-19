@@ -1,4 +1,7 @@
+export type MobileMarkdownTableAlignment = 'center' | 'default' | 'left' | 'right'
+
 export type MobileMarkdownTable = {
+  alignments: MobileMarkdownTableAlignment[]
   endLine: number
   headers: string[]
   key: string
@@ -48,6 +51,7 @@ export function updateMobileMarkdownTable({
   if (!table) return { markdown, updated: false }
 
   const nextSource = mobileMarkdownTableSource({
+    alignments: table.alignments,
     headers: update.headers,
     rows: update.rows,
   })
@@ -62,18 +66,21 @@ export function updateMobileMarkdownTable({
 }
 
 export function mobileMarkdownTableSource({
+  alignments = [],
   headers,
   rows,
 }: {
+  alignments?: MobileMarkdownTableAlignment[]
   headers: string[]
   rows: string[][]
 }): string {
   const columnCount = normalizedColumnCount({ headers, rows })
   const normalizedHeaders = normalizedCells({ cells: headers, columnCount })
+  const normalizedAlignments = normalizedTableAlignments({ alignments, columnCount })
   const normalizedRows = rows.map((cells) => normalizedCells({ cells, columnCount }))
   return [
     tableRowSource({ cells: normalizedHeaders }),
-    tableRowSource({ cells: normalizedHeaders.map(() => '---') }),
+    tableRowSource({ cells: normalizedAlignments.map(tableDividerSource) }),
     ...normalizedRows.map((cells) => tableRowSource({ cells })),
   ].join('\n')
 }
@@ -103,6 +110,7 @@ function readMarkdownTableAt({
   return {
     nextLine,
     table: {
+      alignments: divider.map(tableAlignment),
       endLine: nextLine - 1,
       headers,
       key: `line:${lineNumber}`,
@@ -138,6 +146,16 @@ function normalizedCells({ cells, columnCount }: { cells: string[]; columnCount:
   return Array.from({ length: columnCount }, (_value, index) => cells[index]?.trim() ?? '')
 }
 
+function normalizedTableAlignments({
+  alignments,
+  columnCount,
+}: {
+  alignments: MobileMarkdownTableAlignment[]
+  columnCount: number
+}): MobileMarkdownTableAlignment[] {
+  return Array.from({ length: columnCount }, (_value, index) => alignments[index] ?? 'default')
+}
+
 function tableCells({ line }: { line: string }): string[] {
   const row = trimmedOuterPipes({ line })
   if (!row.includes('|')) return []
@@ -164,8 +182,25 @@ function tableRowSource({ cells }: { cells: string[] }): string {
   return `| ${cells.map(tableCellSource).join(' | ')} |`
 }
 
+function tableDividerSource(alignment: MobileMarkdownTableAlignment): string {
+  if (alignment === 'center') return ':---:'
+  if (alignment === 'left') return ':---'
+  if (alignment === 'right') return '---:'
+  return '---'
+}
+
 function tableCellSource(cell: string): string {
   return cell.replace(/\r?\n/gu, ' ').replaceAll('|', '\\|').trim()
+}
+
+function tableAlignment(cell: string): MobileMarkdownTableAlignment {
+  const trimmed = cell.trim()
+  const hasLeadingColon = trimmed.startsWith(':')
+  const hasTrailingColon = trimmed.endsWith(':')
+  if (hasLeadingColon && hasTrailingColon) return 'center'
+  if (hasLeadingColon) return 'left'
+  if (hasTrailingColon) return 'right'
+  return 'default'
 }
 
 function trimmedOuterPipes({ line }: { line: string }): string {

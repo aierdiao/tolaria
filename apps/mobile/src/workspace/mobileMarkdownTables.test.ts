@@ -19,6 +19,7 @@ describe('mobile markdown tables', () => {
     ].join('\n') })
 
     expect(tables).toEqual([{
+      alignments: ['default', 'default'],
       endLine: 5,
       headers: ['Surface', 'Target'],
       key: 'line:2',
@@ -63,6 +64,53 @@ describe('mobile markdown tables', () => {
       '| Inspector | Properties | Properties |',
       '',
       'Tail',
+    ].join('\n'))
+  })
+
+  it('preserves desktop markdown table column alignment when editing cells', () => {
+    const content = [
+      'Intro',
+      '',
+      '| Surface | Desktop | Mobile |',
+      '| :--- | :---: | ---: |',
+      '| Editor | BlockNote | TenTap |',
+      '',
+      'Tail',
+    ].join('\n')
+
+    const [table] = readMobileMarkdownTables({ markdown: content })
+    expect(table?.alignments).toEqual(['left', 'center', 'right'])
+
+    const result = updateMobileMarkdownTable({
+      markdown: content,
+      update: {
+        headers: ['Surface', 'Desktop', 'Mobile'],
+        key: 'line:2',
+        rows: [['Editor', 'BlockNote', 'Native WYSIWYG']],
+      },
+    })
+
+    expect(result.updated).toBe(true)
+    expect(result.markdown).toBe([
+      'Intro',
+      '',
+      '| Surface | Desktop | Mobile |',
+      '| :--- | :---: | ---: |',
+      '| Editor | BlockNote | Native WYSIWYG |',
+      '',
+      'Tail',
+    ].join('\n'))
+  })
+
+  it('serializes new columns with default alignment while preserving existing aligned columns', () => {
+    expect(mobileMarkdownTableSource({
+      alignments: ['left', 'center'],
+      headers: ['Surface', 'Desktop', 'Mobile'],
+      rows: [['Editor', 'BlockNote', 'TenTap']],
+    })).toBe([
+      '| Surface | Desktop | Mobile |',
+      '| :--- | :---: | --- |',
+      '| Editor | BlockNote | TenTap |',
     ].join('\n'))
   })
 
