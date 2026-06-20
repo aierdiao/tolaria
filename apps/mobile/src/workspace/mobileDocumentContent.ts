@@ -1,6 +1,7 @@
 import { parseLocalVaultDocument } from './localVaultFrontmatter'
 import {
   isMobileDisplayMathStart,
+  mobileDisplayMathLatex,
   normalizeMobileDisplayMathMarkdown,
   readMobileDisplayMathBlock,
 } from './mobileDisplayMath'
@@ -207,9 +208,20 @@ function readHtmlBlock(lines: MarkdownLines, startIndex: number): ReadHtmlBlockR
 
 function readDisplayMathBlock(lines: MarkdownLines, startIndex: number): ReadHtmlBlockResult | null {
   const displayMath = readMobileDisplayMathBlock(lines, startIndex)
+  const latex = displayMath ? mobileDisplayMathLatex(displayMath.lines) : null
   return displayMath
-    ? { html: `<p>${displayMath.lines.map(escapeHtml).join('<br>')}</p>`, nextIndex: displayMath.nextIndex }
+    ? { html: displayMathBlockHtml(latex ?? displayMath.lines.join('\n')), nextIndex: displayMath.nextIndex }
     : null
+}
+
+function displayMathBlockHtml(latex: PlainText): HtmlSnippet {
+  const escapedLatex = escapeAttribute(latex)
+  const source = `$$\n${escapeHtml(latex)}\n$$`
+  return [
+    `<div class="math math--display" data-latex="${escapedLatex}" data-type="mathBlock" role="img" title="${source}">`,
+    source,
+    '</div>',
+  ].join('')
 }
 
 function readIndentedDisplayMathSourceBlock(lines: MarkdownLines, startIndex: number): ReadHtmlBlockResult | null {
@@ -698,6 +710,7 @@ const blockNodeSerializers: Record<string, (node: TiptapJsonNode, options: Tipta
   codeBlock: codeBlockMarkdown,
   horizontalRule: () => '---',
   image: imageMarkdown,
+  mathBlock: displayMathMarkdown,
   table: tableMarkdown,
 }
 
@@ -913,6 +926,13 @@ function tableMarkdown(node: TiptapJsonNode, options: TiptapMarkdownOptions): Ma
 function codeBlockMarkdown(node: TiptapJsonNode): MarkdownBody {
   const language = typeof node.attrs?.language === 'string' ? node.attrs.language : ''
   return `\`\`\`${language}\n${plainText(node.content ?? [])}\n\`\`\``
+}
+
+function displayMathMarkdown(node: TiptapJsonNode): MarkdownBody {
+  const latex = typeof node.attrs?.latex === 'string'
+    ? node.attrs.latex
+    : typeof node.props?.latex === 'string' ? node.props.latex : ''
+  return `$$\n${latex.trimEnd()}\n$$`
 }
 
 function imageMarkdown(node: TiptapJsonNode, options: TiptapMarkdownOptions): MarkdownBody {

@@ -13,6 +13,7 @@ export type NativeWysiwygMarkdownBlockProof = {
   contentLength: number
   dividerSaved: boolean
   mathBlockSaved: boolean
+  mathBlockRendered: boolean
   mermaidSaved: boolean
   noteId: NoteId
   plainTextSaved: boolean
@@ -55,6 +56,7 @@ const proofFieldTypes = {
   contentLength: 'number',
   dividerSaved: 'boolean',
   mathBlockSaved: 'boolean',
+  mathBlockRendered: 'boolean',
   mermaidSaved: 'boolean',
   noteId: 'string',
   plainTextSaved: 'boolean',
@@ -81,9 +83,11 @@ export function nativeWysiwygMarkdownBlockProbePlainTextPayload(): NativeWysiwyg
 
 export function nativeWysiwygMarkdownBlockProof({
   content,
+  mathBlockRendered = false,
   noteId,
 }: {
   content: MarkdownContent
+  mathBlockRendered?: boolean
   noteId: NoteId
 }): NativeWysiwygMarkdownBlockProof {
   const normalizedContent = normalizedMarkdown(content)
@@ -93,6 +97,7 @@ export function nativeWysiwygMarkdownBlockProof({
     contentLength: content.length,
     dividerSaved: markdownBlocks(normalizedContent).includes(expectedDivider),
     mathBlockSaved: normalizedContent.includes(expectedMathBlock),
+    mathBlockRendered,
     mermaidSaved: normalizedContent.includes(expectedMermaid),
     noteId,
     plainTextSaved: normalizedContent.includes(expectedPlainText),
@@ -149,6 +154,11 @@ export function assertNativeWysiwygMarkdownBlockProofs(
       'Native WYSIWYG math insertion saves as desktop display-math markdown',
     ),
     proofFailure(
+      latest.mathBlockRendered,
+      'editor.wysiwyg.markdownBlocks.mathBlockRendered',
+      'Native WYSIWYG math insertion renders as MathML in the TenTap WebView',
+    ),
+    proofFailure(
       latest.mermaidSaved,
       'editor.wysiwyg.markdownBlocks.mermaid',
       'Native WYSIWYG Mermaid insertion saves as desktop fenced-diagram markdown',
@@ -197,6 +207,7 @@ function parsedProof(value: unknown): NativeWysiwygMarkdownBlockProof | null {
     contentLength: value.contentLength,
     dividerSaved: value.dividerSaved,
     mathBlockSaved: value.mathBlockSaved,
+    mathBlockRendered: value.mathBlockRendered,
     mermaidSaved: value.mermaidSaved,
     noteId: value.noteId,
     plainTextSaved: value.plainTextSaved,

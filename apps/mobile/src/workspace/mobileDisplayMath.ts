@@ -39,6 +39,15 @@ export function isMobileDisplayMathStart(line: MarkdownLine): boolean {
   return trimmed === '$$' || isSingleLineMobileDisplayMath(trimmed)
 }
 
+export function mobileDisplayMathLatex(lines: MarkdownLines): string | null {
+  const firstLine = lines[0]?.trim() ?? ''
+  const singleLine = firstLine.match(/^\$\$(.+)\$\$$/)
+  if (lines.length === 1 && singleLine) return singleLine[1]
+  if (firstLine !== '$$' || lines.at(-1)?.trim() !== '$$') return null
+
+  return lines.slice(1, -1).join('\n').trimEnd()
+}
+
 export function normalizeMobileDisplayMathMarkdown(markdown: string): string {
   const lines = markdown.split('\n')
   if (!hasMobileDisplayMathFence(lines)) return markdown

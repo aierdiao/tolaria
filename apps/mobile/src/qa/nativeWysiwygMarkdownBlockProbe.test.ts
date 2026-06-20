@@ -54,11 +54,13 @@ describe('native WYSIWYG markdown block probe', () => {
         '{}',
         '```',
       ].join('\n'),
+      mathBlockRendered: true,
       noteId: 'note.md',
     })).toMatchObject({
       codeBlockSaved: true,
       dividerSaved: true,
       mathBlockSaved: true,
+      mathBlockRendered: true,
       mermaidSaved: true,
       noteId: 'note.md',
       plainTextSaved: true,
@@ -98,11 +100,13 @@ describe('native WYSIWYG markdown block probe', () => {
         '{}',
         '```',
       ].join('\n'),
+      mathBlockRendered: true,
       noteId: 'note.md',
     })).toMatchObject({
       codeBlockSaved: true,
       dividerSaved: false,
       mathBlockSaved: true,
+      mathBlockRendered: true,
       mermaidSaved: true,
       plainTextSaved: true,
       tableSaved: true,
@@ -141,6 +145,7 @@ describe('native WYSIWYG markdown block probe', () => {
         '{}',
         '```',
       ].join('\n'),
+      mathBlockRendered: true,
       noteId: 'note.md',
     })
 
@@ -170,6 +175,10 @@ describe('native WYSIWYG markdown block probe', () => {
       {
         id: 'editor.wysiwyg.markdownBlocks.mathBlock',
         message: 'Native WYSIWYG math insertion saves as desktop display-math markdown',
+      },
+      {
+        id: 'editor.wysiwyg.markdownBlocks.mathBlockRendered',
+        message: 'Native WYSIWYG math insertion renders as MathML in the TenTap WebView',
       },
       {
         id: 'editor.wysiwyg.markdownBlocks.mermaid',

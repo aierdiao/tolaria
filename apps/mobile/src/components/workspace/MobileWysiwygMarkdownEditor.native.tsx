@@ -109,6 +109,9 @@ type EditorStateReadableBridge = EditorBridge & {
 type MathInlineRenderableEditorBridge = EditorBridge & {
   getMathInlineRenderProof: () => Promise<boolean>
 }
+type MathBlockRenderableEditorBridge = EditorBridge & {
+  getMathBlockRenderProof: () => Promise<boolean>
+}
 
 type CssInjectableEditorBridge = EditorBridge & {
   injectCSS: (css: string, tag?: string) => void
@@ -152,6 +155,7 @@ type NativeTentapEditorRefs = {
   firstEditorSerializationRef: MutableRefObject<boolean>
   hasAcceptedEditorChangeRef: MutableRefObject<boolean>
   inlineAutocompleteTimerRef: MutableRefObject<TimerHandle | null>
+  markdownBlockRenderProofRef: MutableRefObject<boolean>
   saveTimerRef: MutableRefObject<TimerHandle | null>
 }
 type NativeWysiwygInlineAutocompleteHandler = (match: NativeWysiwygInlineAutocomplete | null) => void
@@ -440,7 +444,7 @@ function useNativeTentapEditorBridge({
   useNativeWysiwygDeferredInsertionProbe({
     enabled: wysiwygMarkdownBlockProbe,
     flushEditorDocument,
-    insertIntoEditor: insertNativeWysiwygMarkdownBlockProbe,
+    insertIntoEditor: (candidateEditor) => insertNativeWysiwygMarkdownBlockProbe(candidateEditor, refs),
     refs,
     warning: '[mobile-editor] Failed to run native WYSIWYG markdown block probe:',
   })
@@ -465,6 +469,7 @@ function useNativeTentapEditorRefs(initialDocumentContent: string): NativeTentap
   const firstEditorSerializationRef = useRef(true)
   const hasAcceptedEditorChangeRef = useRef(false)
   const inlineAutocompleteTimerRef = useRef<TimerHandle | null>(null)
+  const markdownBlockRenderProofRef = useRef(false)
   const saveTimerRef = useRef<TimerHandle | null>(null)
 
   return useMemo(() => ({
@@ -475,6 +480,7 @@ function useNativeTentapEditorRefs(initialDocumentContent: string): NativeTentap
     firstEditorSerializationRef,
     hasAcceptedEditorChangeRef,
     inlineAutocompleteTimerRef,
+    markdownBlockRenderProofRef,
     saveTimerRef,
   }), [
     acceptsEditorChangesRef,
@@ -484,6 +490,7 @@ function useNativeTentapEditorRefs(initialDocumentContent: string): NativeTentap
     firstEditorSerializationRef,
     hasAcceptedEditorChangeRef,
     inlineAutocompleteTimerRef,
+    markdownBlockRenderProofRef,
     saveTimerRef,
   ])
 }
@@ -600,7 +607,13 @@ function writeEditorJsonToMarkdown({
   refs.firstEditorSerializationRef.current = false
   if (!nextContent.skipped && nextContent.content !== refs.contentRef.current) {
     onUpdateContent(noteId, nextContent.content)
-    if (markdownBlockProbeEnabled) publishNativeWysiwygMarkdownBlockProof(noteId, nextContent.content)
+    if (markdownBlockProbeEnabled) {
+      publishNativeWysiwygMarkdownBlockProof({
+        content: nextContent.content,
+        mathBlockRendered: refs.markdownBlockRenderProofRef.current,
+        noteId,
+      })
+    }
     if (mutationProbeEnabled) publishNativeWysiwygMutationProof(noteId, nextContent.content)
     if (wikilinkInsertProbeEnabled) publishNativeWysiwygWikilinkInsertProof(noteId, nextContent.content)
   }
@@ -802,6 +815,12 @@ async function nativeWysiwygInputTransformMathRenderProof(editor: EditorBridge):
   return editor.getMathInlineRenderProof()
 }
 
+async function nativeWysiwygBlockMathRenderProof(editor: EditorBridge): Promise<boolean> {
+  if (!isMathBlockRenderableEditorBridge(editor)) return false
+  await settleNativeWysiwygEditorContent()
+  return editor.getMathBlockRenderProof()
+}
+
 function settleNativeWysiwygEditorContent(): Promise<void> {
   return new Promise((resolve) => {
     setTimeout(resolve, 60)
@@ -859,10 +878,22 @@ function publishNativeWysiwygWikilinkInsertProof(noteId: string, content: string
   console.info(nativeWysiwygWikilinkInsertLogLine(nativeWysiwygWikilinkInsertProof({ content, noteId })))
 }
 
-function publishNativeWysiwygMarkdownBlockProof(noteId: string, content: string): void {
+function publishNativeWysiwygMarkdownBlockProof({
+  content,
+  mathBlockRendered,
+  noteId,
+}: {
+  content: string
+  mathBlockRendered: boolean
+  noteId: string
+}): void {
   if (Platform.OS === 'web') return
 
-  console.info(nativeWysiwygMarkdownBlockLogLine(nativeWysiwygMarkdownBlockProof({ content, noteId })))
+  console.info(nativeWysiwygMarkdownBlockLogLine(nativeWysiwygMarkdownBlockProof({
+    content,
+    mathBlockRendered,
+    noteId,
+  })))
 }
 
 function useNativeWysiwygInserter<Payload>({
@@ -928,6 +959,7 @@ async function insertPlainTextIntoNativeEditor(
 async function insertMarkdownBlocksIntoNativeEditor(
   editor: EditorBridge | null,
   payloads: NativeWysiwygMarkdownBlockPayload[],
+  refs: NativeTentapEditorRefs,
 ): Promise<boolean> {
   if (!isJsonReadableEditorBridge(editor) || !isContentSettableEditorBridge(editor)) return false
 
@@ -945,6 +977,7 @@ async function insertMarkdownBlocksIntoNativeEditor(
     nextJson = insertedJson
   }
   editor.setContent(nextJson)
+  refs.markdownBlockRenderProofRef.current = await nativeWysiwygBlockMathRenderProof(editor)
   return true
 }
 
@@ -952,8 +985,11 @@ function insertNativeWysiwygWikilinkProbe(editor: EditorBridge | null): Promise<
   return insertWikilinkIntoNativeEditor(editor, nativeWysiwygWikilinkInsertProbePayload())
 }
 
-function insertNativeWysiwygMarkdownBlockProbe(editor: EditorBridge | null): Promise<boolean> {
-  return insertMarkdownBlocksIntoNativeEditor(editor, nativeWysiwygMarkdownBlockProbePayloads())
+function insertNativeWysiwygMarkdownBlockProbe(
+  editor: EditorBridge | null,
+  refs: NativeTentapEditorRefs,
+): Promise<boolean> {
+  return insertMarkdownBlocksIntoNativeEditor(editor, nativeWysiwygMarkdownBlockProbePayloads(), refs)
 }
 
 async function insertPayloadIntoNativeEditor<Payload>(
@@ -1208,13 +1244,26 @@ function useResetEditorChangeGate({
   noteId: string
   refs: NativeTentapEditorRefs
 }) {
-  const { acceptsEditorChangesRef, firstEditorSerializationRef, hasAcceptedEditorChangeRef } = refs
+  const {
+    acceptsEditorChangesRef,
+    firstEditorSerializationRef,
+    hasAcceptedEditorChangeRef,
+    markdownBlockRenderProofRef,
+  } = refs
 
   useEffect(() => {
     acceptsEditorChangesRef.current = false
     firstEditorSerializationRef.current = true
     hasAcceptedEditorChangeRef.current = false
-  }, [acceptsEditorChangesRef, firstEditorSerializationRef, hasAcceptedEditorChangeRef, initialContent, noteId])
+    markdownBlockRenderProofRef.current = false
+  }, [
+    acceptsEditorChangesRef,
+    firstEditorSerializationRef,
+    hasAcceptedEditorChangeRef,
+    initialContent,
+    markdownBlockRenderProofRef,
+    noteId,
+  ])
 }
 
 function useFlushOnUnmount(
@@ -1245,6 +1294,12 @@ function isMathInlineRenderableEditorBridge(
   editor: EditorBridge | null,
 ): editor is MathInlineRenderableEditorBridge {
   return typeof (editor as Partial<MathInlineRenderableEditorBridge> | null)?.getMathInlineRenderProof === 'function'
+}
+
+function isMathBlockRenderableEditorBridge(
+  editor: EditorBridge | null,
+): editor is MathBlockRenderableEditorBridge {
+  return typeof (editor as Partial<MathBlockRenderableEditorBridge> | null)?.getMathBlockRenderProof === 'function'
 }
 
 function isContentSettableEditorBridge(editor: EditorBridge | null): editor is ContentSettableEditorBridge {

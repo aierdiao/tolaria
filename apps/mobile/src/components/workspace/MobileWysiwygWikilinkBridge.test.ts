@@ -108,6 +108,19 @@ describe('native WYSIWYG wikilink bridge', () => {
     expect(tiptapJsonToMobileMarkdown(nextDocument)).toBe(expectedMarkdown)
   })
 
+  it('inserts native WYSIWYG display math as a structured TenTap node before markdown serialization', () => {
+    const nextDocument = nativeWysiwygDocumentWithInsertedMarkdownBlock({
+      json: documentNode(paragraphNode('Intro'), paragraphNode('Tail')),
+      payload: { action: 'mathBlock' },
+      selection: { from: 3, to: 3 },
+    })
+
+    expect(nextDocument?.content?.[1]).toMatchObject({
+      attrs: { latex: '\\sqrt{a^2 + b^2}' },
+      type: 'mathBlock',
+    })
+  })
+
   it('inserts native WYSIWYG whiteboards as desktop durable tldraw markdown', () => {
     const nextDocument = nativeWysiwygDocumentWithInsertedMarkdownBlock({
       json: documentNode(paragraphNode('Intro'), paragraphNode('Tail')),

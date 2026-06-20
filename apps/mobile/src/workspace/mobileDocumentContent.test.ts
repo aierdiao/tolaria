@@ -157,10 +157,20 @@ Updated body.
     expect(html).not.toContain('<table>')
   })
 
-  it('keeps unsupported display math blocks editable as markdown lines in TenTap basic mode', () => {
+  it('hydrates root display math blocks as native TenTap math nodes', () => {
     const html = mobileMarkdownBodyToTentapHtml('Intro\n\n$$\n\\int_0^1 x\\,dx\n$$\n\nDone\n')
 
-    expect(html).toBe('<p>Intro</p>\n<p>$$<br>\\int_0^1 x\\,dx<br>$$</p>\n<p>Done</p>')
+    expect(html).toContain('<p>Intro</p>')
+    expect(html).toContain('data-type="mathBlock"')
+    expect(html).toContain('data-latex="\\int_0^1 x\\,dx"')
+    expect(html).toContain('<p>Done</p>')
+  })
+
+  it('hydrates single-line root display math as a native TenTap math node', () => {
+    const html = mobileMarkdownBodyToTentapHtml('$$x^2$$\n')
+
+    expect(html).toContain('data-type="mathBlock"')
+    expect(html).toContain('data-latex="x^2"')
   })
 
   it('hydrates blockquotes without collapsing explicit breaks or quoted paragraphs', () => {
@@ -470,6 +480,20 @@ Updated body.
 
   it('serializes display math hard breaks back to durable markdown source', () => {
     const document = paragraphDocument('$$', '\\int_0^1 x\\,dx', '$$')
+
+    expect(tiptapJsonToMobileMarkdown(document)).toBe('$$\n\\int_0^1 x\\,dx\n$$')
+  })
+
+  it('serializes native display math nodes back to desktop markdown source', () => {
+    const document: TiptapJsonNode = {
+      type: 'doc',
+      content: [
+        {
+          attrs: { latex: '\\int_0^1 x\\,dx' },
+          type: 'mathBlock',
+        },
+      ],
+    }
 
     expect(tiptapJsonToMobileMarkdown(document)).toBe('$$\n\\int_0^1 x\\,dx\n$$')
   })

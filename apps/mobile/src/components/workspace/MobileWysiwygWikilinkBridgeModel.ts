@@ -8,7 +8,10 @@ import {
   activeMobileWikilinkQuery,
 } from '../../workspace/mobileWikilinkAutocomplete'
 import type { TiptapJsonNode } from '../../workspace/mobileDocumentContent'
-import { mobileMarkdownSourceBlockLines } from '../../workspace/mobileMarkdownSourceBlocks'
+import {
+  mobileMarkdownSourceBlockFormat,
+  mobileMarkdownSourceBlockLines,
+} from '../../workspace/mobileMarkdownSourceBlocks'
 import type { NativeWysiwygMarkdownBlockAction } from './MobileWysiwygFormatCommands'
 
 type NativeWysiwygWikilinkTextNode = {
@@ -180,7 +183,17 @@ function nativeWysiwygLinkAttachmentContent(
 }
 
 function nativeWysiwygMarkdownBlockNode(action: NativeWysiwygMarkdownBlockAction): TiptapJsonNode {
+  if (action === 'mathBlock') return nativeWysiwygMathBlockNode()
   return nativeWysiwygSourceParagraph(mobileMarkdownSourceBlockLines(action))
+}
+
+function nativeWysiwygMathBlockNode(): TiptapJsonNode {
+  return {
+    attrs: {
+      latex: mobileMarkdownSourceBlockFormat('mathBlock')?.fallback ?? '',
+    },
+    type: 'mathBlock',
+  }
 }
 
 function nativeWysiwygSourceParagraph(lines: string[]): TiptapJsonNode {
