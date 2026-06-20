@@ -107,7 +107,7 @@ export function addTypeSchemaRelationshipRef({
   targetRef,
   targetTitle,
 }: AddTypeSchemaRelationshipRefInput): MobileTypeSchemaRelationship[] {
-  const relationshipKey = canonicalSchemaKey(normalizeRelationshipKey(key))
+  const relationshipKey = normalizeRelationshipKey(key)
   if (!relationshipKey) return relationships
 
   const ref = normalizedRelationshipRef(targetRef) ?? relationshipRefFromInput(targetTitle, notes, sourceNote)

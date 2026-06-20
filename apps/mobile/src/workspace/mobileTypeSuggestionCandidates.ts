@@ -17,7 +17,8 @@ export type MobileTypeValueSuggestionItem = {
 }
 
 export function normalizeMobileRelationshipKey(key: RelationshipKey): RelationshipKey {
-  return normalizeSharedRelationshipKey(key)
+  const trimmedKey = key.trim()
+  return isRelationshipKey(trimmedKey) ? normalizeSharedRelationshipKey(trimmedKey) : trimmedKey
 }
 
 export function selectedTypePropertyCandidates(

@@ -67,6 +67,24 @@ describe('mobile type definition schema helpers', () => {
     ])
   })
 
+  it('preserves custom Type relationship key spelling like desktop frontmatter', () => {
+    const notes = workspaceScenarioForId('default').notes
+    const relationships = addTypeSchemaRelationshipRef({
+      key: 'Mentored by',
+      notes,
+      relationships: [],
+      targetTitle: 'How I Run an Open Source Project',
+    })
+
+    expect(relationships).toEqual([{ key: 'Mentored by', refs: ['[[Tolaria/Mobile UI/How I Run an Open Source Project]]'] }])
+    expect(typeDefinitionSchemaPatch([], relationships)).toEqual({
+      properties: {},
+      relationships: {
+        'Mentored by': ['[[Tolaria/Mobile UI/How I Run an Open Source Project]]'],
+      },
+    })
+  })
+
   it('searches and saves type relationship targets through desktop note identities', () => {
     const notes = workspaceScenarioForId('default').notes.map((note) => note.id === 'open-source-project'
       ? { ...note, aliases: ['OSS Project'] }
@@ -134,7 +152,7 @@ describe('mobile type definition schema helpers', () => {
       }),
     ])
     expect(addTypeSchemaRelationshipRef({
-      key: 'depends on',
+      key: 'depends_on',
       notes,
       relationships: [],
       sourceNote: sourceType,
