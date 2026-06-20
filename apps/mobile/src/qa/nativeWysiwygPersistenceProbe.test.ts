@@ -56,6 +56,7 @@ describe('native WYSIWYG persistence probe', () => {
       'editor.wysiwyg.persistence.mutation.codeBlock',
       'editor.wysiwyg.persistence.mutation.divider',
       'editor.wysiwyg.persistence.mutation.table',
+      'editor.wysiwyg.persistence.mutation.tableAlignment',
     ])
   })
 })
@@ -96,7 +97,7 @@ function passingPersistenceProof(): NativeWysiwygPersistenceProof {
         '---',
         '',
         '| Surface | Target |',
-        '| --- | --- |',
+        '| :--- | ---: |',
         '| Editor | Native WYSIWYG |',
         '',
       ].join('\n'),

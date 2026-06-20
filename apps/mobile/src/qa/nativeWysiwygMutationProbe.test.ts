@@ -37,6 +37,7 @@ describe('native WYSIWYG mutation probe', () => {
   it('builds a passing proof from the saved markdown content', () => {
     const proof = nativeWysiwygMutationProof({
       content: savedMutationContent(),
+      json: nativeWysiwygMutationProbeContent(),
       noteId: 'workflow-orchestration',
     })
 
@@ -53,6 +54,26 @@ describe('native WYSIWYG mutation probe', () => {
               text: 'project brief.pdf',
             }),
           ]),
+        }),
+        expect.objectContaining({
+          type: 'codeBlock',
+        }),
+        expect.objectContaining({
+          content: expect.arrayContaining([
+            expect.objectContaining({
+              content: expect.arrayContaining([
+                expect.objectContaining({
+                  attrs: { tolariaAlignment: 'left' },
+                  type: 'tableHeader',
+                }),
+                expect.objectContaining({
+                  attrs: { tolariaAlignment: 'right' },
+                  type: 'tableHeader',
+                }),
+              ]),
+            }),
+          ]),
+          type: 'table',
         }),
       ]),
     })
@@ -78,14 +99,18 @@ describe('native WYSIWYG mutation probe', () => {
       'editor.wysiwyg.mutation.lists',
       'editor.wysiwyg.mutation.quote',
       'editor.wysiwyg.mutation.codeBlock',
+      'editor.wysiwyg.mutation.codeBlockStructured',
       'editor.wysiwyg.mutation.divider',
       'editor.wysiwyg.mutation.table',
+      'editor.wysiwyg.mutation.tableAlignment',
+      'editor.wysiwyg.mutation.tableStructured',
     ])
   })
 
   it('keeps layout assertions on pre-mutation logs while still parsing the proof', () => {
     const proof = nativeWysiwygMutationProof({
       content: savedMutationContent(),
+      json: nativeWysiwygMutationProbeContent(),
       noteId: 'workflow-orchestration',
     })
     const logText = [
@@ -101,6 +126,7 @@ describe('native WYSIWYG mutation probe', () => {
   it('keeps current layout logs when a stale native proof is inside the log window', () => {
     const proof = nativeWysiwygMutationProof({
       content: savedMutationContent(),
+      json: nativeWysiwygMutationProbeContent(),
       noteId: 'workflow-orchestration',
     })
     const staleProof = nativeWysiwygMutationLogLine(proof)
@@ -151,7 +177,7 @@ function savedMutationContent(): string {
     '---',
     '',
     '| Surface | Target |',
-    '| --- | --- |',
+    '| :--- | ---: |',
     '| Editor | Native WYSIWYG |',
     '',
   ].join('\n')

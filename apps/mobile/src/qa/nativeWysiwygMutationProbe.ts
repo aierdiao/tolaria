@@ -9,10 +9,16 @@ type FrontmatterKey = string
 type FrontmatterValue = string
 type ProofFailureId = string
 type ProofFailureMessage = string
+type MutationTableAlignment = 'left' | 'right'
+type MutationTableCell = {
+  alignment: MutationTableAlignment
+  text: string
+}
 
 export type NativeWysiwygMutationProof = {
   attachmentLinkSaved: boolean
   codeBlockSaved: boolean
+  codeBlockStructured?: boolean
   contentLength: number
   dividerSaved: boolean
   favoritePreserved: boolean
@@ -23,8 +29,10 @@ export type NativeWysiwygMutationProof = {
   noteId: NoteId
   quoteSaved: boolean
   statusPreserved: boolean
+  tableAlignmentSaved: boolean
   tagsPreserved: boolean
   tableLinesPreserved: boolean
+  tableStructured?: boolean
   titleSaved: boolean
   typePreserved: boolean
   wikilinkSaved: boolean
@@ -37,6 +45,7 @@ export type NativeWysiwygMutationAssertionFailure = {
 
 type NativeWysiwygMutationProofInput = {
   content: MarkdownContent
+  json?: unknown
   noteId: NoteId
 }
 
@@ -53,7 +62,7 @@ const mutationListSamples = ['- Bullet item', '1. Ordered item', '- [x] Task ite
 const mutationQuote = '> Quoted desktop parity'
 const mutationCodeFenceLines = ['```ts', 'const parity = "desktop";', 'ship(parity)', '```'] as const
 const mutationCodeFence = mutationCodeFenceLines.join('\n')
-const mutationTableLines = ['| Surface | Target |', '| --- | --- |', '| Editor | Native WYSIWYG |'] as const
+const mutationTableLines = ['| Surface | Target |', '| :--- | ---: |', '| Editor | Native WYSIWYG |'] as const
 const mutationDividerBeforeTable = `\n---\n\n${mutationTableLines[0]}`
 const mutationWikilink = '[[AI Ops Guide]]'
 const mutationProofBooleanFields: readonly NativeWysiwygMutationBooleanField[] = [
@@ -67,6 +76,7 @@ const mutationProofBooleanFields: readonly NativeWysiwygMutationBooleanField[] =
   'mutationTextSaved',
   'quoteSaved',
   'statusPreserved',
+  'tableAlignmentSaved',
   'tagsPreserved',
   'tableLinesPreserved',
   'titleSaved',
@@ -90,6 +100,24 @@ const mutationQuoteNode: TiptapJsonNode = {
   content: [paragraphNode('Quoted desktop parity')],
   type: 'blockquote',
 }
+const mutationCodeBlockNode: TiptapJsonNode = {
+  attrs: { language: 'ts' },
+  content: [{ text: 'const parity = "desktop";\nship(parity)', type: 'text' }],
+  type: 'codeBlock',
+}
+const mutationTableNode: TiptapJsonNode = {
+  content: [
+    tableRowNode('tableHeader', [
+      { alignment: 'left', text: 'Surface' },
+      { alignment: 'right', text: 'Target' },
+    ]),
+    tableRowNode('tableCell', [
+      { alignment: 'left', text: 'Editor' },
+      { alignment: 'right', text: 'Native WYSIWYG' },
+    ]),
+  ],
+  type: 'table',
+}
 
 export function nativeWysiwygMutationProbeContent(vaultRootUri?: VaultRootUri): TiptapJsonNode {
   return {
@@ -101,9 +129,9 @@ export function nativeWysiwygMutationProbeContent(vaultRootUri?: VaultRootUri): 
       mutationOrderedListNode,
       mutationTaskListNode,
       mutationQuoteNode,
-      paragraphNode(...mutationCodeFenceLines),
+      mutationCodeBlockNode,
       paragraphNode('---'),
-      paragraphNode(...mutationTableLines),
+      mutationTableNode,
     ],
     type: 'doc',
   }
@@ -118,11 +146,13 @@ export function nativeWysiwygMutationProbeInitialContent(note: NativeWysiwygMuta
 
 export function nativeWysiwygMutationProof({
   content,
+  json,
   noteId,
 }: NativeWysiwygMutationProofInput): NativeWysiwygMutationProof {
   return {
     attachmentLinkSaved: content.includes(mutationAttachmentLink),
     codeBlockSaved: content.includes(mutationCodeFence),
+    ...mutationStructuredProof(json),
     contentLength: content.length,
     dividerSaved: content.includes(mutationDividerBeforeTable),
     favoritePreserved: content.includes('\n_favorite: true\n'),
@@ -133,6 +163,7 @@ export function nativeWysiwygMutationProof({
     noteId,
     quoteSaved: content.includes(mutationQuote),
     statusPreserved: content.includes('\nStatus: Draft\n'),
+    tableAlignmentSaved: hasMutationTableAlignment(content),
     tagsPreserved: content.includes('\ntags:\n  - Design\n  - AI\n'),
     tableLinesPreserved: mutationTableLines.every((line) => content.includes(line)),
     titleSaved: content.includes(`# ${mutationTitle}\n`),
@@ -178,9 +209,12 @@ export function assertNativeWysiwygMutationProofs(
     proofFailure(latest.wikilinkSaved, 'editor.wysiwyg.mutation.wikilink', 'Native WYSIWYG links can preserve Tolaria wikilink markdown'),
     proofFailure(latest.listBlocksSaved, 'editor.wysiwyg.mutation.lists', 'Native WYSIWYG list blocks serialize to desktop markdown syntax'),
     proofFailure(latest.quoteSaved, 'editor.wysiwyg.mutation.quote', 'Native WYSIWYG quote blocks serialize to desktop markdown syntax'),
-    proofFailure(latest.codeBlockSaved, 'editor.wysiwyg.mutation.codeBlock', 'Unsupported code-fence content remains editable desktop markdown lines'),
+    proofFailure(latest.codeBlockSaved, 'editor.wysiwyg.mutation.codeBlock', 'Native WYSIWYG structured codeBlock serializes to desktop fenced-code markdown'),
+    proofFailure(latest.codeBlockStructured === true, 'editor.wysiwyg.mutation.codeBlockStructured', 'Native WYSIWYG mutation proof keeps code fences as structured TenTap codeBlock JSON before save'),
     proofFailure(latest.dividerSaved, 'editor.wysiwyg.mutation.divider', 'Unsupported divider content remains editable desktop markdown'),
-    proofFailure(latest.tableLinesPreserved, 'editor.wysiwyg.mutation.table', 'Unsupported table content remains editable markdown lines'),
+    proofFailure(latest.tableLinesPreserved, 'editor.wysiwyg.mutation.table', 'Native WYSIWYG structured tables serialize to desktop markdown table lines'),
+    proofFailure(latest.tableAlignmentSaved, 'editor.wysiwyg.mutation.tableAlignment', 'Native WYSIWYG structured tables preserve desktop markdown alignment dividers'),
+    proofFailure(latest.tableStructured === true, 'editor.wysiwyg.mutation.tableStructured', 'Native WYSIWYG mutation proof keeps tables as structured TenTap table JSON before save'),
   ].filter((failure): failure is NativeWysiwygMutationAssertionFailure => failure !== null)
 }
 
@@ -192,6 +226,25 @@ export function formatNativeWysiwygMutationFailures(
 
 export function nativeWysiwygMutationProbeEnabled(searchParams: URLSearchParams): boolean {
   return searchParams.get('wysiwygMutationProbe') === '1'
+}
+
+function mutationStructuredProof(json: unknown): Partial<NativeWysiwygMutationProof> {
+  if (json === undefined) return {}
+
+  return {
+    codeBlockStructured: hasNodeType(json, 'codeBlock'),
+    tableStructured: hasNodeType(json, 'table'),
+  }
+}
+
+function hasNodeType(value: unknown, type: string): boolean {
+  if (!isTiptapJsonNode(value)) return false
+  if (value.type === type) return true
+  return (value.content ?? []).some((child) => hasNodeType(child, type))
+}
+
+function hasMutationTableAlignment(content: MarkdownContent): boolean {
+  return content.includes('| :--- | ---: |')
 }
 
 function headingNode(text: FrontmatterValue): TiptapJsonNode {
@@ -253,6 +306,17 @@ function paragraphNode(...lines: readonly FrontmatterValue[]): TiptapJsonNode {
   }
 }
 
+function tableRowNode(cellType: 'tableCell' | 'tableHeader', cells: MutationTableCell[]): TiptapJsonNode {
+  return {
+    content: cells.map((cell) => ({
+      attrs: { tolariaAlignment: cell.alignment },
+      content: [paragraphNode(cell.text)],
+      type: cellType,
+    })),
+    type: 'tableRow',
+  }
+}
+
 function mutationProbeFrontmatter(note: NativeWysiwygMutationSeedNote): FrontmatterValue[] {
   return [
     scalarFrontmatterLine('type', note.type),
@@ -308,6 +372,19 @@ function isNativeWysiwygMutationProof(value: unknown): value is NativeWysiwygMut
   return typeof candidate.noteId === 'string'
     && typeof candidate.contentLength === 'number'
     && mutationProofBooleanFields.every((field) => typeof candidate[field] === 'boolean')
+    && optionalBooleanField(candidate.codeBlockStructured)
+    && optionalBooleanField(candidate.tableStructured)
+}
+
+function isTiptapJsonNode(value: unknown): value is TiptapJsonNode {
+  if (!value || typeof value !== 'object') return false
+
+  const candidate = value as TiptapJsonNode
+  return typeof candidate.type === 'string' || Array.isArray(candidate.content)
+}
+
+function optionalBooleanField(value: unknown): boolean {
+  return value === undefined || typeof value === 'boolean'
 }
 
 function proofFailure(

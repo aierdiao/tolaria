@@ -13,10 +13,15 @@ type ContentSettableEditorBridge = EditorBridge & {
 }
 
 export type NativeWysiwygMutationProbeRefs = {
+  acceptsEditorChangesRef: MutableRefObject<boolean>
   editorRef: MutableRefObject<EditorBridge | null>
   hasAcceptedEditorChangeRef: MutableRefObject<boolean>
   saveTimerRef: MutableRefObject<TimerHandle | null>
 }
+
+const mutationProbeInitialDelayMs = 1500
+const mutationProbeRetryDelayMs = 250
+const mutationProbeSaveDelayMs = 500
 
 export function useNativeWysiwygMutationProbe({
   enabled,
@@ -32,24 +37,43 @@ export function useNativeWysiwygMutationProbe({
   useEffect(() => {
     if (!enabled) return undefined
 
-    const contentTimer = setTimeout(() => {
+    let contentTimer: TimerHandle | null = null
+    let disposed = false
+
+    const scheduleProbe = (delayMs: number) => {
+      contentTimer = setTimeout(runProbe, delayMs)
+    }
+    const runProbe = () => {
+      if (disposed) return
+      if (!refs.acceptsEditorChangesRef.current) {
+        scheduleProbe(mutationProbeRetryDelayMs)
+        return
+      }
+
       const editor = refs.editorRef.current
-      if (!isContentSettableEditorBridge(editor)) return
+      if (!isContentSettableEditorBridge(editor)) {
+        scheduleProbe(mutationProbeRetryDelayMs)
+        return
+      }
 
       refs.hasAcceptedEditorChangeRef.current = true
       editor.setContent(nativeWysiwygMutationProbeContent(vaultRootUri))
-      refs.saveTimerRef.current = setTimeout(flushEditorDocument, 500)
-    }, 1500)
+      if (refs.saveTimerRef.current) clearTimeout(refs.saveTimerRef.current)
+      refs.saveTimerRef.current = setTimeout(flushEditorDocument, mutationProbeSaveDelayMs)
+    }
+
+    scheduleProbe(mutationProbeInitialDelayMs)
 
     return () => {
-      clearTimeout(contentTimer)
+      disposed = true
+      if (contentTimer) clearTimeout(contentTimer)
       if (refs.saveTimerRef.current) clearTimeout(refs.saveTimerRef.current)
     }
   }, [enabled, flushEditorDocument, refs, vaultRootUri])
 }
 
-export function publishNativeWysiwygMutationProof(noteId: string, content: string): void {
-  console.info(nativeWysiwygMutationLogLine(nativeWysiwygMutationProof({ content, noteId })))
+export function publishNativeWysiwygMutationProof(noteId: string, content: string, json?: unknown): void {
+  console.info(nativeWysiwygMutationLogLine(nativeWysiwygMutationProof({ content, json, noteId })))
 }
 
 function isContentSettableEditorBridge(editor: EditorBridge | null): editor is ContentSettableEditorBridge {

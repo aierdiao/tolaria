@@ -652,7 +652,7 @@ function writeEditorJsonToMarkdown({
         tableStructured: nativeWysiwygMarkdownBlockStructuredTable(json),
       })
     }
-    if (mutationProbeEnabled) publishNativeWysiwygMutationProof(noteId, nextContent.content)
+    if (mutationProbeEnabled) publishNativeWysiwygMutationProof(noteId, nextContent.content, json)
     if (wikilinkInsertProbeEnabled) publishNativeWysiwygWikilinkInsertProof(noteId, nextContent.content)
   }
   if (!nextContent.skipped && shouldPublishTableCommandMutationProof(tableCommandMutationProbeEnabled, refs)) {
