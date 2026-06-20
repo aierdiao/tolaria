@@ -132,6 +132,10 @@ describe('native workspace persistence probe', () => {
     expectProofFailures({ updatedViewHydrated: false }, ['workspace.persistence.updateView'])
   })
 
+  it('reports incomplete saved-view creation persistence proofs', () => {
+    expectProofFailures({ savedViewHydrated: false }, ['workspace.persistence.createView'])
+  })
+
   it('reports incomplete section ordering persistence proofs', () => {
     expectProofFailures({
       reorderedTypeSectionHydrated: false,

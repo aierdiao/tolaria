@@ -297,18 +297,21 @@ function workspacePersistenceEditWrites(
 
 function workspacePersistenceViewWrites(seedSnapshot: MobileWorkspaceSnapshot) {
   return [
+    ...workspacePersistenceViewCreateWrites(seedSnapshot),
     ...workspacePersistenceViewMoveWrites(seedSnapshot),
     ...workspacePersistenceViewUpdateWrites(seedSnapshot),
-    {
-      content: mobilePersistenceViewContent(),
-      kind: 'saveView' as const,
-      path: 'views/mobile-persistence.yml',
-    },
     {
       kind: 'deleteView' as const,
       path: 'views/old-native-proof.yml',
     },
   ]
+}
+
+function workspacePersistenceViewCreateWrites(seedSnapshot: MobileWorkspaceSnapshot) {
+  return applyMobileWorkspaceEditWithWrites(seedSnapshot, {
+    definition: mobilePersistenceViewDefinition(),
+    type: 'createView',
+  }).writes
 }
 
 function workspacePersistenceViewMoveWrites(seedSnapshot: MobileWorkspaceSnapshot) {
@@ -341,6 +344,16 @@ function updatedNativeProofViewDefinition(): MobileViewDefinition {
     listPropertiesDisplay: ['status', 'Priority'],
     name: updatedViewName,
     sort: 'property:Priority:asc',
+  }
+}
+
+function mobilePersistenceViewDefinition(): MobileViewDefinition {
+  return {
+    color: 'green',
+    filters: { all: [{ field: 'type', op: 'equals', value: 'Essay' }] },
+    icon: 'file-text',
+    name: 'Mobile Persistence',
+    sort: 'modified:desc',
   }
 }
 
@@ -625,7 +638,7 @@ function workspacePersistenceProof(
     renamedTypeAssignedNoteHydrated: renamedTypeAssignedNoteHydrated(snapshot, content.renamedAssignedContent),
     renamedTypeDefinitionHydrated: renamedTypeDefinitionHydrated(snapshot),
     renamedTypeSchemaRefsHydrated: renamedTypeSchemaRefsHydrated(snapshot),
-    savedViewHydrated: viewExists(snapshot, 'Mobile Persistence'),
+    savedViewHydrated: savedViewHydrated(snapshot),
     textFileContentHydrated: textFileContentHydrated(snapshot, content.textFileContent),
     typeDefinitionHydrated: snapshot.typeDefinitions?.[typeName]?.tone === 'green',
     updatedViewHydrated: updatedViewHydrated(snapshot),
@@ -655,6 +668,15 @@ function viewExists(snapshot: MobileWorkspaceSnapshot, name: string) {
   return snapshot.views?.some((view) => view.definition.name === name) === true
 }
 
+function savedViewHydrated(snapshot: MobileWorkspaceSnapshot) {
+  const view = viewByName(snapshot, 'Mobile Persistence')
+  return view?.filename === 'mobile-persistence.yml'
+    && view.definition.color === 'green'
+    && view.definition.icon === 'file-text'
+    && view.definition.sort === 'modified:desc'
+    && updatedViewFilterHydrated(view.definition.filters, { field: 'type', value: 'Essay' })
+}
+
 function reorderedViewHydrated(snapshot: MobileWorkspaceSnapshot) {
   const alpha = viewByName(snapshot, reorderedViewAlphaName)
   const beta = viewByName(snapshot, reorderedViewBetaName)
@@ -681,18 +703,21 @@ function updatedViewHydrated(snapshot: MobileWorkspaceSnapshot) {
     && view.definition.icon === 'folder'
     && view.definition.sort === 'property:Priority:asc'
     && joinedProperties(view.definition.listPropertiesDisplay) === 'status|Priority'
-    && updatedViewFilterHydrated(view.definition.filters)
+    && updatedViewFilterHydrated(view.definition.filters, { field: 'status', value: 'Active' })
 }
 
-function updatedViewFilterHydrated(filters: MobileViewDefinition['filters']) {
+function updatedViewFilterHydrated(
+  filters: MobileViewDefinition['filters'],
+  expected: { field: string; value: string },
+) {
   const nodes = 'all' in filters ? filters.all : []
   const condition = nodes[0]
   return nodes.length === 1
     && condition !== undefined
     && 'field' in condition
-    && condition.field === 'status'
+    && condition.field === expected.field
     && condition.op === 'equals'
-    && condition.value === 'Active'
+    && condition.value === expected.value
 }
 
 function updatedTypeDefinitionHydrated(snapshot: MobileWorkspaceSnapshot) {
@@ -1115,21 +1140,6 @@ function orderedNativeProofViewContent(name: string, order: number) {
     `order: ${order}`,
     'filters:',
     '  all: []',
-    '',
-  ].join('\n')
-}
-
-function mobilePersistenceViewContent() {
-  return [
-    'name: Mobile Persistence',
-    'icon: file-text',
-    'color: green',
-    'sort: modified:desc',
-    'filters:',
-    '  all:',
-    '    - field: type',
-    '      op: equals',
-    '      value: Essay',
     '',
   ].join('\n')
 }

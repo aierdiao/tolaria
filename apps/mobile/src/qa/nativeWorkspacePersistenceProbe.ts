@@ -98,7 +98,7 @@ export function assertNativeWorkspacePersistenceProofs(
     proofFailure(latest.relationshipTargetHydrated, 'workspace.persistence.relationshipTarget', 'Relationship target creation rehydrates the reducer-created target note'),
     proofFailure(latest.relationshipSourceRefHydrated, 'workspace.persistence.relationshipSourceRef', 'Relationship target creation rehydrates the saved source note relationship ref'),
     proofFailure(latest.relationshipMovedRefHydrated, 'workspace.persistence.relationshipMovedRef', 'Moved note relationship refs rehydrate from reducer-generated native rewrite writes'),
-    proofFailure(latest.savedViewHydrated, 'workspace.persistence.saveView', 'Saved desktop-compatible views rehydrate from native views/*.yml'),
+    proofFailure(latest.savedViewHydrated, 'workspace.persistence.createView', 'Created desktop-compatible views rehydrate from reducer-generated native view writes'),
     proofFailure(latest.updatedViewHydrated, 'workspace.persistence.updateView', 'Updated desktop-compatible views rehydrate from reducer-generated native view writes'),
     proofFailure(latest.reorderedViewHydrated, 'workspace.persistence.moveView', 'Moved saved-view order rehydrates from reducer-generated native view order writes'),
     proofFailure(latest.deletedViewRemoved, 'workspace.persistence.deleteView', 'Deleted native view files disappear from the mobile snapshot'),
