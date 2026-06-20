@@ -1,3 +1,11 @@
+import type {
+  FilterCondition,
+  FilterGroup,
+  FilterNode,
+  FilterOp,
+  ViewDefinition,
+} from '../../../../src/utils/viewSchema'
+
 export type MobileTone = 'blue' | 'gray' | 'green' | 'orange' | 'purple' | 'red' | 'yellow'
 export type MobileNoteWidth = 'normal' | 'wide'
 export type MobileFileKind = 'binary' | 'markdown' | 'text'
@@ -158,27 +166,11 @@ export type MobileEditorBlock =
   | { kind: 'divider' }
   | { headers: string[]; kind: 'table'; rows: string[][] }
 
-export type MobileViewFilterOp = 'equals' | 'not_equals' | 'contains' | 'not_contains' | 'any_of' | 'none_of' | 'is_empty' | 'is_not_empty' | 'before' | 'after'
-
-export type MobileViewFilterCondition = {
-  field: string
-  op: MobileViewFilterOp
-  regex?: boolean
-  value?: unknown
-}
-
-export type MobileViewFilterGroup = { all: MobileViewFilterNode[] } | { any: MobileViewFilterNode[] }
-export type MobileViewFilterNode = MobileViewFilterCondition | MobileViewFilterGroup
-
-export type MobileViewDefinition = {
-  color: string | null
-  filters: MobileViewFilterGroup
-  icon: string | null
-  listPropertiesDisplay?: string[]
-  name: string
-  order?: number | null
-  sort: string | null
-}
+export type MobileViewFilterOp = FilterOp
+export type MobileViewFilterCondition = FilterCondition
+export type MobileViewFilterGroup = FilterGroup
+export type MobileViewFilterNode = FilterNode
+export type MobileViewDefinition = ViewDefinition
 
 export type MobileCreateNoteDefaults = {
   archived?: boolean

@@ -18,6 +18,12 @@ import {
 import { compileSafeUserRegex } from '../../../../src/utils/safeRegex'
 import { createViewFilename } from '../../../../src/utils/viewFilename'
 import { evaluateArrayFieldCondition } from '../../../../src/utils/viewFilterArrayFields'
+import {
+  canMoveView,
+  moveView,
+  nextViewOrder,
+  type ViewMoveDirection,
+} from '../../../../src/utils/viewOrdering'
 
 type ViewFileSource = {
   content: string
@@ -110,14 +116,10 @@ export function orderedMobileSavedViews(views: MobileSavedView[]): MobileSavedVi
   return [...views].sort(compareSavedViews)
 }
 
-export type MobileViewMoveDirection = 'down' | 'up'
+export type MobileViewMoveDirection = ViewMoveDirection
 
 export function nextMobileSavedViewOrder(views: MobileSavedView[]): number {
-  const explicitOrders = views
-    .map((view) => view.definition.order)
-    .filter((order): order is number => typeof order === 'number' && Number.isFinite(order))
-
-  return explicitOrders.length > 0 ? Math.max(...explicitOrders) + 1 : views.length
+  return nextViewOrder(views)
 }
 
 export function canMoveMobileSavedView(
@@ -125,11 +127,8 @@ export function canMoveMobileSavedView(
   viewId: string,
   direction: MobileViewMoveDirection,
 ): boolean {
-  const index = savedViewIndex(views, viewId)
-  if (index === -1) return false
-
-  const nextIndex = savedViewDestinationIndex(index, direction)
-  return nextIndex >= 0 && nextIndex < views.length
+  const filename = savedViewFilename(views, viewId)
+  return filename ? canMoveView(views, filename, direction) : false
 }
 
 export function moveMobileSavedView(
@@ -137,14 +136,8 @@ export function moveMobileSavedView(
   viewId: string,
   direction: MobileViewMoveDirection,
 ): MobileSavedView[] | null {
-  if (!canMoveMobileSavedView(views, viewId, direction)) return null
-
-  const index = savedViewIndex(views, viewId)
-  const nextIndex = savedViewDestinationIndex(index, direction)
-  const reordered = [...views]
-  const [view] = reordered.splice(index, 1)
-  reordered.splice(nextIndex, 0, view)
-  return reordered
+  const filename = savedViewFilename(views, viewId)
+  return filename ? moveView(views, filename, direction) : null
 }
 
 export function mobileSavedViewOrderUpdates(views: MobileSavedView[]): MobileSavedView[] {
@@ -938,12 +931,9 @@ function compareSavedViews(left: MobileSavedView, right: MobileSavedView) {
   return left.filename.localeCompare(right.filename)
 }
 
-function savedViewIndex(views: MobileSavedView[], viewId: string): number {
-  return views.findIndex((view) => view.id === viewId || view.filename === viewId)
-}
-
-function savedViewDestinationIndex(index: number, direction: MobileViewMoveDirection): number {
-  return direction === 'up' ? index - 1 : index + 1
+function savedViewFilename(views: MobileSavedView[], viewId: string): ViewFilename | null {
+  const view = views.find((candidate) => candidate.id === viewId || candidate.filename === viewId)
+  return view?.filename ?? null
 }
 
 function slugify(value: YamlText) {
