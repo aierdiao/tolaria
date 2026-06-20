@@ -67,7 +67,9 @@ export function canonicalSystemMetadataKey(key: string): string {
   return canonicalFrontmatterKey(key)
 }
 
-export function systemMetadataAliases(canonicalKey: SystemMetadataKey): readonly string[] {
+export function systemMetadataAliases<Key extends SystemMetadataKey>(
+  canonicalKey: Key,
+): (typeof SYSTEM_METADATA_ALIAS_GROUPS)[Key] {
   return SYSTEM_METADATA_ALIAS_GROUPS[canonicalKey]
 }
 

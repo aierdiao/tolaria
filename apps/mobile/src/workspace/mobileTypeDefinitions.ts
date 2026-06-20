@@ -13,17 +13,18 @@ import type {
   MobileTypeDefinition,
   MobileTypeDefinitions,
 } from './mobileWorkspaceModel'
+import { systemMetadataAliases } from '../../../../src/utils/systemMetadata'
 
 type TypeName = string
 type TypePath = string
 type TypeRawContent = string
 type FrontmatterKey = string
 
-const systemMetadataAliases = {
-  icon: ['_icon', 'icon'],
-  order: ['_order', 'order'],
-  sidebarLabel: ['_sidebar_label', 'sidebar_label', 'sidebar label'],
-  sort: ['_sort', 'sort'],
+const typeSystemMetadataAliases = {
+  icon: systemMetadataAliases('_icon'),
+  order: systemMetadataAliases('_order'),
+  sidebarLabel: systemMetadataAliases('_sidebar_label'),
+  sort: systemMetadataAliases('_sort'),
 } as const
 
 export type MobileTypeDefinitionPatch = {
@@ -164,14 +165,14 @@ function patchedTypeFrontmatter(
 ): LocalVaultFrontmatter {
   const nextFrontmatter = { ...frontmatter }
   writeFrontmatterValue(nextFrontmatter, 'type', 'Type')
-  writeOptionalSystemMetadataValue(nextFrontmatter, systemMetadataAliases.sidebarLabel, patch.label)
+  writeOptionalSystemMetadataValue(nextFrontmatter, typeSystemMetadataAliases.sidebarLabel, patch.label)
   writeOptionalFrontmatterValue(nextFrontmatter, 'color', patch.tone)
-  writeOptionalSystemMetadataValue(nextFrontmatter, systemMetadataAliases.icon, patch.icon)
+  writeOptionalSystemMetadataValue(nextFrontmatter, typeSystemMetadataAliases.icon, patch.icon)
   writeOptionalFrontmatterValue(nextFrontmatter, 'template', patch.template)
-  writeOptionalSystemMetadataValue(nextFrontmatter, systemMetadataAliases.sort, patch.sort)
+  writeOptionalSystemMetadataValue(nextFrontmatter, typeSystemMetadataAliases.sort, patch.sort)
   writeOptionalCanonicalFrontmatterValue(nextFrontmatter, 'view', patch.view)
   writeOptionalFrontmatterValue(nextFrontmatter, '_list_properties_display', patch.listPropertiesDisplay)
-  writeOptionalSystemMetadataValue(nextFrontmatter, systemMetadataAliases.order, patch.order)
+  writeOptionalSystemMetadataValue(nextFrontmatter, typeSystemMetadataAliases.order, patch.order)
 
   if (patch.visible !== undefined) {
     writeOptionalCanonicalFrontmatterValue(nextFrontmatter, 'visible', patch.visible === false ? false : null)
