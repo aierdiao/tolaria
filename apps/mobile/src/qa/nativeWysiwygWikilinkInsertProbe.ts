@@ -1,4 +1,7 @@
-import type { NativeWysiwygWikilinkPayload } from '../components/workspace/MobileWysiwygWikilinkBridgeModel'
+import type {
+  NativeWysiwygSelection,
+  NativeWysiwygWikilinkPayload,
+} from '../components/workspace/MobileWysiwygWikilinkBridgeModel'
 
 type MarkdownContent = string
 type NoteId = string
@@ -7,6 +10,8 @@ type ProbeLine = string
 
 export type NativeWysiwygWikilinkInsertProof = {
   contentLength: number
+  insertedPersonMentionSaved: boolean
+  insertedPersonMentionSourceRemoved: boolean
   insertedWikilinkSaved: boolean
   noteId: NoteId
 }
@@ -19,12 +24,39 @@ export type NativeWysiwygWikilinkInsertAssertionFailure = {
 export const nativeWysiwygWikilinkInsertLogPrefix = 'TOLARIA_MOBILE_WYSIWYG_WIKILINK_INSERT_PROBE'
 const probeTarget = 'AI Ops Guide'
 const expectedWikilink = `[[${probeTarget}]]`
+const personMentionProbeLabel = 'Luca'
+const personMentionProbeTarget = 'People/Luca'
+const personMentionProbeSource = 'Ask @Lu'
+const expectedPersonMentionWikilink = `[[${personMentionProbeTarget}|${personMentionProbeLabel}]]`
 
 export function nativeWysiwygWikilinkInsertProbePayload(): NativeWysiwygWikilinkPayload {
   return {
     label: probeTarget,
     target: probeTarget,
   }
+}
+
+export function nativeWysiwygPersonMentionInsertProbePayload(): NativeWysiwygWikilinkPayload {
+  return {
+    label: personMentionProbeLabel,
+    target: personMentionProbeTarget,
+  }
+}
+
+export function nativeWysiwygPersonMentionInsertProbeContent(): object {
+  return {
+    content: [
+      {
+        content: [{ text: personMentionProbeSource, type: 'text' }],
+        type: 'paragraph',
+      },
+    ],
+    type: 'doc',
+  }
+}
+
+export function nativeWysiwygPersonMentionInsertProbeSelection(): NativeWysiwygSelection {
+  return { from: 5, to: 8 }
 }
 
 export function nativeWysiwygWikilinkInsertProof({
@@ -36,6 +68,8 @@ export function nativeWysiwygWikilinkInsertProof({
 }): NativeWysiwygWikilinkInsertProof {
   return {
     contentLength: content.length,
+    insertedPersonMentionSaved: content.includes(expectedPersonMentionWikilink),
+    insertedPersonMentionSourceRemoved: !content.includes('@Lu'),
     insertedWikilinkSaved: content.includes(expectedWikilink),
     noteId,
   }
@@ -70,6 +104,16 @@ export function assertNativeWysiwygWikilinkInsertProofs(
       'editor.wysiwyg.wikilinkInsert.saved',
       'Native WYSIWYG picker insertion saves as desktop wikilink markdown',
     ),
+    proofFailure(
+      latest.insertedPersonMentionSaved,
+      'editor.wysiwyg.wikilinkInsert.personMentionSaved',
+      'Native WYSIWYG person mention insertion saves as a desktop wikilink alias',
+    ),
+    proofFailure(
+      latest.insertedPersonMentionSourceRemoved,
+      'editor.wysiwyg.wikilinkInsert.personMentionReplacement',
+      'Native WYSIWYG person mention insertion replaces the typed @ query',
+    ),
   ].filter((failure): failure is NativeWysiwygWikilinkInsertAssertionFailure => failure !== null)
 }
 
@@ -100,11 +144,15 @@ function parsedProof(value: unknown): NativeWysiwygWikilinkInsertProof | null {
 
   const candidate = value as Partial<NativeWysiwygWikilinkInsertProof>
   if (typeof candidate.contentLength !== 'number') return null
+  if (typeof candidate.insertedPersonMentionSaved !== 'boolean') return null
+  if (typeof candidate.insertedPersonMentionSourceRemoved !== 'boolean') return null
   if (typeof candidate.insertedWikilinkSaved !== 'boolean') return null
   if (typeof candidate.noteId !== 'string') return null
 
   return {
     contentLength: candidate.contentLength,
+    insertedPersonMentionSaved: candidate.insertedPersonMentionSaved,
+    insertedPersonMentionSourceRemoved: candidate.insertedPersonMentionSourceRemoved,
     insertedWikilinkSaved: candidate.insertedWikilinkSaved,
     noteId: candidate.noteId,
   }

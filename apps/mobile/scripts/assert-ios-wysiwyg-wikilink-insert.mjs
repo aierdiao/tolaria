@@ -77,11 +77,26 @@ function selectDevice(requestedDevice, preferPhone) {
 }
 
 async function openProbeUrl(device, openUrl, waitMs) {
-  assertNativeQaOpenUrl(openUrl, 'Native iOS WYSIWYG wikilink insertion')
+  assertNativeQaOpenUrl(openUrl, 'Native iOS WYSIWYG wikilink and person mention insertion')
   terminateExpoGo(device)
   await sleep(500)
-  run('xcrun', ['simctl', 'openurl', device, wikilinkInsertProbeUrl(openUrl)])
+  openSimulatorUrl(device, wikilinkInsertProbeUrl(openUrl))
   await sleep(Math.max(waitMs, 9000))
+}
+
+function openSimulatorUrl(device, url) {
+  try {
+    run('xcrun', ['simctl', 'openurl', device, url])
+  } catch (error) {
+    if (!isSimulatorOpenUrlTimeout(error)) throw error
+    console.warn(`Continuing after simulator URL timeout; proof logs will verify launch: ${error.message}`)
+  }
+}
+
+function isSimulatorOpenUrlTimeout(error) {
+  return error instanceof Error
+    && error.message.includes('simctl openurl')
+    && error.message.includes('Operation timed out')
 }
 
 function wikilinkInsertProbeUrl(openUrl) {
@@ -151,7 +166,7 @@ async function main() {
     throw new Error(`Native WYSIWYG wikilink insertion proof failed:\n${formatNativeWysiwygWikilinkInsertFailures(failures)}`)
   }
 
-  console.log('Native iOS WYSIWYG wikilink insertion proof passed.')
+  console.log('Native iOS WYSIWYG wikilink and person mention insertion proof passed.')
 }
 
 main().catch((error) => {

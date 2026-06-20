@@ -57,6 +57,9 @@ import {
 } from '../../qa/nativeWysiwygInputTransformProbe'
 import {
   nativeWysiwygWikilinkInsertLogLine,
+  nativeWysiwygPersonMentionInsertProbeContent,
+  nativeWysiwygPersonMentionInsertProbePayload,
+  nativeWysiwygPersonMentionInsertProbeSelection,
   nativeWysiwygWikilinkInsertProbePayload,
   nativeWysiwygWikilinkInsertProof,
 } from '../../qa/nativeWysiwygWikilinkInsertProbe'
@@ -949,8 +952,34 @@ async function insertMarkdownBlocksIntoNativeEditor(
   return true
 }
 
-function insertNativeWysiwygWikilinkProbe(editor: EditorBridge | null): Promise<boolean> {
-  return insertWikilinkIntoNativeEditor(editor, nativeWysiwygWikilinkInsertProbePayload())
+async function insertNativeWysiwygWikilinkProbe(editor: EditorBridge | null): Promise<boolean> {
+  if (!isContentSettableEditorBridge(editor) || !isJsonReadableEditorBridge(editor)) return false
+
+  const personMentionJson = nativeWysiwygDocumentWithInsertedWikilink({
+    json: nativeWysiwygPersonMentionInsertProbeContent(),
+    payload: nativeWysiwygPersonMentionInsertProbePayload(),
+    selection: nativeWysiwygPersonMentionInsertProbeSelection(),
+  })
+  if (!personMentionJson) return false
+
+  const combinedJson = nativeWysiwygDocumentWithInsertedWikilink({
+    json: personMentionJson,
+    payload: nativeWysiwygWikilinkInsertProbePayload(),
+  })
+  if (!combinedJson) return false
+
+  editor.setContent(combinedJson)
+  await settleNativeWysiwygEditorContent()
+  const nextContent = nativeWysiwygDocumentContentFromJson({
+    currentContent: '',
+    initialBodyHasContent: false,
+    isFirstSerialization: false,
+    json: await editor.getJSON(),
+  })
+  const proof = nativeWysiwygWikilinkInsertProof({ content: nextContent.content, noteId: 'probe' })
+  return proof.insertedWikilinkSaved
+    && proof.insertedPersonMentionSaved
+    && proof.insertedPersonMentionSourceRemoved
 }
 
 function insertNativeWysiwygMarkdownBlockProbe(
@@ -1015,9 +1044,14 @@ function useNativeWysiwygDeferredInsertionProbe({
     if (hasInsertedRef.current) return undefined
 
     let insertTimer: TimerHandle | null = null
+    let disposed = false
+    const scheduleRetry = () => {
+      if (disposed) return
+      insertTimer = setTimeout(insertWhenReady, 250)
+    }
     const insertWhenReady = () => {
       if (!refs.acceptsEditorChangesRef.current) {
-        insertTimer = setTimeout(insertWhenReady, 250)
+        scheduleRetry()
         return
       }
 
@@ -1027,21 +1061,26 @@ function useNativeWysiwygDeferredInsertionProbe({
         .then((inserted) => {
           if (!inserted) {
             hasInsertedRef.current = false
+            scheduleRetry()
             return
           }
 
           refs.hasAcceptedEditorChangeRef.current = true
-          refs.saveTimerRef.current = setTimeout(flushEditorDocument, 500)
+          if (refs.saveTimerRef.current) clearTimeout(refs.saveTimerRef.current)
+          flushEditorDocument()
+          refs.saveTimerRef.current = setTimeout(flushEditorDocument, 250)
         })
         .catch((error: unknown) => {
           hasInsertedRef.current = false
           console.warn(warning, error)
+          scheduleRetry()
         })
     }
 
-    insertTimer = setTimeout(insertWhenReady, 250)
+    scheduleRetry()
 
     return () => {
+      disposed = true
       if (insertTimer) clearTimeout(insertTimer)
       if (refs.saveTimerRef.current) clearTimeout(refs.saveTimerRef.current)
     }

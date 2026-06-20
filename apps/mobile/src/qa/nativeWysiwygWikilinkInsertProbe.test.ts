@@ -2,6 +2,9 @@ import { describe, expect, it } from 'vitest'
 import {
   assertNativeWysiwygWikilinkInsertProofs,
   formatNativeWysiwygWikilinkInsertFailures,
+  nativeWysiwygPersonMentionInsertProbeContent,
+  nativeWysiwygPersonMentionInsertProbePayload,
+  nativeWysiwygPersonMentionInsertProbeSelection,
   nativeWysiwygWikilinkInsertLogLine,
   nativeWysiwygWikilinkInsertProbeEnabled,
   nativeWysiwygWikilinkInsertProbePayload,
@@ -15,13 +18,27 @@ describe('native WYSIWYG wikilink insert probe', () => {
       label: 'AI Ops Guide',
       target: 'AI Ops Guide',
     })
+    expect(nativeWysiwygPersonMentionInsertProbePayload()).toEqual({
+      label: 'Luca',
+      target: 'People/Luca',
+    })
+    expect(nativeWysiwygPersonMentionInsertProbeContent()).toMatchObject({
+      content: [{
+        content: [{ text: 'Ask @Lu', type: 'text' }],
+        type: 'paragraph',
+      }],
+      type: 'doc',
+    })
+    expect(nativeWysiwygPersonMentionInsertProbeSelection()).toEqual({ from: 5, to: 8 })
   })
 
-  it('builds a passing proof when the inserted link saved as desktop markdown', () => {
+  it('builds a passing proof when inserted links save as desktop markdown', () => {
     expect(nativeWysiwygWikilinkInsertProof({
-      content: '# Note\n\nSee [[AI Ops Guide]] for details.',
+      content: '# Note\n\nAsk [[People/Luca|Luca]] about [[AI Ops Guide]].',
       noteId: 'note.md',
     })).toMatchObject({
+      insertedPersonMentionSaved: true,
+      insertedPersonMentionSourceRemoved: true,
       insertedWikilinkSaved: true,
       noteId: 'note.md',
     })
@@ -29,7 +46,7 @@ describe('native WYSIWYG wikilink insert probe', () => {
 
   it('parses and asserts simulator log proofs', () => {
     const proof = nativeWysiwygWikilinkInsertProof({
-      content: '# Note\n\n[[AI Ops Guide]] ',
+      content: '# Note\n\nAsk [[People/Luca|Luca]] [[AI Ops Guide]] ',
       noteId: 'note.md',
     })
 
@@ -46,6 +63,21 @@ describe('native WYSIWYG wikilink insert probe', () => {
     ])).toEqual([{
       id: 'editor.wysiwyg.wikilinkInsert.saved',
       message: 'Native WYSIWYG picker insertion saves as desktop wikilink markdown',
+    }, {
+      id: 'editor.wysiwyg.wikilinkInsert.personMentionSaved',
+      message: 'Native WYSIWYG person mention insertion saves as a desktop wikilink alias',
+    }])
+    expect(assertNativeWysiwygWikilinkInsertProofs([
+      nativeWysiwygWikilinkInsertProof({
+        content: '# Note\n\nAsk @Lu [[AI Ops Guide]]',
+        noteId: 'note.md',
+      }),
+    ])).toEqual([{
+      id: 'editor.wysiwyg.wikilinkInsert.personMentionSaved',
+      message: 'Native WYSIWYG person mention insertion saves as a desktop wikilink alias',
+    }, {
+      id: 'editor.wysiwyg.wikilinkInsert.personMentionReplacement',
+      message: 'Native WYSIWYG person mention insertion replaces the typed @ query',
     }])
   })
 

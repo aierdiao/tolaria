@@ -108,31 +108,27 @@ describe('native WYSIWYG wikilink bridge', () => {
     expect(tiptapJsonToMobileMarkdown(nextDocument)).toBe(expectedMarkdown)
   })
 
-  it('inserts native WYSIWYG code blocks as structured TenTap nodes before markdown serialization', () => {
-    const nextDocument = nativeWysiwygDocumentWithInsertedMarkdownBlock({
-      json: documentNode(paragraphNode('Intro'), paragraphNode('Tail')),
-      payload: { action: 'codeBlock' },
-      selection: { from: 3, to: 3 },
-    })
-
-    expect(nextDocument?.content?.[1]).toMatchObject({
+  it.each([
+    ['codeBlock', {
       attrs: { language: 'text' },
       content: [{ text: 'code', type: 'text' }],
       type: 'codeBlock',
-    })
-  })
-
-  it('inserts native WYSIWYG display math as a structured TenTap node before markdown serialization', () => {
+    }],
+    ['mathBlock', {
+      attrs: { latex: '\\sqrt{a^2 + b^2}' },
+      type: 'mathBlock',
+    }],
+  ] as const)('inserts native WYSIWYG %s as a structured TenTap node before markdown serialization', (
+    action,
+    expectedNode,
+  ) => {
     const nextDocument = nativeWysiwygDocumentWithInsertedMarkdownBlock({
       json: documentNode(paragraphNode('Intro'), paragraphNode('Tail')),
-      payload: { action: 'mathBlock' },
+      payload: { action },
       selection: { from: 3, to: 3 },
     })
 
-    expect(nextDocument?.content?.[1]).toMatchObject({
-      attrs: { latex: '\\sqrt{a^2 + b^2}' },
-      type: 'mathBlock',
-    })
+    expect(nextDocument?.content?.[1]).toMatchObject(expectedNode)
   })
 
   it('inserts native WYSIWYG tables as structured TenTap nodes before markdown serialization', () => {
@@ -242,20 +238,32 @@ describe('native WYSIWYG wikilink bridge', () => {
     })).toBeNull()
   })
 
-  it('replaces an active native autocomplete query with the selected wikilink', () => {
-    const autocomplete = nativeWysiwygInlineAutocompleteAtSelection({
-      json: documentNode(paragraphNode('See [[AI')),
-      selection: { from: 9, to: 9 },
-    })
-
-    expect(insertedWikilinkMarkdown({
-      payload: {
-        label: 'AI Ops Guide',
-        target: 'AI Ops Guide',
-      },
-      selection: autocomplete?.range,
+  it.each([
+    {
+      cursor: 9,
+      expectedMarkdown: 'See [[AI Ops Guide]]',
+      kind: 'wikilink',
+      payload: { label: 'AI Ops Guide', target: 'AI Ops Guide' },
       text: 'See [[AI',
-    })).toBe('See [[AI Ops Guide]]')
+    },
+    {
+      cursor: 8,
+      expectedMarkdown: 'Ask [[People/Luca|Luca]] about this',
+      kind: 'person mention',
+      payload: { label: 'Luca', target: 'People/Luca' },
+      text: 'Ask @Lu about this',
+    },
+  ] as const)('replaces an active native $kind query with the selected wikilink', ({
+    cursor,
+    expectedMarkdown,
+    payload,
+    text,
+  }) => {
+    expect(insertedWikilinkMarkdown({
+      payload,
+      selection: autocompleteRange(text, cursor),
+      text,
+    })).toBe(expectedMarkdown)
   })
 })
 
@@ -284,6 +292,13 @@ function insertedWikilinkMarkdown({
     payload,
     selection,
   }))
+}
+
+function autocompleteRange(text: string, cursor: number): NativeWysiwygSelection | undefined {
+  return nativeWysiwygInlineAutocompleteAtSelection({
+    json: documentNode(paragraphNode(text)),
+    selection: { from: cursor, to: cursor },
+  })?.range
 }
 
 function documentNode(...content: TiptapJsonNode[]): TiptapJsonNode {
