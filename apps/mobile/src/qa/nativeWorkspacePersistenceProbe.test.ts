@@ -90,6 +90,7 @@ describe('native workspace persistence probe', () => {
     const proof = passingWorkspaceProof()
     proof.changedNoteTypeHydrated = false
     proof.noteChromeMetadataHydrated = false
+    proof.noteIconRemovalHydrated = false
     proof.noteStateMetadataHydrated = false
 
     const failureIds = assertNativeWorkspacePersistenceProofs([proof])
@@ -98,6 +99,7 @@ describe('native workspace persistence probe', () => {
     expect(failureIds).toEqual([
       'workspace.persistence.changeNoteType',
       'workspace.persistence.noteChromeMetadata',
+      'workspace.persistence.noteIconRemoval',
       'workspace.persistence.noteStateMetadata',
     ])
   })
@@ -201,6 +203,7 @@ function passingWorkspaceProof(): NativeWorkspacePersistenceProof {
     folderRenameApplied: true,
     movedNoteContentPreserved: true,
     noteChromeMetadataHydrated: true,
+    noteIconRemovalHydrated: true,
     noteStateMetadataHydrated: true,
     persistedToNativeRepository: true,
     propertyDisplayModesHydrated: true,

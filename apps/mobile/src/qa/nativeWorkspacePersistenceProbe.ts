@@ -16,6 +16,7 @@ export type NativeWorkspacePersistenceProof = {
   folderRenameApplied: boolean
   movedNoteContentPreserved: boolean
   noteChromeMetadataHydrated: boolean
+  noteIconRemovalHydrated: boolean
   noteStateMetadataHydrated: boolean
   persistedToNativeRepository: boolean
   propertyDisplayModesHydrated: boolean
@@ -90,6 +91,7 @@ export function assertNativeWorkspacePersistenceProofs(
     proofFailure(latest.textFileContentHydrated, 'workspace.persistence.updateTextFileContent', 'Plain text file edits rehydrate from native filesystem writes'),
     proofFailure(latest.changedNoteTypeHydrated, 'workspace.persistence.changeNoteType', 'Changed note type rehydrates from native frontmatter writes'),
     proofFailure(latest.noteChromeMetadataHydrated, 'workspace.persistence.noteChromeMetadata', 'Note icon and width metadata rehydrate from native frontmatter writes'),
+    proofFailure(latest.noteIconRemovalHydrated, 'workspace.persistence.noteIconRemoval', 'Removed note icons rehydrate from native frontmatter deletion writes'),
     proofFailure(latest.noteStateMetadataHydrated, 'workspace.persistence.noteStateMetadata', 'Note archive, organized, and favorite metadata rehydrate from native frontmatter writes'),
     proofFailure(latest.favoriteOrderHydrated, 'workspace.persistence.moveFavorite', 'Favorite order rehydrates from native favorite index writes'),
     proofFailure(latest.propertyDisplayModesHydrated, 'workspace.persistence.propertyDisplayModes', 'Property display modes rehydrate from native vault-scoped config storage'),
@@ -192,6 +194,7 @@ const workspacePersistenceProofKeys = [
   'folderRenameApplied',
   'movedNoteContentPreserved',
   'noteChromeMetadataHydrated',
+  'noteIconRemovalHydrated',
   'noteStateMetadataHydrated',
   'persistedToNativeRepository',
   'propertyDisplayModesHydrated',

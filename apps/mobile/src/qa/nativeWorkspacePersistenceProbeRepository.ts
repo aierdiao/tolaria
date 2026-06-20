@@ -9,6 +9,20 @@ import {
   type NativeWorkspacePersistenceProof,
 } from './nativeWorkspacePersistenceProbe'
 import {
+  favoriteLabels,
+  folderPathStartsWith,
+  joinedProperties,
+  noteByPath,
+  noteMatches,
+  notePropertyValue,
+  relationshipRefs,
+  snapshotContainsNotePath,
+  textContainsAll,
+  typeDefinitionExists,
+  viewByName,
+  viewExists,
+} from './nativeWorkspacePersistenceProofHelpers'
+import {
   nativeWorkspaceNotePathProof,
   nativeWorkspaceNotePathSeedWrites,
   nativeWorkspaceNotePathWrites,
@@ -34,6 +48,7 @@ const oldTypeName = 'Retired Proof'
 const oldViewName = 'Old Native Proof'
 const propertyRelationshipNotePath = 'Properties/Relationship Proof.md'
 const propertyRelationshipUrl = 'https://tolaria.local/mobile'
+const removedIconNotePath = 'Metadata/Icon Removal.md'
 const relationshipSourcePath = 'Relationships/Source.md'
 const relationshipTargetPath = 'Relationships/native-related-target.md'
 const reorderedTypeAlphaName = 'Order Alpha'
@@ -125,6 +140,7 @@ async function logWorkspacePersistenceProof(
   const favoriteBetaContent = await readProbeNoteContent(baseRepository, snapshot, favoriteBetaPath, request)
   const propertyRelationshipContent = await readProbeNoteContent(baseRepository, snapshot, propertyRelationshipNotePath, request)
   const renamedAssignedContent = await readProbeNoteContent(baseRepository, snapshot, renamedTypeAssignedNotePath, request)
+  const removedIconContent = await readProbeNoteContent(baseRepository, snapshot, removedIconNotePath, request)
   const restoredNoteContent = await readProbeNoteContent(baseRepository, snapshot, restoredNotePath, request)
   const relationshipSourceContent = await readProbeNoteContent(baseRepository, snapshot, relationshipSourcePath, request)
   const metadataContent = await readProbeNoteContent(baseRepository, snapshot, metadataNotePath, request)
@@ -140,6 +156,7 @@ async function logWorkspacePersistenceProof(
     propertyRelationshipContent,
     relationshipSourceContent,
     renamedAssignedContent,
+    removedIconContent,
     restoredNoteContent,
     textFileContent,
   })))
@@ -259,7 +276,8 @@ type WorkspaceProbeWrites = ReturnType<typeof applyMobileWorkspaceEditWithWrites
 
 function workspacePersistenceMetadataWrites(seedSnapshot: MobileWorkspaceSnapshot) {
   const note = noteByPath(seedSnapshot, metadataNotePath)
-  if (!note) return []
+  const removedIconNote = noteByPath(seedSnapshot, removedIconNotePath)
+  if (!note || !removedIconNote) return []
 
   return workspacePersistenceEditWrites(seedSnapshot, [
     { noteId: note.id, type: 'changeNoteType', value: 'Procedure' },
@@ -268,6 +286,7 @@ function workspacePersistenceMetadataWrites(seedSnapshot: MobileWorkspaceSnapsho
     { archived: true, noteId: note.id, type: 'setArchived' },
     { noteId: note.id, organized: true, type: 'setOrganized' },
     { noteId: note.id, type: 'toggleFavorite' },
+    { key: '_icon', noteId: removedIconNote.id, type: 'deleteProperty' },
   ])
 }
 
@@ -491,6 +510,20 @@ function seedWorkspaceNoteWrites() {
       path: metadataNotePath,
     },
     {
+      content: [
+        '---',
+        'type: Essay',
+        '_icon: star',
+        '---',
+        '# Icon Removal',
+        '',
+        'Remove note icon persistence proof seed.',
+        '',
+      ].join('\n'),
+      kind: 'createNote' as const,
+      path: removedIconNotePath,
+    },
+    {
       content: favoriteNoteContent('Alpha', 10),
       kind: 'createNote' as const,
       path: favoriteAlphaPath,
@@ -600,6 +633,7 @@ function workspacePersistenceProof(
     propertyRelationshipContent: string | null
     relationshipSourceContent: string | null
     renamedAssignedContent: string | null
+    removedIconContent: string | null
     restoredNoteContent: string | null
     textFileContent: string | null
   },
@@ -618,6 +652,7 @@ function workspacePersistenceProof(
     folderRenameApplied: folderRenameApplied(snapshot),
     movedNoteContentPreserved: movedContentPreserved(content.movedContent),
     noteChromeMetadataHydrated: noteChromeMetadataHydrated(snapshot, content.metadataContent),
+    noteIconRemovalHydrated: noteIconRemovalHydrated(snapshot, content.removedIconContent),
     noteStateMetadataHydrated: noteStateMetadataHydrated(snapshot, content.metadataContent),
     persistedToNativeRepository: snapshot.source?.kind === 'localVault',
     propertyDeletionHydrated: propertyDeletionHydrated(snapshot, content.propertyRelationshipContent),
@@ -645,29 +680,17 @@ function workspacePersistenceProof(
   }
 }
 
+function folderCreateApplied(snapshot: MobileWorkspaceSnapshot) {
+  return snapshot.folderPaths?.includes(createdFolderPath) === true
+}
+
 function folderRenameApplied(snapshot: MobileWorkspaceSnapshot) {
   return snapshot.folderPaths?.includes(renamedFolderPath) === true
     && snapshotContainsNotePath(snapshot, `${renamedFolderPath}/Keep.md`)
 }
 
-function folderCreateApplied(snapshot: MobileWorkspaceSnapshot) {
-  return snapshot.folderPaths?.includes(createdFolderPath) === true
-}
-
 function restoredFolderHydrated(snapshot: MobileWorkspaceSnapshot) {
   return snapshot.folderPaths?.includes(restoredFolderPath) === true
-}
-
-function snapshotContainsNotePath(snapshot: MobileWorkspaceSnapshot, path: string) {
-  return noteByPath(snapshot, path) !== null
-}
-
-function typeDefinitionExists(snapshot: MobileWorkspaceSnapshot, name: string) {
-  return snapshot.typeDefinitions?.[name] !== undefined
-}
-
-function viewExists(snapshot: MobileWorkspaceSnapshot, name: string) {
-  return snapshot.views?.some((view) => view.definition.name === name) === true
 }
 
 function savedViewHydrated(snapshot: MobileWorkspaceSnapshot) {
@@ -692,10 +715,6 @@ function restoredViewHydrated(snapshot: MobileWorkspaceSnapshot) {
   return view?.filename === restoredViewFilename
     && view.definition.order === 7
     && view.definition.icon === 'rotate-ccw'
-}
-
-function viewByName(snapshot: MobileWorkspaceSnapshot, name: string) {
-  return snapshot.views?.find((view) => view.definition.name === name)
 }
 
 function updatedViewHydrated(snapshot: MobileWorkspaceSnapshot) {
@@ -832,13 +851,6 @@ function favoriteOrderHydrated(
   ].every(Boolean)
 }
 
-function favoriteLabels(snapshot: MobileWorkspaceSnapshot) {
-  return snapshot.sidebarSections
-    .find((section) => section.id === 'favorites')
-    ?.items
-    ?.map((item) => item.label) ?? []
-}
-
 function propertyValuesHydrated(snapshot: MobileWorkspaceSnapshot, content: string | null) {
   const note = noteByPath(snapshot, propertyRelationshipNotePath)
   return [
@@ -863,24 +875,6 @@ function relationshipEditHydrated(snapshot: MobileWorkspaceSnapshot, content: st
     && content?.includes('[[Writing/Seed]]') === false
 }
 
-function notePropertyValue(note: ReturnType<typeof noteByPath>, key: string) {
-  return note?.properties?.find((property) => property.key === key)?.value
-}
-
-function relationshipRefs(note: ReturnType<typeof noteByPath>, key: string) {
-  return note?.relationships.find((relationship) => relationship.key === key)?.values
-    .map((value) => value.ref)
-    .filter((ref): ref is string => typeof ref === 'string') ?? []
-}
-
-function joinedProperties(properties: string[] | undefined) {
-  return properties?.join('|') ?? ''
-}
-
-function folderPathStartsWith(snapshot: MobileWorkspaceSnapshot, pathPrefix: string) {
-  return snapshot.folderPaths?.some((path) => path === pathPrefix || path.startsWith(`${pathPrefix}/`)) === true
-}
-
 function movedContentPreserved(content: string | null) {
   return content?.includes('saved before moving through native persistence') === true
 }
@@ -896,6 +890,12 @@ function noteChromeMetadataHydrated(snapshot: MobileWorkspaceSnapshot, content: 
     && textContainsAll(content, ['_icon: star', '_width: wide'])
 }
 
+function noteIconRemovalHydrated(snapshot: MobileWorkspaceSnapshot, content: string | null) {
+  const note = noteByPath(snapshot, removedIconNotePath)
+  return noteMatches(note, { icon: null })
+    && content?.includes('_icon:') === false
+}
+
 function changedNoteTypeHydrated(snapshot: MobileWorkspaceSnapshot, content: string | null) {
   return noteByPath(snapshot, metadataNotePath)?.type === 'Procedure'
     && content?.includes('type: Procedure') === true
@@ -905,17 +905,6 @@ function noteStateMetadataHydrated(snapshot: MobileWorkspaceSnapshot, content: s
   const note = noteByPath(snapshot, metadataNotePath)
   return noteMatches(note, { archived: true, favorite: true, organized: true })
     && textContainsAll(content, ['_archived: true', '_organized: true', '_favorite: true', '_favorite_index:'])
-}
-
-function noteMatches(
-  note: ReturnType<typeof noteByPath>,
-  expected: Partial<Pick<NonNullable<ReturnType<typeof noteByPath>>, 'archived' | 'favorite' | 'icon' | 'noteWidth' | 'organized'>>,
-) {
-  return note !== null && Object.entries(expected).every(([key, value]) => note[key as keyof typeof expected] === value)
-}
-
-function textContainsAll(content: string | null, fragments: string[]) {
-  return content !== null && fragments.every((fragment) => content.includes(fragment))
 }
 
 function relationshipSourceRefHydrated(content: string | null) {
@@ -949,10 +938,6 @@ function renamedTypeSchemaRefsHydrated(snapshot: MobileWorkspaceSnapshot) {
   const schemaCarrier = snapshot.typeDefinitions?.[renamedTypeSchemaCarrierName]
   return schemaCarrier?.relationships?.related_to?.includes('[[rename-target]]') === true
     && schemaCarrier.rawContent?.includes('[[rename-target]]') === true
-}
-
-function noteByPath(snapshot: MobileWorkspaceSnapshot, path: string) {
-  return (snapshot.allNotes ?? snapshot.notes).find((note) => note.path === path) ?? null
 }
 
 function restoredMobileNote(): MobileNote {
