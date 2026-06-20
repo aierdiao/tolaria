@@ -1,11 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import type { MobileNote } from './mobileWorkspaceModel'
 import {
+  activeMobileEmojiShortcodeQuery,
   activeMobilePersonMentionQuery,
   activeMobileWikilinkQuery,
   mobilePersonMentionAutocompleteSuggestions,
   mobileWikilinkAutocompleteSuggestions,
   mobileWikilinkAutocompleteTarget,
+  replaceActiveMobileEmojiShortcodeQuery,
   replaceActiveMobilePersonMentionQuery,
   replaceActiveMobileWikilinkQuery,
 } from './mobileWikilinkAutocomplete'
@@ -152,6 +154,23 @@ describe('mobile wikilink autocomplete', () => {
     expect(replaceActiveMobilePersonMentionQuery('Talk to @Mer', 12, 'people/maria')).toEqual({
       cursor: 25,
       text: 'Talk to [[people/maria]] ',
+    })
+  })
+
+  it('detects desktop-style emoji shortcode queries at text boundaries', () => {
+    expect(activeMobileEmojiShortcodeQuery('Ship :rock today', 10)).toEqual({
+      cursor: 10,
+      query: 'rock',
+      start: 5,
+    })
+    expect(activeMobileEmojiShortcodeQuery('Ship:', 5)).toBeNull()
+    expect(activeMobileEmojiShortcodeQuery('https://example.com', 8)).toBeNull()
+  })
+
+  it('replaces emoji shortcode queries without adding mobile-only spacing', () => {
+    expect(replaceActiveMobileEmojiShortcodeQuery('Ship :rock today', 10, '🚀')).toEqual({
+      cursor: 7,
+      text: 'Ship 🚀 today',
     })
   })
 })

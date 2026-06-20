@@ -11,11 +11,14 @@ import { mobileColors, mobileSpace } from '../../ui/tokens'
 import type { MobileNote } from '../../workspace/mobileWorkspaceModel'
 import { MobileTypeIcon } from './MobileWorkspaceIcons'
 import {
+  mobileWysiwygEmojiPayloadForEntry,
+  mobileWysiwygEmojiPickerSuggestions,
   mobileWysiwygWikilinkPayloadForNote,
   mobileWysiwygWikilinkPickerSuggestions,
 } from './MobileWysiwygWikilinkPickerModel'
 import type {
   NativeWysiwygInlineAutocompleteKind,
+  NativeWysiwygPlainTextPayload,
   NativeWysiwygWikilinkPayload,
 } from './MobileWysiwygWikilinkBridgeModel'
 
@@ -25,6 +28,7 @@ type MobileWysiwygWikilinkPickerProps = {
   notes: MobileNote[]
   onClose: () => void
   onSelect: (payload: NativeWysiwygWikilinkPayload) => void
+  onSelectEmoji: (payload: NativeWysiwygPlainTextPayload) => void
   sourceNote?: MobileNote | null
 }
 
@@ -34,6 +38,7 @@ export function MobileWysiwygWikilinkPicker({
   notes,
   onClose,
   onSelect,
+  onSelectEmoji,
   sourceNote = null,
 }: MobileWysiwygWikilinkPickerProps) {
   const [query, setQuery] = useState(initialQuery)
@@ -41,29 +46,44 @@ export function MobileWysiwygWikilinkPicker({
     () => mobileWysiwygWikilinkPickerSuggestions(notes, query, kind),
     [kind, notes, query],
   )
+  const emojiSuggestions = useMemo(
+    () => kind === 'emoji' ? mobileWysiwygEmojiPickerSuggestions(query) : [],
+    [kind, query],
+  )
+  const hasSuggestions = kind === 'emoji' ? emojiSuggestions.length > 0 : suggestions.length > 0
 
   return (
     <View style={styles.host} testID="editor-wysiwyg-wikilink-picker">
       <Pressable style={styles.backdrop} testID="editor-wysiwyg-wikilink-backdrop" onPress={onClose} />
       <MobilePanel style={styles.panel}>
         <MobileToolbar testID="editor-wysiwyg-wikilink-toolbar">
-          <MobileToolbarTitle title={mobileText('editor.formatting.wikilink')} />
+          <MobileToolbarTitle title={pickerTitle(kind)} />
           <MobileToolbarSpacer />
           <MobileButton label={mobileText('common.cancel')} variant="ghost" onPress={onClose} />
         </MobileToolbar>
         <View style={styles.content}>
           <MobileTextInput
             autoFocus
-            label={mobileText('noteList.searchAction')}
-            placeholder={mobileText('noteList.searchPlaceholder')}
+            label={pickerSearchLabel(kind)}
+            placeholder={pickerSearchPlaceholder(kind)}
             testID="editor-wysiwyg-wikilink-search"
             value={query}
             onChangeText={setQuery}
           />
           <ScrollView contentContainerStyle={styles.suggestionList} keyboardShouldPersistTaps="handled">
-            {suggestions.length === 0 ? (
-              <Text style={styles.empty} testID="editor-wysiwyg-wikilink-empty">{mobileText('noteList.empty.noMatching')}</Text>
+            {!hasSuggestions ? (
+              <Text style={styles.empty} testID="editor-wysiwyg-wikilink-empty">{pickerEmptyLabel(kind)}</Text>
             ) : null}
+            {emojiSuggestions.map((entry) => (
+              <MobileListRow
+                key={entry.emoji}
+                subtitle={entry.group}
+                testID={`editor-wysiwyg-emoji-suggestion-${testIdSegment(entry.name)}`}
+                title={entry.name}
+                trailing={<Text style={styles.emoji}>{entry.emoji}</Text>}
+                onPress={() => onSelectEmoji(mobileWysiwygEmojiPayloadForEntry(entry))}
+              />
+            ))}
             {suggestions.map((note) => (
               <MobileListRow
                 chips={<MobileChip label={note.type} tone={note.typeTone} />}
@@ -82,6 +102,30 @@ export function MobileWysiwygWikilinkPicker({
   )
 }
 
+function pickerTitle(kind: NativeWysiwygInlineAutocompleteKind) {
+  return kind === 'emoji'
+    ? mobileText('editor.formatting.emoji')
+    : mobileText('editor.formatting.wikilink')
+}
+
+function pickerSearchLabel(kind: NativeWysiwygInlineAutocompleteKind) {
+  return kind === 'emoji'
+    ? mobileText('editor.formatting.searchEmoji')
+    : mobileText('noteList.searchAction')
+}
+
+function pickerSearchPlaceholder(kind: NativeWysiwygInlineAutocompleteKind) {
+  return kind === 'emoji'
+    ? mobileText('editor.formatting.searchEmojiPlaceholder')
+    : mobileText('noteList.searchPlaceholder')
+}
+
+function pickerEmptyLabel(kind: NativeWysiwygInlineAutocompleteKind) {
+  return kind === 'emoji'
+    ? mobileText('editor.formatting.noMatchingEmoji')
+    : mobileText('noteList.empty.noMatching')
+}
+
 function testIdSegment(value: string) {
   return value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
 }
@@ -98,6 +142,10 @@ const styles = StyleSheet.create({
     color: mobileColors.textMuted,
     paddingHorizontal: mobileSpace.sm,
     paddingVertical: mobileSpace.md,
+  },
+  emoji: {
+    fontSize: 20,
+    lineHeight: 24,
   },
   host: {
     ...StyleSheet.absoluteFillObject,

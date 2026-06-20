@@ -238,6 +238,22 @@ describe('native WYSIWYG wikilink bridge', () => {
     })).toBeNull()
   })
 
+  it('detects an active native emoji shortcode autocomplete query', () => {
+    expectAutocomplete('Ship :rock', 11, {
+      kind: 'emoji',
+      query: 'rock',
+      range: { from: 6, to: 11 },
+    })
+  })
+
+  it('replaces an active native emoji shortcode query with plain emoji text', () => {
+    expect(insertedPlainTextMarkdown({
+      selection: autocompleteRange('Ship :rock today', 11),
+      text: 'Ship :rock today',
+      value: '🚀',
+    })).toBe('Ship 🚀 today')
+  })
+
   it.each([
     {
       cursor: 9,
@@ -276,6 +292,22 @@ function expectAutocomplete(
     json: documentNode(paragraphNode(text)),
     selection: { from: cursor, to: cursor },
   })).toEqual(expected)
+}
+
+function insertedPlainTextMarkdown({
+  selection,
+  text,
+  value,
+}: {
+  selection?: NativeWysiwygSelection
+  text: string
+  value: string
+}): string {
+  return tiptapJsonToMobileMarkdown(nativeWysiwygDocumentWithInsertedPlainText({
+    json: documentNode(paragraphNode(text)),
+    payload: { text: value },
+    selection,
+  }))
 }
 
 function insertedWikilinkMarkdown({

@@ -4,6 +4,7 @@ import {
   type MobileAttachmentImport,
 } from '../../workspace/mobileAttachments'
 import {
+  activeMobileEmojiShortcodeQuery,
   activeMobilePersonMentionQuery,
   activeMobileWikilinkQuery,
 } from '../../workspace/mobileWikilinkAutocomplete'
@@ -42,7 +43,7 @@ export type NativeWysiwygSelection = {
   from: number
   to: number
 }
-export type NativeWysiwygInlineAutocompleteKind = 'personMention' | 'wikilink'
+export type NativeWysiwygInlineAutocompleteKind = 'emoji' | 'personMention' | 'wikilink'
 export type NativeWysiwygInlineAutocomplete = {
   kind: NativeWysiwygInlineAutocompleteKind
   query: string
@@ -354,14 +355,25 @@ function inlineAutocompleteForContainer(
   }
 
   const mentionMatch = activeMobilePersonMentionQuery(projection.text, projection.cursor)
-  if (!mentionMatch || mentionMatch.query.length === 0) return null
+  if (mentionMatch && mentionMatch.query.length > 0) {
+    return inlineAutocompleteMatch({
+      kind: 'personMention',
+      position,
+      projection,
+      query: mentionMatch.query,
+      start: mentionMatch.start,
+    })
+  }
+
+  const emojiMatch = activeMobileEmojiShortcodeQuery(projection.text, projection.cursor)
+  if (!emojiMatch) return null
 
   return inlineAutocompleteMatch({
-    kind: 'personMention',
+    kind: 'emoji',
     position,
     projection,
-    query: mentionMatch.query,
-    start: mentionMatch.start,
+    query: emojiMatch.query,
+    start: emojiMatch.start,
   })
 }
 

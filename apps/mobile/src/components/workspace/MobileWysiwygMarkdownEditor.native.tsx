@@ -298,6 +298,10 @@ function NativeTentapEditorSurface({
     insertWikilink(payload, pickerState?.replacementRange)
     onCloseWikilinkPicker()
   }, [insertWikilink, onCloseWikilinkPicker, pickerState?.replacementRange])
+  const handleInsertEmoji = useCallback((payload: NativeWysiwygPlainTextPayload) => {
+    insertPlainText(payload, pickerState?.replacementRange)
+    onCloseWikilinkPicker()
+  }, [insertPlainText, onCloseWikilinkPicker, pickerState?.replacementRange])
 
   return (
     <View {...probeProps(layoutProbe, 'editor.wysiwyg.form')} style={nativeEditorStyles.container} testID="editor-wysiwyg-form">
@@ -329,6 +333,7 @@ function NativeTentapEditorSurface({
           sourceNote={sourceNote}
           onClose={onCloseWikilinkPicker}
           onSelect={handleInsertWikilink}
+          onSelectEmoji={handleInsertEmoji}
         />
       ) : null}
     </View>

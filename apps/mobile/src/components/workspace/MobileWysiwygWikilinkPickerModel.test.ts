@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import type { MobileNote } from '../../workspace/mobileWorkspaceModel'
 import {
+  mobileWysiwygEmojiPayloadForEntry,
+  mobileWysiwygEmojiPickerSuggestions,
   mobileWysiwygWikilinkPayloadForNote,
   mobileWysiwygWikilinkPickerSuggestions,
 } from './MobileWysiwygWikilinkPickerModel'
@@ -27,6 +29,17 @@ describe('native WYSIWYG wikilink picker model', () => {
     ], 'luc', 'personMention')
 
     expect(suggestions.map((suggestion) => suggestion.title)).toEqual(['Luca'])
+  })
+
+  it('uses the shared desktop emoji catalog and ranking for native : autocomplete', () => {
+    const suggestions = mobileWysiwygEmojiPickerSuggestions('rocket')
+    const firstSuggestion = suggestions[0]!
+
+    expect(firstSuggestion).toMatchObject({
+      emoji: '🚀',
+      name: 'rocket',
+    })
+    expect(mobileWysiwygEmojiPayloadForEntry(firstSuggestion)).toEqual({ text: '🚀' })
   })
 
   it('builds the native insertion payload with the note title as label and canonical path target', () => {

@@ -13,6 +13,7 @@ type MarkdownContent = string
 type WikilinkQuery = string
 type WikilinkTarget = string
 type PersonMentionQuery = string
+type EmojiShortcodeQuery = string
 type MobileWikilinkSuggestionNote = MobileNote & { path: string }
 type InlineQueryOptions = {
   invalidQuery: (query: string) => boolean
@@ -42,6 +43,12 @@ const personMentionQueryOptions: InlineQueryOptions = {
   replacement: personMentionReplacement,
   trigger: '@',
   validBoundary: hasPersonMentionBoundary,
+}
+const emojiShortcodeQueryOptions: InlineQueryOptions = {
+  invalidQuery: (query) => query.includes(':') || /\s/u.test(query),
+  replacement: (emoji) => emoji,
+  trigger: ':',
+  validBoundary: hasInlineShortcutBoundary,
 }
 
 export function activeMobileWikilinkQuery(
@@ -92,6 +99,28 @@ export function replaceActiveMobilePersonMentionQuery(
   return replaceActiveMobileInlineQuery(text, cursor, target, personMentionQueryOptions)
 }
 
+export type MobileEmojiShortcodeAutocompleteMatch = {
+  cursor: CursorOffset
+  query: EmojiShortcodeQuery
+  start: CursorOffset
+}
+
+export function activeMobileEmojiShortcodeQuery(
+  text: MarkdownContent,
+  cursor: CursorOffset,
+): MobileEmojiShortcodeAutocompleteMatch | null {
+  const match = activeMobileInlineQuery(text, cursor, emojiShortcodeQueryOptions)
+  return match && match.query.length > 0 ? match : null
+}
+
+export function replaceActiveMobileEmojiShortcodeQuery(
+  text: MarkdownContent,
+  cursor: CursorOffset,
+  emoji: string,
+): MobileWikilinkAutocompleteReplacement | null {
+  return replaceActiveMobileInlineQuery(text, cursor, emoji, emojiShortcodeQueryOptions)
+}
+
 export function mobilePersonMentionAutocompleteSuggestions(
   notes: MobileNote[],
   query: PersonMentionQuery,
@@ -131,6 +160,10 @@ function boundedTextCursor(text: MarkdownContent, cursor: CursorOffset): CursorO
 }
 
 function hasPersonMentionBoundary(text: string, triggerIndex: number): boolean {
+  return hasInlineShortcutBoundary(text, triggerIndex)
+}
+
+function hasInlineShortcutBoundary(text: string, triggerIndex: number): boolean {
   const previous = text.at(triggerIndex - 1)
   return previous === undefined || /[\s([{:>,-]/u.test(previous)
 }

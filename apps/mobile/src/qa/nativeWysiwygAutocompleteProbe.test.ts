@@ -20,7 +20,7 @@ describe('native WYSIWYG autocomplete probe', () => {
     expect(nativeWysiwygAutocompleteProbeSelection()).toEqual({ from: 9, to: 9 })
   })
 
-  it('runs native documents for wikilink and person mention autocomplete', () => {
+  it('runs native documents for wikilink, person mention, and emoji autocomplete', () => {
     expect(nativeWysiwygAutocompleteProbeSteps()).toEqual([
       {
         content: {
@@ -36,10 +36,17 @@ describe('native WYSIWYG autocomplete probe', () => {
         },
         selection: { from: 8, to: 8 },
       },
+      {
+        content: {
+          content: [{ content: [{ text: 'Ship :rock', type: 'text' }], type: 'paragraph' }],
+          type: 'doc',
+        },
+        selection: { from: 11, to: 11 },
+      },
     ])
   })
 
-  it('parses and asserts simulator log proofs for both autocomplete families', () => {
+  it('parses and asserts simulator log proofs for desktop autocomplete families', () => {
     const wikilinkProof = nativeWysiwygAutocompleteProof({
       kind: 'wikilink',
       query: 'AI',
@@ -50,13 +57,19 @@ describe('native WYSIWYG autocomplete probe', () => {
       query: 'Lu',
       range: { from: 5, to: 8 },
     })
+    const emojiProof = nativeWysiwygAutocompleteProof({
+      kind: 'emoji',
+      query: 'rock',
+      range: { from: 6, to: 11 },
+    })
     const log = [
       nativeWysiwygAutocompleteLogLine(wikilinkProof),
       nativeWysiwygAutocompleteLogLine(personMentionProof),
+      nativeWysiwygAutocompleteLogLine(emojiProof),
     ].join('\n')
 
-    expect(parseNativeWysiwygAutocompleteProofs(log)).toEqual([wikilinkProof, personMentionProof])
-    expect(assertNativeWysiwygAutocompleteProofs([wikilinkProof, personMentionProof])).toEqual([])
+    expect(parseNativeWysiwygAutocompleteProofs(log)).toEqual([wikilinkProof, personMentionProof, emojiProof])
+    expect(assertNativeWysiwygAutocompleteProofs([wikilinkProof, personMentionProof, emojiProof])).toEqual([])
   })
 
   it('reports missing and failed autocomplete proofs', () => {
@@ -71,6 +84,10 @@ describe('native WYSIWYG autocomplete probe', () => {
       {
         id: 'editor.wysiwyg.autocomplete.personMention',
         message: 'Native WYSIWYG detects person mention autocomplete with the exact replacement range',
+      },
+      {
+        id: 'editor.wysiwyg.autocomplete.emoji',
+        message: 'Native WYSIWYG detects emoji shortcode autocomplete with the exact replacement range',
       },
     ])
   })

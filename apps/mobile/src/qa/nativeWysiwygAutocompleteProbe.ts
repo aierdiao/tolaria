@@ -40,6 +40,10 @@ export function nativeWysiwygAutocompleteProbeSteps(): NativeWysiwygAutocomplete
       content: textProbeContent('Ask @Lu'),
       selection: { from: 8, to: 8 },
     },
+    {
+      content: textProbeContent('Ship :rock'),
+      selection: { from: 11, to: 11 },
+    },
   ]
 }
 
@@ -99,6 +103,11 @@ export function assertNativeWysiwygAutocompleteProofs(
       hasAutocompleteProof(proofs, { kind: 'personMention', query: 'Lu', rangeFrom: 5, rangeTo: 8 }),
       'editor.wysiwyg.autocomplete.personMention',
       'Native WYSIWYG detects person mention autocomplete with the exact replacement range',
+    ),
+    proofFailure(
+      hasAutocompleteProof(proofs, { kind: 'emoji', query: 'rock', rangeFrom: 6, rangeTo: 11 }),
+      'editor.wysiwyg.autocomplete.emoji',
+      'Native WYSIWYG detects emoji shortcode autocomplete with the exact replacement range',
     ),
   ].filter((failure): failure is NativeWysiwygAutocompleteAssertionFailure => failure !== null)
 }

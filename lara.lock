@@ -632,6 +632,10 @@ files:
     editor.formatting.strikethrough: 926a51baad949d12035107e5d06e2fdb
     editor.formatting.code: ca0dbad92a874b2f69b549293387925e
     editor.formatting.wikilink: e0ee5416c95077b05ea46d40dee513a7
+    editor.formatting.emoji: 68305e25f5788db069d06c54924af087
+    editor.formatting.searchEmoji: 21cb93f165892484afe2431194e15b43
+    editor.formatting.searchEmojiPlaceholder: f5869e8673f8fac0c39d210471b9acec
+    editor.formatting.noMatchingEmoji: d6b4952322c3544d1407af823c643a80
     editor.formatting.heading1: fd7500ca2aba5ce6ba82e8dee1ffe5f4
     editor.formatting.heading2: ea59935a58010a876f94374fb2f41d51
     editor.formatting.heading3: 652864eb81a28bd7164f1605ab52a26a
