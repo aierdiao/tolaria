@@ -1,9 +1,9 @@
 import {
   assertNativePropertiesLayoutMetrics,
   nativePropertiesMetricContract,
-} from './nativePropertiesLayoutMetrics'
+} from './nativePropertiesLayoutMetrics.ts'
 
-export { nativePropertiesMetricContract } from './nativePropertiesLayoutMetrics'
+export { nativePropertiesMetricContract } from './nativePropertiesLayoutMetrics.ts'
 
 export type NativeLayoutMetric = {
   height: number
@@ -107,6 +107,7 @@ const layoutTolerance = 1.5
 const sidebarSectionOrder = ['primary', 'favorites', 'views', 'types', 'folders']
 const wysiwygToolbarActionMetricIds = [
   'editor.wysiwyg.toolbar.action.attachment',
+  'editor.wysiwyg.toolbar.action.pastePlainText',
   'editor.wysiwyg.toolbar.action.bold',
   'editor.wysiwyg.toolbar.action.italic',
   'editor.wysiwyg.toolbar.action.strike',
