@@ -127,6 +127,16 @@ Updated body.
     )
   })
 
+  it('hydrates markdown links whose labels contain balanced or escaped brackets', () => {
+    const html = mobileMarkdownBodyToTentapHtml(
+      'Read [Project [Alpha]](https://example.com/alpha) and [Project \\[Beta\\]](https://example.com/beta).\n',
+    )
+
+    expect(html).toBe(
+      '<p>Read <a href="https://example.com/alpha">Project [Alpha]</a> and <a href="https://example.com/beta">Project [Beta]</a>.</p>',
+    )
+  })
+
   it('hydrates markdown autolinks as editable TenTap links', () => {
     const html = mobileMarkdownBodyToTentapHtml(
       'Location: <https://example.com/room?id=42> and <luca@example.com>\n',
@@ -508,6 +518,12 @@ Updated body.
   it('serializes link destinations with spaces using desktop angle syntax', () => {
     expect(tiptapJsonToMobileMarkdown(linkDocument('attachments/project brief.pdf'))).toBe(
       '[project brief.pdf](<attachments/project brief.pdf>)',
+    )
+  })
+
+  it('serializes link labels with brackets as escaped desktop markdown labels', () => {
+    expect(tiptapJsonToMobileMarkdown(linkDocument('https://example.com/alpha', 'Project [Alpha]'))).toBe(
+      '[Project \\[Alpha\\]](https://example.com/alpha)',
     )
   })
 

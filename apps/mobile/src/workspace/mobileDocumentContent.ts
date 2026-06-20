@@ -741,11 +741,11 @@ function nextMarkdownLink(
   while (searchIndex < markdown.length) {
     const labelStart = markdown.indexOf('[', searchIndex)
     if (labelStart === -1) return null
-    const labelEnd = markdown.indexOf(']', labelStart + 1)
-    if (labelEnd === -1) return null
-    const destinationStart = labelEnd + 2
-    if (markdown[labelEnd + 1] !== '(') {
-      searchIndex = labelEnd + 1
+    const label = readMarkdownLinkLabel(markdown, labelStart)
+    if (!label) return null
+    const destinationStart = label.end + 2
+    if (markdown[label.end + 1] !== '(') {
+      searchIndex = label.end + 1
       continue
     }
 
@@ -754,7 +754,7 @@ function nextMarkdownLink(
       return {
         end: destination.end + 1,
         href: destination.href,
-        label: markdown.slice(labelStart + 1, labelEnd),
+        label: label.value,
         start: labelStart,
       }
     }
@@ -762,6 +762,35 @@ function nextMarkdownLink(
   }
 
   return null
+}
+
+function readMarkdownLinkLabel(
+  markdown: MarkdownLine,
+  startIndex: number,
+): { end: number; value: LinkLabel } | null {
+  let bracketDepth = 0
+  let index = startIndex + 1
+
+  while (index < markdown.length) {
+    const char = markdown[index] ?? ''
+    if (isClosingMarkdownLinkLabel(char, bracketDepth)) {
+      return { end: index, value: markdown.slice(startIndex + 1, index) }
+    }
+    bracketDepth = nextMarkdownLinkLabelDepth(bracketDepth, char)
+    index += 1
+  }
+
+  return null
+}
+
+function isClosingMarkdownLinkLabel(char: PlainText, bracketDepth: number): boolean {
+  return char === ']' && bracketDepth === 0
+}
+
+function nextMarkdownLinkLabelDepth(bracketDepth: number, char: PlainText): number {
+  if (char === '[') return bracketDepth + 1
+  if (char === ']') return Math.max(0, bracketDepth - 1)
+  return bracketDepth
 }
 
 function readMarkdownLinkDestination(
@@ -1149,7 +1178,7 @@ function isMarkdownEmailAutolink(value: LinkLabel): boolean {
 }
 
 function escapeMarkdownLinkLabel(text: LinkLabel): LinkLabel {
-  return text.replace(/\\/g, '\\\\').replace(/\]/g, '\\]')
+  return text.replace(/\\/g, '\\\\').replace(/\[/g, '\\[').replace(/\]/g, '\\]')
 }
 
 function escapeMarkdownLinkDestination(href: UrlText): UrlText {
