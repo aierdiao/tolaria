@@ -412,24 +412,13 @@ function workspacePersistenceTextFileWrites(seedSnapshot: MobileWorkspaceSnapsho
 }
 
 function workspacePersistenceFolderWrites(seedSnapshot: MobileWorkspaceSnapshot) {
-  return [
-    ...workspacePersistenceEditWrites(seedSnapshot, [
-      { name: 'Created Drafts', parentPath: 'Folders', type: 'createFolder' },
-    ]),
-    {
-      kind: 'renameFolder' as const,
-      path: 'Folders/Queue',
-      toPath: renamedFolderPath,
-    },
-    {
-      kind: 'createFolder' as const,
-      path: 'Scratch/To Delete',
-    },
-    {
-      kind: 'deleteFolder' as const,
-      path: 'Scratch',
-    },
-  ]
+  return workspacePersistenceEditWrites(seedSnapshot, [
+    { name: 'Created Drafts', parentPath: 'Folders', type: 'createFolder' },
+    { folderPath: 'Folders/Queue', name: 'Proof Queue', type: 'renameFolder' },
+    { name: 'Scratch', type: 'createFolder' },
+    { name: 'To Delete', parentPath: 'Scratch', type: 'createFolder' },
+    { folderPath: 'Scratch', type: 'deleteFolder' },
+  ])
 }
 
 function workspacePersistenceTypeWrites(seedSnapshot: MobileWorkspaceSnapshot) {
