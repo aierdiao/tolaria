@@ -102,6 +102,10 @@ describe('native workspace persistence probe', () => {
     ])
   })
 
+  it('reports incomplete favorite order persistence proofs', () => {
+    expectProofFailures({ favoriteOrderHydrated: false }, ['workspace.persistence.moveFavorite'])
+  })
+
   it('reports incomplete vault config persistence proofs', () => {
     expectProofFailures({
       defaultNoteWidthHydrated: false,
@@ -182,6 +186,7 @@ function passingWorkspaceProof(): NativeWorkspacePersistenceProof {
     deletedTypeDefinitionRemoved: true,
     deletedViewRemoved: true,
     defaultNoteWidthHydrated: true,
+    favoriteOrderHydrated: true,
     fileVisibilityHydrated: true,
     folderDeleteApplied: true,
     folderRenameApplied: true,

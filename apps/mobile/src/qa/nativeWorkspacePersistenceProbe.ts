@@ -9,6 +9,7 @@ export type NativeWorkspacePersistenceProof = {
   deletedTypeDefinitionRemoved: boolean
   deletedViewRemoved: boolean
   defaultNoteWidthHydrated: boolean
+  favoriteOrderHydrated: boolean
   fileVisibilityHydrated: boolean
   folderDeleteApplied: boolean
   folderRenameApplied: boolean
@@ -89,6 +90,7 @@ export function assertNativeWorkspacePersistenceProofs(
     proofFailure(latest.changedNoteTypeHydrated, 'workspace.persistence.changeNoteType', 'Changed note type rehydrates from native frontmatter writes'),
     proofFailure(latest.noteChromeMetadataHydrated, 'workspace.persistence.noteChromeMetadata', 'Note icon and width metadata rehydrate from native frontmatter writes'),
     proofFailure(latest.noteStateMetadataHydrated, 'workspace.persistence.noteStateMetadata', 'Note archive, organized, and favorite metadata rehydrate from native frontmatter writes'),
+    proofFailure(latest.favoriteOrderHydrated, 'workspace.persistence.moveFavorite', 'Favorite order rehydrates from native favorite index writes'),
     proofFailure(latest.propertyDisplayModesHydrated, 'workspace.persistence.propertyDisplayModes', 'Property display modes rehydrate from native vault-scoped config storage'),
     proofFailure(latest.propertyDeletionHydrated, 'workspace.persistence.propertyDeletion', 'Deleted scalar properties are removed from native frontmatter writes'),
     proofFailure(latest.propertyValuesHydrated, 'workspace.persistence.propertyValues', 'Typed property values rehydrate from native frontmatter writes'),
@@ -181,6 +183,7 @@ const workspacePersistenceProofKeys = [
   'deletedTypeDefinitionRemoved',
   'deletedViewRemoved',
   'defaultNoteWidthHydrated',
+  'favoriteOrderHydrated',
   'fileVisibilityHydrated',
   'folderDeleteApplied',
   'folderRenameApplied',

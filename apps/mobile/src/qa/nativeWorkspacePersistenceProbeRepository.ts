@@ -24,6 +24,8 @@ type ExpoFileSystemModule = {
 declare const require: (moduleName: string) => ExpoFileSystemModule
 
 const createdNotePath = 'Writing/Drafts/mobile-created.md'
+const favoriteAlphaPath = 'Favorites/Alpha.md'
+const favoriteBetaPath = 'Favorites/Beta.md'
 const movedNoteFolderPath = 'Research'
 const movedNotePath = 'Research/Seed.md'
 const metadataNotePath = 'Metadata/Chrome State.md'
@@ -118,6 +120,8 @@ async function logWorkspacePersistenceProof(
   const movedNote = snapshot.allNotes?.find((note) => note.path === movedNotePath)
     ?? snapshot.notes.find((note) => note.path === movedNotePath)
   const movedContent = movedNote ? await baseRepository.readNoteContent(movedNote, request) : null
+  const favoriteAlphaContent = await readProbeNoteContent(baseRepository, snapshot, favoriteAlphaPath, request)
+  const favoriteBetaContent = await readProbeNoteContent(baseRepository, snapshot, favoriteBetaPath, request)
   const propertyRelationshipContent = await readProbeNoteContent(baseRepository, snapshot, propertyRelationshipNotePath, request)
   const renamedAssignedContent = await readProbeNoteContent(baseRepository, snapshot, renamedTypeAssignedNotePath, request)
   const restoredNoteContent = await readProbeNoteContent(baseRepository, snapshot, restoredNotePath, request)
@@ -127,6 +131,8 @@ async function logWorkspacePersistenceProof(
   const notePathContent = await readNativeWorkspaceNotePathContent(baseRepository, snapshot, request)
 
   console.info(nativeWorkspacePersistenceLogLine(workspacePersistenceProof(snapshot, {
+    favoriteAlphaContent,
+    favoriteBetaContent,
     metadataContent,
     movedContent,
     notePathContent,
@@ -169,6 +175,7 @@ function workspacePersistenceProbeRootUri(): string | null {
 function workspacePersistenceProbeWrites(seedSnapshot: MobileWorkspaceSnapshot) {
   return [
     ...workspacePersistenceNoteAndRelationshipWrites(seedSnapshot),
+    ...workspacePersistenceFavoriteWrites(seedSnapshot),
     ...workspacePersistenceMetadataWrites(seedSnapshot),
     ...workspacePersistencePropertyAndRelationshipWrites(seedSnapshot),
     ...workspacePersistenceRestorationWrites(seedSnapshot),
@@ -260,6 +267,15 @@ function workspacePersistenceMetadataWrites(seedSnapshot: MobileWorkspaceSnapsho
     { archived: true, noteId: note.id, type: 'setArchived' },
     { noteId: note.id, organized: true, type: 'setOrganized' },
     { noteId: note.id, type: 'toggleFavorite' },
+  ])
+}
+
+function workspacePersistenceFavoriteWrites(seedSnapshot: MobileWorkspaceSnapshot) {
+  const note = noteByPath(seedSnapshot, favoriteBetaPath)
+  if (!note) return []
+
+  return workspacePersistenceEditWrites(seedSnapshot, [
+    { direction: 'up', noteId: note.id, type: 'moveFavorite' },
   ])
 }
 
@@ -465,6 +481,16 @@ function seedWorkspaceNoteWrites() {
       path: metadataNotePath,
     },
     {
+      content: favoriteNoteContent('Alpha', 10),
+      kind: 'createNote' as const,
+      path: favoriteAlphaPath,
+    },
+    {
+      content: favoriteNoteContent('Beta', 20),
+      kind: 'createNote' as const,
+      path: favoriteBetaPath,
+    },
+    {
       content: '# Keep\n',
       kind: 'createNote' as const,
       path: 'Folders/Queue/Keep.md',
@@ -556,6 +582,8 @@ function seedWorkspaceTypeWrites() {
 function workspacePersistenceProof(
   snapshot: MobileWorkspaceSnapshot,
   content: {
+    favoriteAlphaContent: string | null
+    favoriteBetaContent: string | null
     metadataContent: string | null
     movedContent: string | null
     notePathContent: NativeWorkspaceNotePathPersistenceContent
@@ -573,6 +601,7 @@ function workspacePersistenceProof(
     deletedTypeDefinitionRemoved: !typeDefinitionExists(snapshot, oldTypeName),
     deletedViewRemoved: !viewExists(snapshot, oldViewName),
     defaultNoteWidthHydrated: snapshot.vaultConfig?.defaultNoteWidth === 'wide',
+    favoriteOrderHydrated: favoriteOrderHydrated(snapshot, content),
     fileVisibilityHydrated: fileVisibilityHydrated(snapshot),
     folderDeleteApplied: !folderPathStartsWith(snapshot, 'Scratch'),
     folderRenameApplied: folderRenameApplied(snapshot),
@@ -752,6 +781,26 @@ function textFileContentHydrated(snapshot: MobileWorkspaceSnapshot, content: str
   return note?.fileKind === 'text'
     && note.snippet === 'feature=mobile-editing'
     && content === textFileUpdatedContent
+}
+
+function favoriteOrderHydrated(
+  snapshot: MobileWorkspaceSnapshot,
+  content: { favoriteAlphaContent?: string | null; favoriteBetaContent?: string | null },
+) {
+  return [
+    noteByPath(snapshot, favoriteBetaPath)?.favoriteIndex === 0,
+    noteByPath(snapshot, favoriteAlphaPath)?.favoriteIndex === 1,
+    favoriteLabels(snapshot).join('|') === 'Beta|Alpha',
+    textContainsAll(content.favoriteBetaContent ?? null, ['_favorite_index: 0']),
+    textContainsAll(content.favoriteAlphaContent ?? null, ['_favorite_index: 1']),
+  ].every(Boolean)
+}
+
+function favoriteLabels(snapshot: MobileWorkspaceSnapshot) {
+  return snapshot.sidebarSections
+    .find((section) => section.id === 'favorites')
+    ?.items
+    ?.map((item) => item.label) ?? []
 }
 
 function propertyValuesHydrated(snapshot: MobileWorkspaceSnapshot, content: string | null) {
@@ -953,6 +1002,18 @@ function restoredNoteContent() {
     '# Restored Undo Note',
     '',
     'Restored from mobile history.',
+    '',
+  ].join('\n')
+}
+
+function favoriteNoteContent(title: string, index: number) {
+  return [
+    '---',
+    `title: ${title}`,
+    '_favorite: true',
+    `_favorite_index: ${index}`,
+    '---',
+    `# ${title}`,
     '',
   ].join('\n')
 }
