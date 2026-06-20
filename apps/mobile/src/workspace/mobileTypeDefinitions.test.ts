@@ -146,4 +146,32 @@ Visible: false
     expect(content).toContain('"key:value": 2026-06-01')
     expect(content).toContain('"blocked#by":\n  - "[[launch-plan]]"')
   })
+
+  it('preserves omitted Type schema defaults when patching only one schema side', () => {
+    const definition = {
+      rawContent: `---
+type: Type
+Priority: High
+belongs_to:
+  - "[[Tolaria MVP]]"
+---
+# Project
+`,
+    }
+
+    const propertyOnlyContent = mobileTypeDefinitionContent('Project', definition, {
+      properties: { Priority: 'Low' },
+    })
+
+    expect(propertyOnlyContent).toContain('Priority: Low')
+    expect(propertyOnlyContent).toContain('belongs_to:\n  - "[[Tolaria MVP]]"')
+
+    const relationshipOnlyContent = mobileTypeDefinitionContent('Project', definition, {
+      relationships: { related_to: ['[[Mobile UI]]'] },
+    })
+
+    expect(relationshipOnlyContent).toContain('Priority: High')
+    expect(relationshipOnlyContent).toContain('related_to:\n  - "[[Mobile UI]]"')
+    expect(relationshipOnlyContent).not.toContain('belongs_to:')
+  })
 })

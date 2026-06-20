@@ -179,7 +179,11 @@ function patchedTypeFrontmatter(
   }
 
   if (patch.properties !== undefined || patch.relationships !== undefined) {
-    replaceTypeSchemaFrontmatter(nextFrontmatter, patch.properties ?? {}, patch.relationships ?? {})
+    replaceTypeSchemaFrontmatter(
+      nextFrontmatter,
+      patch.properties ?? preservedTypeSchemaProperties(nextFrontmatter),
+      patch.relationships ?? frontmatterRelationships(nextFrontmatter),
+    )
   }
 
   return nextFrontmatter
@@ -201,6 +205,21 @@ function replaceTypeSchemaFrontmatter(
   for (const [key, refs] of Object.entries(relationships)) {
     writeFrontmatterValue(frontmatter, key, refs)
   }
+}
+
+function preservedTypeSchemaProperties(frontmatter: LocalVaultFrontmatter): Record<string, MobilePropertyValue> {
+  return Object.fromEntries(
+    Object.entries(frontmatterProperties(frontmatter)).flatMap(([key, value]) => {
+      const propertyValue = preservedTypeSchemaPropertyValue(value)
+      return propertyValue === null ? [] : [[key, propertyValue]]
+    }),
+  )
+}
+
+function preservedTypeSchemaPropertyValue(value: LocalVaultFrontmatterValue): MobilePropertyValue | null {
+  if (value === null) return null
+  if (!Array.isArray(value)) return value
+  return value.flatMap((item) => item === null ? [] : [String(item)])
 }
 
 function typeSchemaFrontmatterKeys(frontmatter: LocalVaultFrontmatter): string[] {
