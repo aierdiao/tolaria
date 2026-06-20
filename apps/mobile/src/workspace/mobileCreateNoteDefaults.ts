@@ -5,7 +5,7 @@ import type {
   MobileTypeDefinition,
   MobileTypeDefinitions,
 } from './mobileWorkspaceModel'
-import { normalizeRelationshipKey } from './mobileWorkspaceSuggestions'
+import { isRelationshipKey, normalizeRelationshipKey } from '../../../../src/utils/relationshipKeys'
 
 type MutableCreateDefaults = Pick<MobileCreateNoteDefaults, 'template' | 'type'> & {
   properties: Record<string, MobilePropertyValue>
@@ -13,7 +13,6 @@ type MutableCreateDefaults = Pick<MobileCreateNoteDefaults, 'template' | 'type'>
 }
 
 const ignoredTypePropertyDefaultFields = new Set(['is_a', 'title', 'type'])
-const relationshipDefaultFields = new Set(['belongs_to', 'related_to', 'has'])
 const booleanDefaultKeys = ['archived', 'favorite', 'organized'] as const
 const textDefaultKeys = ['folderPath', 'status', 'template', 'type'] as const
 
@@ -152,7 +151,7 @@ function normalizedFieldKey(field: string): string {
 }
 
 function isRelationshipDefaultField(key: string): boolean {
-  return relationshipDefaultFields.has(key) || key.startsWith('has_')
+  return isRelationshipKey(key)
 }
 
 function compactDefaults(defaults: MobileCreateNoteDefaults): MobileCreateNoteDefaults {

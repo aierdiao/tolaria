@@ -24,6 +24,10 @@ export function relationshipKindForKey(key: string): RelationshipKind {
   return 'custom'
 }
 
+export function isRelationshipKey(key: string): boolean {
+  return relationshipKindForKey(key) !== 'custom'
+}
+
 export function relationshipKeyForKind(kind: RelationshipKind | null | undefined): string | null {
   return kind ? RELATIONSHIP_KEYS_BY_KIND[kind] ?? null : null
 }

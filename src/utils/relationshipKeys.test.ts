@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  isRelationshipKey,
   normalizeRelationshipKey,
   relationshipFrontmatterKey,
   relationshipKeyForKind,
@@ -18,6 +19,12 @@ describe('relationship key helpers', () => {
     expect(relationshipKindForKey('has')).toBe('has')
     expect(relationshipKindForKey('has_part')).toBe('has')
     expect(relationshipKindForKey('mentioned_by')).toBe('custom')
+  })
+
+  it('detects relationship keys using the same canonical and has-prefixed rules', () => {
+    expect(isRelationshipKey('Belongs to')).toBe(true)
+    expect(isRelationshipKey('has_part')).toBe(true)
+    expect(isRelationshipKey('mentioned_by')).toBe(false)
   })
 
   it('maps relationship kinds back to canonical desktop frontmatter keys', () => {
