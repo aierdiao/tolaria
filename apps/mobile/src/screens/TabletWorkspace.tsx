@@ -18,6 +18,7 @@ import { useMobileEditorCommandRegistry, type RegisterMobileEditorCommands } fro
 import { mobileNoteIdForWikilinkTarget } from '../workspace/mobileWikilinks'
 import { buildMobileCommandPaletteCommands } from '../workspace/mobileCommandPalette'
 import { TabletEditorPanel } from './TabletEditorPanel'
+import { tabletScreenModeForWindow } from './tabletWorkspaceScreenMode'
 import type { TabletPanel, TabletWorkspaceChromeProps } from './tabletWorkspaceTypes'
 import { useTabletWorkspaceController } from './useTabletWorkspaceController'
 import { useMobileInspectorReferenceGroups } from './useMobileInspectorReferenceGroups'
@@ -86,12 +87,14 @@ function useTabletScreenMode() {
   const { height, width } = useWindowDimensions()
   const screen = Dimensions.get('screen')
   const nativeIpad = Platform.OS === 'ios' && Platform.isPad
-  const effectiveTabletWidth = nativeIpad ? Math.max(width, height, screen.width, screen.height) : width
 
-  return {
-    compactTablet: !nativeIpad && width < 1080 && width < height && screen.width < screen.height,
-    defaultPropertiesVisible: nativeIpad ? effectiveTabletWidth >= 1200 : true,
-  }
+  return tabletScreenModeForWindow({
+    height,
+    nativeIpad,
+    screenHeight: screen.height,
+    screenWidth: screen.width,
+    width,
+  })
 }
 
 function TabletWorkspaceChrome(props: TabletWorkspaceChromeProps) {
