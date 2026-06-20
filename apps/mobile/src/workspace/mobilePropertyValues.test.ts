@@ -66,6 +66,8 @@ describe('mobile property values', () => {
     expect(parseMobilePropertyValue({ key: 'Published', kind: 'boolean', valueText: 'false' })).toBe(false)
     expect(parseMobilePropertyValue({ key: 'Priority', kind: 'string', valueText: ' High ' })).toBe('High')
     expect(parseMobilePropertyValue({ key: 'Date', kind: 'date', valueText: ' 2026-06-14 ' })).toBe('2026-06-14')
+    expect(parseMobilePropertyValue({ key: 'Date', kind: 'date', valueText: '2026-01-15T10:00' })).toBe('2026-01-15')
+    expect(parseMobilePropertyValue({ key: 'Date', kind: 'date', valueText: '02/25/2026' })).toBe('2026-02-25')
     expect(parseMobilePropertyValue({ key: 'Status', kind: 'status', valueText: ' Active ' })).toBe('Active')
     expect(parseMobilePropertyValue({ key: 'URL', kind: 'url', valueText: ' https://example.com ' })).toBe('https://example.com')
     expect(parseMobilePropertyValue({ key: 'Brand color', kind: 'color', valueText: ' #3b82f6 ' })).toBe('#3b82f6')
@@ -78,6 +80,15 @@ describe('mobile property values', () => {
     expect(canSubmitMobilePropertyValue({ key: 'Estimate', kind: 'number', valueText: 'later' })).toBe(false)
     expect(canSubmitMobilePropertyValue({ key: 'Priority', kind: 'string', valueText: 'later' })).toBe(true)
     expect(canSubmitMobilePropertyValue({ key: '', kind: 'string', valueText: 'later' })).toBe(false)
+  })
+
+  it('matches desktop submit validation for date property values', () => {
+    expect(canSubmitMobilePropertyValue({ key: 'Date', kind: 'date', valueText: '2026-06-14' })).toBe(true)
+    expect(canSubmitMobilePropertyValue({ key: 'Date', kind: 'date', valueText: '2026-06-14T10:00' })).toBe(true)
+    expect(canSubmitMobilePropertyValue({ key: 'Date', kind: 'date', valueText: '02/25/2026' })).toBe(true)
+    expect(canSubmitMobilePropertyValue({ key: 'Date', kind: 'date', valueText: '' })).toBe(true)
+    expect(canSubmitMobilePropertyValue({ key: 'Date', kind: 'date', valueText: '2026-6-14' })).toBe(false)
+    expect(canSubmitMobilePropertyValue({ key: 'Date', kind: 'date', valueText: '02/30/2026' })).toBe(false)
   })
 
   it('formats existing values for editing', () => {

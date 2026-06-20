@@ -1,4 +1,5 @@
 import type { MobilePropertyDisplayMode, MobilePropertyValue } from './mobileWorkspaceModel'
+import { parseDashDateParts, parseSlashDateParts, type DateParts } from '../../../../src/utils/dateStringParts'
 import {
   isMobileColorProperty,
   isMobileColorPropertyKey,
@@ -37,6 +38,7 @@ export type MobilePropertySuggestionValueInput = MobilePropertyValueInput & {
 export function canSubmitMobilePropertyValue(input: MobilePropertyValueInput): boolean {
   if (!input.key.trim()) return false
   const kind = mobilePropertyValueKindForKey(input.key, input.kind)
+  if (kind === 'date') return isValidDatePropertyValue(input.valueText)
   return kind !== 'number' || isValidNumberPropertyValue(input.valueText)
 }
 
@@ -95,6 +97,7 @@ export function parseMobilePropertyValue(input: MobilePropertyValueInput): Mobil
   if (kind === 'list') return listPropertyValue(input.valueText)
   if (kind === 'boolean') return booleanPropertyValue(input.valueText)
   if (kind === 'number') return numberPropertyValue(input.valueText)
+  if (kind === 'date') return datePropertyValue(input.valueText)
   return input.valueText.trim()
 }
 
@@ -135,6 +138,30 @@ function numberPropertyValue(value: MobilePropertyValueText): number | string {
 function isValidNumberPropertyValue(value: MobilePropertyValueText): boolean {
   const trimmed = value.trim()
   return trimmed !== '' && Number.isFinite(Number(trimmed))
+}
+
+function datePropertyValue(value: MobilePropertyValueText): MobilePropertyValueText {
+  return normalizedDatePropertyValue(value) ?? value.trim()
+}
+
+function isValidDatePropertyValue(value: MobilePropertyValueText): boolean {
+  const trimmed = value.trim()
+  return trimmed === '' || normalizedDatePropertyValue(trimmed) !== null
+}
+
+function normalizedDatePropertyValue(value: MobilePropertyValueText): MobilePropertyValueText | null {
+  const trimmed = value.trim()
+  if (trimmed === '') return ''
+  const parts = parseDashDateParts(trimmed) ?? parseSlashDateParts(trimmed)
+  return parts ? formatDateParts(parts) : null
+}
+
+function formatDateParts(parts: DateParts): MobilePropertyValueText {
+  return [
+    String(parts.year).padStart(4, '0'),
+    String(parts.month).padStart(2, '0'),
+    String(parts.day).padStart(2, '0'),
+  ].join('-')
 }
 
 const stringPropertyValueKindDetectors: readonly {
