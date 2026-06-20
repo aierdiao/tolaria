@@ -11,7 +11,6 @@ import {
   deriveLocalVaultTitle,
   localVaultEditorBlocks,
   localVaultEditorBullets,
-  localVaultLinkCount,
   localVaultOutgoingLinks,
   localVaultSnippet,
 } from './localVaultMarkdown'
@@ -108,9 +107,11 @@ type LocalVaultEntry = {
 
 type RelationshipResolver = (target: WikilinkTarget) => LocalVaultEntry | null
 type MobileNoteDetailLevel = 'editable' | 'summary'
+type SnapshotFrontmatterValues = Map<string, unknown>
 
 const DEFAULT_MAX_NOTES = 80
 const absoluteDateFormatter = new Intl.DateTimeFormat('en', { day: 'numeric', month: 'short', year: 'numeric' })
+const snapshotFrontmatterValueCache = new WeakMap<LocalVaultFrontmatter, SnapshotFrontmatterValues>()
 const textFileExtensions = new Set([
   'bash',
   'bat',
@@ -272,6 +273,7 @@ function parseMarkdownVaultEntry(file: LocalVaultFile, fileKind: MobileFileKind)
   const filename = file.relativePath.split('/').at(-1) ?? file.relativePath
   const type = cleanTypeName(frontmatterScalar(document.frontmatter, ['type', 'Is A', 'is_a']) ?? 'Note')
   const color = frontmatterScalar(document.frontmatter, ['color', '_color'])
+  const outgoingLinks = localVaultOutgoingLinks(document.body)
   const title = deriveLocalVaultTitle({
     body: document.body,
     fallbackTitle: frontmatterScalar(document.frontmatter, ['title']),
@@ -289,11 +291,11 @@ function parseMarkdownVaultEntry(file: LocalVaultFile, fileKind: MobileFileKind)
     filename,
     id: file.relativePath,
     icon: frontmatterText(document.frontmatter, ['_icon', 'icon']),
-    links: localVaultLinkCount(document.body),
+    links: outgoingLinks.length,
     modifiedAt: file.modifiedAt,
     noteWidth: normalizeMobileNoteWidth(frontmatterScalar(document.frontmatter, ['_width', 'width'])),
     organized: frontmatterFlag(document.frontmatter, ['_organized']),
-    outgoingLinks: localVaultOutgoingLinks(document.body),
+    outgoingLinks,
     path: file.relativePath,
     properties: mobileProperties(frontmatterProperties(document.frontmatter)),
     rawContent: file.content,
@@ -372,12 +374,23 @@ function frontmatterValue(frontmatter: LocalVaultFrontmatter, keys: string[]) {
     if (Object.hasOwn(frontmatter, key)) return frontmatter[key]
 
     const normalizedKey = normalizedFrontmatterLookupKey(key)
-    const normalizedMatch = Object.entries(frontmatter).find(([candidateKey]) => (
-      normalizedFrontmatterLookupKey(candidateKey) === normalizedKey
-    ))
-    if (normalizedMatch) return normalizedMatch[1]
+    const normalizedValues = snapshotFrontmatterValues(frontmatter)
+    if (normalizedValues.has(normalizedKey)) return normalizedValues.get(normalizedKey)
   }
   return undefined
+}
+
+function snapshotFrontmatterValues(frontmatter: LocalVaultFrontmatter): SnapshotFrontmatterValues {
+  const cached = snapshotFrontmatterValueCache.get(frontmatter)
+  if (cached) return cached
+
+  const values: SnapshotFrontmatterValues = new Map()
+  for (const [key, value] of Object.entries(frontmatter)) {
+    const normalizedKey = normalizedFrontmatterLookupKey(key)
+    if (!values.has(normalizedKey)) values.set(normalizedKey, value)
+  }
+  snapshotFrontmatterValueCache.set(frontmatter, values)
+  return values
 }
 
 function normalizedFrontmatterLookupKey(key: string): string {

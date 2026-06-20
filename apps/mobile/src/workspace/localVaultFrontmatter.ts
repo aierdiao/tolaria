@@ -7,6 +7,7 @@ type FrontmatterText = string
 type MarkdownContent = string
 type LocalVaultFrontmatterKeys = readonly FrontmatterKey[]
 type BlockScalarStyle = 'folded' | 'literal'
+type NormalizedFrontmatterValues = Map<FrontmatterKey, LocalVaultFrontmatterValue>
 type BlockScalarState = {
   key: FrontmatterKey
   lines: FrontmatterLine[]
@@ -416,6 +417,7 @@ const canonicalFrontmatterAliases = new Map([
   ['sort', '_sort'],
   ['width', '_width'],
 ])
+const normalizedFrontmatterValueCache = new WeakMap<LocalVaultFrontmatter, NormalizedFrontmatterValues>()
 
 function wikilinkValues(value: LocalVaultFrontmatterValue): string[] {
   if (typeof value === 'string' && value.includes('[[')) return [value]
@@ -483,10 +485,20 @@ function normalizedFrontmatterValue(
   frontmatter: LocalVaultFrontmatter,
   key: FrontmatterKey,
 ): LocalVaultFrontmatterValue | undefined {
-  const normalizedKey = normalizedFrontmatterKey(key)
-  return Object.entries(frontmatter).find(([candidateKey]) => (
-    normalizedFrontmatterKey(candidateKey) === normalizedKey
-  ))?.[1]
+  return normalizedFrontmatterValues(frontmatter).get(normalizedFrontmatterKey(key))
+}
+
+function normalizedFrontmatterValues(frontmatter: LocalVaultFrontmatter): NormalizedFrontmatterValues {
+  const cached = normalizedFrontmatterValueCache.get(frontmatter)
+  if (cached) return cached
+
+  const values: NormalizedFrontmatterValues = new Map()
+  for (const [key, value] of Object.entries(frontmatter)) {
+    const normalizedKey = normalizedFrontmatterKey(key)
+    if (!values.has(normalizedKey)) values.set(normalizedKey, value)
+  }
+  normalizedFrontmatterValueCache.set(frontmatter, values)
+  return values
 }
 
 function isReservedFrontmatterKey(key: FrontmatterKey): boolean {
