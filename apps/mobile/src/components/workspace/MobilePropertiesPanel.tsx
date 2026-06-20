@@ -235,9 +235,28 @@ function EditableTagsValue({
   labels: string[]
   onPress: () => void
 }) {
+  if (labels.length > 0) {
+    return (
+      <Pressable
+        accessibilityLabel="Tags"
+        accessibilityRole="button"
+        testID="property-tags-edit"
+        onPress={onPress}
+      >
+        <TagWrap labels={labels} />
+      </Pressable>
+    )
+  }
+
   return (
-    <Pressable accessibilityLabel="Tags" accessibilityRole="button" testID="property-tags-edit" onPress={onPress}>
-      <TagWrap labels={labels} />
+    <Pressable
+      accessibilityLabel="Tags"
+      accessibilityRole="button"
+      style={({ pressed }) => [propertyStyles.emptyEditableValue, pressed ? propertyStyles.editableValuePressed : null]}
+      testID="property-tags-edit"
+      onPress={onPress}
+    >
+      <Text style={propertyStyles.emptyEditableText}>{'\u2014'}</Text>
     </Pressable>
   )
 }
@@ -767,6 +786,21 @@ const propertyStyles = StyleSheet.create({
     flex: 1,
     color: mobileColors.text,
     fontSize: mobileType.caption,
+  },
+  emptyEditableText: {
+    color: mobileColors.textFaint,
+    fontSize: mobileType.caption,
+  },
+  emptyEditableValue: {
+    minHeight: desktopPropertyParity.rowMinHeight,
+    minWidth: 0,
+    alignItems: 'center',
+    alignSelf: 'stretch',
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    borderRadius: 4,
+    paddingHorizontal: mobileSpace.xs,
+    paddingVertical: 2,
   },
   editableValue: {
     minWidth: 0,
