@@ -33,6 +33,23 @@ describe('mobile type definition path rewrites', () => {
     ])
   })
 
+  it('preserves desktop workspace alias casing in Type schema relationship rewrites', () => {
+    const snapshot = schemaReferenceSnapshot(['archive', 'projects'], {
+      relationshipTarget: 'TV/projects/remote',
+      workspaceAlias: 'TV',
+    })
+    const result = applyMobileWorkspaceEditWithWrites(snapshot, {
+      folderPath: 'archive',
+      noteId: 'projects/remote.md',
+      type: 'moveNoteToFolder',
+    })
+    const project = result.snapshot.typeDefinitions?.Project
+
+    expect(project?.relationships?.depends_on).toEqual(['[[TV/archive/remote]]'])
+    expect(project?.rawContent).toContain('[[TV/archive/remote]]')
+    expect(project?.rawContent).not.toContain('[[TV/projects/remote]]')
+  })
+
   it('retargets Type schema relationship refs when folder subtrees are renamed', () => {
     const snapshot = schemaReferenceSnapshot(['projects'])
     const result = applyMobileWorkspaceEditWithWrites(snapshot, {
@@ -55,9 +72,15 @@ describe('mobile type definition path rewrites', () => {
   })
 })
 
-function schemaReferenceSnapshot(folderPaths: string[]): MobileWorkspaceSnapshot {
+function schemaReferenceSnapshot(
+  folderPaths: string[],
+  options: {
+    relationshipTarget?: string
+    workspaceAlias?: string
+  } = {},
+): MobileWorkspaceSnapshot {
   const base = workspaceScenarioForId('default')
-  const remote = remoteTeamNote(base.notes[1]!)
+  const remote = remoteTeamNote(base.notes[1]!, options.workspaceAlias ?? 'team')
 
   return {
     ...base,
@@ -65,12 +88,12 @@ function schemaReferenceSnapshot(folderPaths: string[]): MobileWorkspaceSnapshot
     folderPaths,
     notes: [remote],
     typeDefinitions: {
-      Project: projectTypeDefinition(),
+      Project: projectTypeDefinition(options.relationshipTarget ?? 'team/projects/remote'),
     },
   }
 }
 
-function remoteTeamNote(base: MobileNote): MobileNote {
+function remoteTeamNote(base: MobileNote, workspaceAlias: string): MobileNote {
   return {
     ...base,
     id: 'projects/remote.md',
@@ -79,24 +102,24 @@ function remoteTeamNote(base: MobileNote): MobileNote {
     relationships: [],
     title: 'Remote',
     workspace: 'Team',
-    workspaceAlias: 'team',
+    workspaceAlias,
   }
 }
 
-function projectTypeDefinition(): MobileTypeDefinition {
+function projectTypeDefinition(relationshipTarget: string): MobileTypeDefinition {
   return {
     path: 'types/project.md',
     rawContent: [
       '---',
       'type: Type',
       'depends_on:',
-      '  - "[[team/projects/remote]]"',
+      `  - "[[${relationshipTarget}]]"`,
       '---',
       '# Project',
       '',
     ].join('\n'),
     relationships: {
-      depends_on: ['[[team/projects/remote]]'],
+      depends_on: [`[[${relationshipTarget}]]`],
     },
   }
 }
