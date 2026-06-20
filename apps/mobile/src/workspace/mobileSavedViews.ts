@@ -10,6 +10,7 @@ import type {
 import { parseDateFilterInput } from '../../../../src/utils/filterDates'
 import {
   compareSortableValues,
+  isBuiltInSortOption,
   parseSortConfig,
   statusSortRank,
   type SortDirection,
@@ -90,7 +91,6 @@ const supportedFilterOps = new Set<MobileViewFilterOp>([
   'before',
   'after',
 ])
-const builtInSortFields = new Set(['created', 'modified', 'status', 'title'])
 const regexFilterOps = new Set<MobileViewFilterOp>(['contains', 'equals', 'not_contains', 'not_equals'])
 
 const builtInFieldResolvers: Record<string, BuiltInFieldResolver> = {
@@ -582,7 +582,7 @@ function sortField(rawField: FieldKey): SortField {
   }
 
   const field = rawField.toLowerCase()
-  return builtInSortFields.has(field) ? { key: field, kind: 'builtIn' } : { key: rawField, kind: 'property' }
+  return isBuiltInSortOption(field) ? { key: field, kind: 'builtIn' } : { key: rawField, kind: 'property' }
 }
 
 function compareMissingValues(left: SortFieldValue, right: SortFieldValue) {
