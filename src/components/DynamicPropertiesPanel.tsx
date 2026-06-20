@@ -24,6 +24,7 @@ import {
 import { humanizePropertyKey } from '../utils/propertyLabels'
 import { translate, type AppLocale } from '../lib/i18n'
 import { canonicalSystemMetadataKey, hasSystemMetadataKey } from '../utils/systemMetadata'
+import { SUGGESTED_PROPERTY_SLOTS } from '../utils/workspaceSuggestionContracts'
 
 // eslint-disable-next-line react-refresh/only-export-components -- utility co-located with component
 export function containsWikilinks(value: FrontmatterValue): boolean {
@@ -85,13 +86,6 @@ function AddPropertyButton({ locale, onClick, disabled }: { locale: AppLocale; o
     </Button>
   )
 }
-
-const SUGGESTED_PROPERTIES = [
-  { key: 'Status', label: 'Status' },
-  { key: 'Date', label: 'Date' },
-  { key: 'URL', label: 'URL' },
-  { key: 'icon', label: 'Icon' },
-] as const
 
 const SUGGESTED_PROPERTY_MODES: Record<string, PropertyDisplayMode> = {
   Status: 'status',
@@ -231,7 +225,7 @@ function getExistingPropertyKeys(propertyEntries: [string, FrontmatterValue][], 
 function getMissingSuggestedProperties(canAddProperty: boolean, existingKeys: Set<string>, pendingSuggestedKey: string | null) {
   if (!canAddProperty) return []
 
-  return SUGGESTED_PROPERTIES.filter(
+  return SUGGESTED_PROPERTY_SLOTS.filter(
     ({ key }) => !existingKeys.has(key.toLowerCase()) && key !== pendingSuggestedKey,
   )
 }

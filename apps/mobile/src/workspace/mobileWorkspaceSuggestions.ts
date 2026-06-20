@@ -13,6 +13,11 @@ import {
   typePropertyValueCandidates,
   typeViewValueSuggestionCandidates,
 } from './mobileTypeSuggestionCandidates'
+import {
+  SAVED_VIEW_BUILT_IN_FIELDS,
+  SUGGESTED_PROPERTY_KEYS,
+  SUGGESTED_RELATIONSHIP_KEYS,
+} from '../../../../src/utils/workspaceSuggestionContracts'
 
 type PropertyKey = string
 type PropertyValueText = string
@@ -39,9 +44,6 @@ type RelationshipTargetSuggestionOptions = {
   selectedNote?: MobileNote | null
 }
 
-const DESKTOP_SUGGESTED_PROPERTY_KEYS = ['Status', 'Date', 'URL', 'icon'] as const
-const DESKTOP_SUGGESTED_RELATIONSHIP_KEYS = ['belongs_to', 'related_to', 'has'] as const
-const DESKTOP_VIEW_BUILT_IN_FIELDS = ['type', 'status', 'title', 'favorite', 'body', 'filename', 'archived', 'tags'] as const
 const VIEW_FIELD_SUGGESTION_LIMIT = 12
 const ICON_PROPERTY_KEYS = ['icon', '_icon'] as const
 const BUILT_IN_VIEW_VALUE_RESOLVERS: Record<string, ViewValueResolver> = {
@@ -207,7 +209,7 @@ function propertyKeyCandidates(
   typeDefinitions: MobileTypeDefinitions | undefined,
 ): PropertyKey[] {
   return [
-    ...DESKTOP_SUGGESTED_PROPERTY_KEYS,
+    ...SUGGESTED_PROPERTY_KEYS,
     ...selectedTypePropertyCandidates(selectedNote, typeDefinitions),
     ...notes.flatMap((note) => propertiesForNote(note).map((property) => property.key)),
   ]
@@ -231,7 +233,7 @@ function relationshipKeyCandidates(
   typeDefinitions: MobileTypeDefinitions | undefined,
 ): RelationshipKey[] {
   return [
-    ...DESKTOP_SUGGESTED_RELATIONSHIP_KEYS,
+    ...SUGGESTED_RELATIONSHIP_KEYS,
     ...selectedTypeRelationshipCandidates(selectedNote, typeDefinitions),
     ...notes.flatMap((note) => note.relationships.map(relationshipFrontmatterKey)),
   ]
@@ -297,7 +299,7 @@ function viewFieldCandidates(
   typeDefinitions: MobileTypeDefinitions | undefined,
 ): ViewField[] {
   return [
-    ...DESKTOP_VIEW_BUILT_IN_FIELDS,
+    ...SAVED_VIEW_BUILT_IN_FIELDS,
     ...allTypePropertyCandidates(typeDefinitions),
     ...allTypeRelationshipCandidates(typeDefinitions),
     ...notes.flatMap((note) => propertiesForNote(note).map((property) => property.key)),

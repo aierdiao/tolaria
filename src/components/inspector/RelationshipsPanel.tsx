@@ -22,6 +22,7 @@ import {
 import { humanizePropertyKey } from '../../utils/propertyLabels'
 import { translate, type AppLocale } from '../../lib/i18n'
 import { canonicalFrontmatterKey } from '../../utils/systemMetadata'
+import { SUGGESTED_RELATIONSHIP_KEYS } from '../../utils/workspaceSuggestionContracts'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 
@@ -30,8 +31,7 @@ const RELATIONSHIPS_PANEL_GRID_CLASS_NAME = 'grid min-w-0 gap-x-2 gap-y-3'
 const RELATIONSHIP_SECTION_LABEL_TEXT_CLASS_NAME = 'min-w-0 flex-1 truncate'
 const RELATIONSHIP_SECTION_VALUE_CLASS_NAME = 'min-w-0'
 const RELATIONSHIP_ACTION_ROW_CLASS_NAME = 'min-w-0 px-1.5'
-const SUGGESTED_RELATIONSHIPS = ['belongs_to', 'related_to', 'has'] as const
-const RELATIONSHIP_SCHEMA_KEYS = new Set(['belongs_to', 'related_to', 'has'])
+const RELATIONSHIP_SCHEMA_KEYS = new Set<string>(SUGGESTED_RELATIONSHIP_KEYS)
 
 type RelationshipEntryGroup = {
   key: string
@@ -668,7 +668,7 @@ function useMissingSuggestedRelationships(
     [relationshipEntries],
   )
   return useMemo(
-    () => (onAddProperty ? SUGGESTED_RELATIONSHIPS.filter(r => !existingRelKeys.has(r.toLowerCase())) : []),
+    () => (onAddProperty ? SUGGESTED_RELATIONSHIP_KEYS.filter(r => !existingRelKeys.has(r.toLowerCase())) : []),
     [onAddProperty, existingRelKeys],
   )
 }
