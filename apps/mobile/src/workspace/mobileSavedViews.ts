@@ -8,6 +8,7 @@ import type {
   MobileViewFilterOp,
 } from './mobileWorkspaceModel'
 import { parseDateFilterInput } from '../../../../src/utils/filterDates'
+import { parseSortConfig, type SortDirection } from '../../../../src/utils/noteSort'
 import { compileSafeUserRegex } from '../../../../src/utils/safeRegex'
 import { evaluateArrayFieldCondition } from '../../../../src/utils/viewFilterArrayFields'
 
@@ -36,7 +37,6 @@ type BuiltInFieldResolver = (note: MobileNote) => ResolvedMobileField
 type IndentLevel = number
 type LineIndex = number
 type MobileTextValues = string[]
-type SortDirection = 'asc' | 'desc'
 type SortField = { key: FieldKey; kind: 'builtIn' | 'property' }
 type SortFieldValue = string | number | boolean | string[] | null
 type SortValue = string | null
@@ -573,15 +573,9 @@ function sortPropertyValue(note: MobileNote, key: FieldKey): SortFieldValue {
 }
 
 function sortConfig(sort: SortValue): { direction: SortDirection; field: SortField } | null {
-  const rawSort = sort ?? ''
-  const directionSeparator = rawSort.lastIndexOf(':')
-  if (directionSeparator <= 0) return null
-
-  const direction = rawSort.slice(directionSeparator + 1)
-  const rawField = rawSort.slice(0, directionSeparator)
-  if (direction !== 'asc' && direction !== 'desc') return null
-
-  return { direction, field: sortField(rawField) }
+  const parsed = parseSortConfig(sort)
+  if (!parsed) return null
+  return { direction: parsed.direction, field: sortField(parsed.option) }
 }
 
 function sortField(rawField: FieldKey): SortField {

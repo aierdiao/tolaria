@@ -18,6 +18,25 @@ import { evaluateView } from './viewFilters'
 import { viewMatchesSelection } from './viewIdentity'
 import { wikilinkTarget, resolveEntry } from './wikilink'
 import { buildTypeVisibilityLookup, isSectionEntryVisibleForType } from './typeVisibility'
+import {
+  getDefaultDirection,
+  parseSortConfig,
+  serializeSortConfig,
+  type SortConfig,
+  type SortDirection,
+  type SortOption,
+} from './noteSort'
+export {
+  DEFAULT_SORT_OPTIONS,
+  getDefaultDirection,
+  getSortOptionLabel,
+  parseSortConfig,
+  serializeSortConfig,
+  SORT_OPTIONS,
+  type SortConfig,
+  type SortDirection,
+  type SortOption,
+} from './noteSort'
 
 export type NoteListFilter = 'open' | 'archived'
 
@@ -122,34 +141,6 @@ export function sortByModified(a: VaultEntry, b: VaultEntry): number {
   return (getDisplayDate(b) ?? 0) - (getDisplayDate(a) ?? 0)
 }
 
-export type SortOption = 'modified' | 'created' | 'title' | 'status' | `property:${string}`
-export type SortDirection = 'asc' | 'desc'
-
-export interface SortConfig {
-  option: SortOption
-  direction: SortDirection
-}
-
-export const DEFAULT_SORT_OPTIONS: SortOption[] = ['modified', 'created', 'title', 'status']
-const BUILT_IN_SORT_OPTIONS = new Set<string>(DEFAULT_SORT_OPTIONS)
-
-export function getDefaultDirection(option: SortOption): SortDirection {
-  if (option === 'modified' || option === 'created') return 'desc'
-  return 'asc'
-}
-
-export const SORT_OPTIONS: { value: SortOption; label: string }[] = [
-  { value: 'modified', label: 'Modified' },
-  { value: 'created', label: 'Created' },
-  { value: 'title', label: 'Title' },
-  { value: 'status', label: 'Status' },
-]
-
-export function getSortOptionLabel(option: SortOption): string {
-  if (option.startsWith('property:')) return option.slice('property:'.length)
-  return SORT_OPTIONS.find((o) => o.value === option)?.label ?? option
-}
-
 /** Extract sortable custom property keys from a list of entries. */
 export function extractSortableProperties(entries: VaultEntry[]): string[] {
   const keys = new Set<string>()
@@ -216,29 +207,6 @@ export function getSortComparator(option: SortOption, direction?: SortDirection)
   const flip = (direction ?? getDefaultDirection(option)) === 'asc' ? 1 : -1
   if (option.startsWith('property:')) return makePropertyComparator(option.slice('property:'.length), flip)
   return makeBuiltinComparator(option, flip)
-}
-
-/** Serialize a SortConfig to the string format stored in type frontmatter: "option:direction". */
-export function serializeSortConfig(config: SortConfig): string {
-  return `${config.option}:${config.direction}`
-}
-
-/** Parse a frontmatter sort string ("option:direction") back to SortConfig. */
-export function parseSortConfig(raw: string | null | undefined): SortConfig | null {
-  if (!raw) return null
-  // Format: "option:direction" where option itself can contain ":" (e.g. "property:Priority:asc")
-  const lastColon = raw.lastIndexOf(':')
-  if (lastColon <= 0) return null
-  const dir = raw.slice(lastColon + 1)
-  if (dir !== 'asc' && dir !== 'desc') return null
-  const optionName = raw.slice(0, lastColon)
-  if (optionName === 'property:') return null
-  const option = (
-    optionName.startsWith('property:') || BUILT_IN_SORT_OPTIONS.has(optionName)
-      ? optionName
-      : `property:${optionName}`
-  ) as SortOption
-  return { option, direction: dir }
 }
 
 export function loadSortPreferences(): Record<string, SortConfig> {

@@ -1,11 +1,11 @@
+import { isBuiltInSortOption } from '../../../../../src/utils/noteSort'
+
 export type MobileSortDirection = 'asc' | 'desc'
 
 export type MobileCustomSort = {
   direction: MobileSortDirection | null
   field: string
 }
-
-const desktopBuiltInSortFields = new Set(['created', 'modified', 'status', 'title'])
 
 export function mobileCustomSortFromValue(value: string): MobileCustomSort {
   const normalized = value.trim()
@@ -25,7 +25,7 @@ export function mobileCustomPropertySortValue(field: string, direction: MobileSo
 }
 
 export function mobileSortFieldIsDesktopBuiltIn(field: string) {
-  return desktopBuiltInSortFields.has(field.trim().toLowerCase())
+  return isBuiltInSortOption(field.trim().toLowerCase())
 }
 
 export function mobileSortFieldMatches(property: string, query: string) {
