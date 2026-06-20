@@ -16,6 +16,7 @@ import {
   type SortDirection,
 } from '../../../../src/utils/noteSort'
 import { compileSafeUserRegex } from '../../../../src/utils/safeRegex'
+import { createViewFilename } from '../../../../src/utils/viewFilename'
 import { evaluateArrayFieldCondition } from '../../../../src/utils/viewFilterArrayFields'
 
 type ViewFileSource = {
@@ -52,32 +53,6 @@ type ViewPath = string
 type YamlText = string
 type YamlScalar = string | number | boolean | null
 
-const viewFilenameExtension = '.yml'
-const fallbackViewFilenameStem = 'view'
-const windowsReservedDeviceNames = new Set([
-  'CON',
-  'PRN',
-  'AUX',
-  'NUL',
-  'COM1',
-  'COM2',
-  'COM3',
-  'COM4',
-  'COM5',
-  'COM6',
-  'COM7',
-  'COM8',
-  'COM9',
-  'LPT1',
-  'LPT2',
-  'LPT3',
-  'LPT4',
-  'LPT5',
-  'LPT6',
-  'LPT7',
-  'LPT8',
-  'LPT9',
-])
 
 const supportedFilterOps = new Set<MobileViewFilterOp>([
   'equals',
@@ -189,17 +164,7 @@ export function mobileSavedViewId(filename: string) {
 }
 
 export function createMobileSavedViewFilename(name: string, existingFilenames: string[] = []): string {
-  const baseStem = slugifyViewFilenameStem(name)
-  const usedFilenames = new Set(existingFilenames.map((filename) => filename.toLocaleLowerCase()))
-  let candidateStem = baseStem
-  let suffix = 2
-
-  while (usedFilenames.has(viewFilenameFromStem(candidateStem).toLocaleLowerCase())) {
-    candidateStem = `${baseStem}-${suffix}`
-    suffix += 1
-  }
-
-  return viewFilenameFromStem(candidateStem)
+  return createViewFilename(name, existingFilenames)
 }
 
 export function mobileSavedViewPath(filename: ViewFilename): ViewPath {
@@ -896,25 +861,6 @@ function fallbackViewName(filename: ViewFilename, index: ViewIndex) {
 
 function titleCase(value: YamlText) {
   return value.replace(/\b\w/gu, (char) => char.toUpperCase())
-}
-
-function slugifyViewFilenameStem(name: string): string {
-  const stem = name
-    .normalize('NFKC')
-    .toLocaleLowerCase()
-    .trim()
-    .replace(/[^\p{Letter}\p{Number}]+/gu, '-')
-    .replace(/(^-+|-+$)/gu, '')
-
-  return avoidReservedDeviceName(stem || fallbackViewFilenameStem)
-}
-
-function viewFilenameFromStem(stem: string): ViewFilename {
-  return `${stem}${viewFilenameExtension}`
-}
-
-function avoidReservedDeviceName(stem: string): string {
-  return windowsReservedDeviceNames.has(stem.toLocaleUpperCase()) ? `${stem}-view` : stem
 }
 
 function serializedFilterGroup(group: MobileViewFilterGroup, indent: number): string[] {

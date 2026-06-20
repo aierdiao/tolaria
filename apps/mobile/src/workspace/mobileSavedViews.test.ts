@@ -681,7 +681,11 @@ filters:
   })
 
   it('creates desktop-style unique view filenames', () => {
+    expect(createMobileSavedViewFilename(' Project / Q2: Launch 🚀 ')).toBe('project-q2-launch.yml')
+    expect(createMobileSavedViewFilename('你好')).toBe('你好.yml')
+    expect(createMobileSavedViewFilename('🚀')).toBe('view.yml')
     expect(createMobileSavedViewFilename('Active Procedures', ['active-procedures.yml'])).toBe('active-procedures-2.yml')
+    expect(createMobileSavedViewFilename('Roadmap', ['Roadmap.yml'])).toBe('roadmap-2.yml')
     expect(createMobileSavedViewFilename('CON', [])).toBe('con-view.yml')
   })
 
