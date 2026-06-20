@@ -9,6 +9,7 @@ export type NativeWorkspacePersistenceProof = {
   deletedTypeDefinitionRemoved: boolean
   deletedViewRemoved: boolean
   defaultNoteWidthHydrated: boolean
+  folderCreateApplied: boolean
   favoriteOrderHydrated: boolean
   fileVisibilityHydrated: boolean
   folderDeleteApplied: boolean
@@ -103,6 +104,7 @@ export function assertNativeWorkspacePersistenceProofs(
     proofFailure(latest.reorderedViewHydrated, 'workspace.persistence.moveView', 'Moved saved-view order rehydrates from reducer-generated native view order writes'),
     proofFailure(latest.deletedViewRemoved, 'workspace.persistence.deleteView', 'Deleted native view files disappear from the mobile snapshot'),
     proofFailure(latest.restoredViewHydrated, 'workspace.persistence.restoreView', 'Restored saved views rehydrate from undo/redo native view writes'),
+    proofFailure(latest.folderCreateApplied, 'workspace.persistence.createFolder', 'Created native folders rehydrate with the destination path'),
     proofFailure(latest.folderRenameApplied, 'workspace.persistence.renameFolder', 'Renamed native folders rehydrate with the destination path'),
     proofFailure(latest.folderDeleteApplied, 'workspace.persistence.deleteFolder', 'Deleted native folders are absent from the mobile snapshot'),
     proofFailure(latest.restoredFolderHydrated, 'workspace.persistence.restoreFolder', 'Restored folders rehydrate from undo/redo native folder writes'),
@@ -183,6 +185,7 @@ const workspacePersistenceProofKeys = [
   'deletedTypeDefinitionRemoved',
   'deletedViewRemoved',
   'defaultNoteWidthHydrated',
+  'folderCreateApplied',
   'favoriteOrderHydrated',
   'fileVisibilityHydrated',
   'folderDeleteApplied',

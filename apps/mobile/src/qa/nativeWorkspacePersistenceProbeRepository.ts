@@ -24,6 +24,7 @@ type ExpoFileSystemModule = {
 declare const require: (moduleName: string) => ExpoFileSystemModule
 
 const createdNotePath = 'Writing/Drafts/mobile-created.md'
+const createdFolderPath = 'Folders/Created Drafts'
 const favoriteAlphaPath = 'Favorites/Alpha.md'
 const favoriteBetaPath = 'Favorites/Beta.md'
 const movedNoteFolderPath = 'Research'
@@ -183,7 +184,7 @@ function workspacePersistenceProbeWrites(seedSnapshot: MobileWorkspaceSnapshot) 
     ...workspacePersistenceConfigWrites(seedSnapshot),
     ...workspacePersistenceTextFileWrites(seedSnapshot),
     ...nativeWorkspaceNotePathWrites(seedSnapshot),
-    ...workspacePersistenceFolderWrites(),
+    ...workspacePersistenceFolderWrites(seedSnapshot),
     ...workspacePersistenceTypeMoveWrites(seedSnapshot),
     ...workspacePersistenceTypeWrites(seedSnapshot),
     ...workspacePersistenceTypeUpdateWrites(seedSnapshot),
@@ -391,8 +392,11 @@ function workspacePersistenceTextFileWrites(seedSnapshot: MobileWorkspaceSnapsho
   ])
 }
 
-function workspacePersistenceFolderWrites() {
+function workspacePersistenceFolderWrites(seedSnapshot: MobileWorkspaceSnapshot) {
   return [
+    ...workspacePersistenceEditWrites(seedSnapshot, [
+      { name: 'Created Drafts', parentPath: 'Folders', type: 'createFolder' },
+    ]),
     {
       kind: 'renameFolder' as const,
       path: 'Folders/Queue',
@@ -609,6 +613,7 @@ function workspacePersistenceProof(
     defaultNoteWidthHydrated: snapshot.vaultConfig?.defaultNoteWidth === 'wide',
     favoriteOrderHydrated: favoriteOrderHydrated(snapshot, content),
     fileVisibilityHydrated: fileVisibilityHydrated(snapshot),
+    folderCreateApplied: folderCreateApplied(snapshot),
     folderDeleteApplied: !folderPathStartsWith(snapshot, 'Scratch'),
     folderRenameApplied: folderRenameApplied(snapshot),
     movedNoteContentPreserved: movedContentPreserved(content.movedContent),
@@ -643,6 +648,10 @@ function workspacePersistenceProof(
 function folderRenameApplied(snapshot: MobileWorkspaceSnapshot) {
   return snapshot.folderPaths?.includes(renamedFolderPath) === true
     && snapshotContainsNotePath(snapshot, `${renamedFolderPath}/Keep.md`)
+}
+
+function folderCreateApplied(snapshot: MobileWorkspaceSnapshot) {
+  return snapshot.folderPaths?.includes(createdFolderPath) === true
 }
 
 function restoredFolderHydrated(snapshot: MobileWorkspaceSnapshot) {
