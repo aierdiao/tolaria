@@ -144,6 +144,31 @@ describe('mobile type definition schema helpers', () => {
     ])
   })
 
+  it('excludes the edited Type document from relationship target suggestions', () => {
+    const base = workspaceScenarioForId('default')
+    const sourceType = {
+      ...base.notes[0],
+      id: 'types/project.md',
+      path: 'types/project.md',
+      title: 'Project',
+      type: 'Type',
+    }
+    const target = {
+      ...base.notes[1],
+      id: 'projects/project-plan.md',
+      path: 'projects/project-plan.md',
+      title: 'Project Plan',
+      type: 'Essay',
+    }
+
+    expect(typeSchemaRelationshipTargetSuggestions([sourceType, target], 'Project', sourceType)).toEqual([
+      expect.objectContaining({
+        label: 'Project Plan',
+        value: '[[projects/project-plan]]',
+      }),
+    ])
+  })
+
   it('uses selected type relationship refs when titles are ambiguous', () => {
     const base = workspaceScenarioForId('default')
     const notes: MobileNote[] = [

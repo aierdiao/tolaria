@@ -125,7 +125,9 @@ export function typeSchemaRelationshipTargetSuggestions(
   query: QueryText,
   sourceNote?: MobileNote | null,
 ): MobileTypeSchemaRelationshipTargetSuggestion[] {
-  return mobileRelationshipTargetSuggestions(notes, query).map((note) => ({
+  return mobileRelationshipTargetSuggestions(notes, query, {
+    selectedNote: sourceNote,
+  }).map((note) => ({
     label: note.title,
     meta: note.path ?? note.id,
     testId: note.id,
