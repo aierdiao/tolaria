@@ -4,6 +4,7 @@ import { EditorContent } from '@tiptap/react'
 import { TenTapStartKit, useTenTap } from '@10play/tentap-editor/web'
 import { MobileCodeBlockBridge } from './MobileWysiwygCodeBlockBridge'
 import { MobileMathInlineBridge } from './MobileWysiwygMathBridge'
+import { MobileTableBridge } from './MobileWysiwygTableBridge'
 
 declare global {
   interface Window {
@@ -12,7 +13,12 @@ declare global {
   }
 }
 
-const mobileTenTapExtensions = [...TenTapStartKit, MobileCodeBlockBridge, MobileMathInlineBridge]
+const mobileTenTapExtensions = [
+  ...TenTapStartKit,
+  MobileCodeBlockBridge,
+  MobileMathInlineBridge,
+  MobileTableBridge,
+]
 
 function enabledTenTapExtensions() {
   return mobileTenTapExtensions.filter((extension) => (

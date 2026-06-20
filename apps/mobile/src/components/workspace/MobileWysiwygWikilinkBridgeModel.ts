@@ -185,6 +185,7 @@ function nativeWysiwygLinkAttachmentContent(
 function nativeWysiwygMarkdownBlockNode(action: NativeWysiwygMarkdownBlockAction): TiptapJsonNode {
   if (action === 'codeBlock') return nativeWysiwygCodeBlockNode()
   if (action === 'mathBlock') return nativeWysiwygMathBlockNode()
+  if (action === 'table') return nativeWysiwygTableNode()
   return nativeWysiwygSourceParagraph(mobileMarkdownSourceBlockLines(action))
 }
 
@@ -202,6 +203,30 @@ function nativeWysiwygMathBlockNode(): TiptapJsonNode {
       latex: mobileMarkdownSourceBlockFormat('mathBlock')?.fallback ?? '',
     },
     type: 'mathBlock',
+  }
+}
+
+function nativeWysiwygTableNode(): TiptapJsonNode {
+  return {
+    content: [
+      nativeWysiwygTableRow('tableHeader', ['Column', 'Value']),
+      nativeWysiwygTableRow('tableCell', ['Item', 'Detail']),
+    ],
+    type: 'table',
+  }
+}
+
+function nativeWysiwygTableRow(cellType: 'tableCell' | 'tableHeader', cells: string[]): TiptapJsonNode {
+  return {
+    content: cells.map((cell) => nativeWysiwygTableCell(cellType, cell)),
+    type: 'tableRow',
+  }
+}
+
+function nativeWysiwygTableCell(cellType: 'tableCell' | 'tableHeader', text: string): TiptapJsonNode {
+  return {
+    content: [{ content: [{ text, type: 'text' }], type: 'paragraph' }],
+    type: cellType,
   }
 }
 

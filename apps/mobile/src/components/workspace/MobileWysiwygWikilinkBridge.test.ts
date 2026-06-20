@@ -135,6 +135,34 @@ describe('native WYSIWYG wikilink bridge', () => {
     })
   })
 
+  it('inserts native WYSIWYG tables as structured TenTap nodes before markdown serialization', () => {
+    const nextDocument = nativeWysiwygDocumentWithInsertedMarkdownBlock({
+      json: documentNode(paragraphNode('Intro'), paragraphNode('Tail')),
+      payload: { action: 'table' },
+      selection: { from: 3, to: 3 },
+    })
+
+    expect(nextDocument?.content?.[1]).toMatchObject({
+      content: [
+        {
+          content: [
+            { content: [{ content: [{ text: 'Column', type: 'text' }], type: 'paragraph' }], type: 'tableHeader' },
+            { content: [{ content: [{ text: 'Value', type: 'text' }], type: 'paragraph' }], type: 'tableHeader' },
+          ],
+          type: 'tableRow',
+        },
+        {
+          content: [
+            { content: [{ content: [{ text: 'Item', type: 'text' }], type: 'paragraph' }], type: 'tableCell' },
+            { content: [{ content: [{ text: 'Detail', type: 'text' }], type: 'paragraph' }], type: 'tableCell' },
+          ],
+          type: 'tableRow',
+        },
+      ],
+      type: 'table',
+    })
+  })
+
   it('inserts native WYSIWYG whiteboards as desktop durable tldraw markdown', () => {
     const nextDocument = nativeWysiwygDocumentWithInsertedMarkdownBlock({
       json: documentNode(paragraphNode('Intro'), paragraphNode('Tail')),

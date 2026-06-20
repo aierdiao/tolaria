@@ -12,6 +12,10 @@ import { mobileMarkdownListHtml, type MobileMarkdownListItem } from './mobileMar
 import { mobileImageNodeMarkdown, mobileMarkdownImageHtml } from './mobileMarkdownImage'
 import { readMobileInlineMathAt } from './mobileInlineMath'
 import {
+  readMobileMarkdownTableAt,
+  type MobileMarkdownTable,
+} from './mobileMarkdownTables'
+import {
   normalizeUnsupportedHtmlBlockMarkdown,
   readUnsupportedHtmlBlock,
   unsupportedHtmlBlockToParagraphHtml,
@@ -279,18 +283,12 @@ function readImageBlock(lines: MarkdownLines, startIndex: number): ReadHtmlBlock
 }
 
 function readTable(lines: MarkdownLines, startIndex: number): ReadHtmlBlockResult | null {
-  const header = lines[startIndex]
-  const divider = lines[startIndex + 1]
-  if (!header || !divider || !isMarkdownTableDivider(divider)) return null
+  const table = readMobileMarkdownTableAt({ lineNumber: startIndex, lines })
+  if (!table) return null
 
-  const tableLines: string[] = [header, divider]
-  let index = startIndex + 2
-  while (index < lines.length && lines[index]?.includes('|')) {
-    tableLines.push(lines[index] ?? '')
-    index += 1
-  }
-
-  return { html: `<p>${tableLines.map(escapeHtml).join('<br>')}</p>`, nextIndex: index }
+  return isStructuredMobileTable(table.table)
+    ? { html: mobileMarkdownTableHtml(table.table), nextIndex: table.nextLine }
+    : sourceLinesParagraphBlock(lines.slice(startIndex, table.nextLine), table.nextLine)
 }
 
 function readHorizontalRule(lines: MarkdownLines, startIndex: number): ReadHtmlBlockResult | null {
@@ -611,6 +609,31 @@ function isHorizontalRule(line: MarkdownLine): boolean {
 
 function isMarkdownTableDivider(line: MarkdownLine): boolean {
   return /^\s*\|?\s*:?-{3,}:?\s*(\|\s*:?-{3,}:?\s*)+\|?\s*$/.test(line)
+}
+
+function isStructuredMobileTable(table: MobileMarkdownTable): boolean {
+  return table.alignments.every((alignment) => alignment === 'default')
+}
+
+function mobileMarkdownTableHtml(table: MobileMarkdownTable): HtmlSnippet {
+  const header = `<thead><tr>${table.headers.map(tableHeaderCellHtml).join('')}</tr></thead>`
+  const body = table.rows.length > 0
+    ? `<tbody>${table.rows.map(tableRowHtml).join('')}</tbody>`
+    : ''
+
+  return `<table>${header}${body}</table>`
+}
+
+function tableRowHtml(cells: MarkdownLines): HtmlSnippet {
+  return `<tr>${cells.map(tableCellHtml).join('')}</tr>`
+}
+
+function tableHeaderCellHtml(cell: MarkdownLine): HtmlSnippet {
+  return `<th><p>${inlineMarkdownToHtml(cell)}</p></th>`
+}
+
+function tableCellHtml(cell: MarkdownLine): HtmlSnippet {
+  return `<td><p>${inlineMarkdownToHtml(cell)}</p></td>`
 }
 
 function inlineMarkdownToHtml(markdown: MarkdownLine): string {

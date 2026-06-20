@@ -150,11 +150,19 @@ Updated body.
     expect(html).not.toContain('<em>')
   })
 
-  it('keeps unsupported markdown table lines editable in TenTap basic mode', () => {
-    const html = mobileMarkdownBodyToTentapHtml('| Surface | Target |\n| --- | --- |\n| Editor | WYSIWYG |\n')
+  it('hydrates simple markdown tables as native TenTap table HTML', () => {
+    const html = mobileMarkdownBodyToTentapHtml('| Surface | **Target** |\n| --- | --- |\n| Editor | WYSIWYG |\n')
 
-    expect(html).toBe('<p>| Surface | Target |<br>| --- | --- |<br>| Editor | WYSIWYG |</p>')
-    expect(html).not.toContain('<table>')
+    expect(html).toBe(
+      '<table><thead><tr><th><p>Surface</p></th><th><p><strong>Target</strong></p></th></tr></thead>'
+      + '<tbody><tr><td><p>Editor</p></td><td><p>WYSIWYG</p></td></tr></tbody></table>',
+    )
+  })
+
+  it('keeps aligned markdown table lines editable until native cells can round-trip alignment', () => {
+    const html = mobileMarkdownBodyToTentapHtml('| Surface | Target |\n| :--- | ---: |\n| Editor | WYSIWYG |\n')
+
+    expect(html).toBe('<p>| Surface | Target |<br>| :--- | ---: |<br>| Editor | WYSIWYG |</p>')
   })
 
   it('hydrates root display math blocks as native TenTap math nodes', () => {

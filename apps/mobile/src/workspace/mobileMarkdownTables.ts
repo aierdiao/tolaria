@@ -15,7 +15,7 @@ type MarkdownTableUpdate = {
   rows: string[][]
 }
 
-type TableMatch = {
+export type MobileMarkdownTableMatch = {
   nextLine: number
   table: MobileMarkdownTable
 }
@@ -37,6 +37,16 @@ export function readMobileMarkdownTables({ markdown }: { markdown: string }): Mo
   }
 
   return tables
+}
+
+export function readMobileMarkdownTableAt({
+  lineNumber,
+  lines,
+}: {
+  lineNumber: number
+  lines: string[]
+}): MobileMarkdownTableMatch | null {
+  return readMarkdownTableAt({ lineNumber, lines })
 }
 
 export function updateMobileMarkdownTable({
@@ -91,7 +101,7 @@ function readMarkdownTableAt({
 }: {
   lineNumber: number
   lines: string[]
-}): TableMatch | null {
+}): MobileMarkdownTableMatch | null {
   const headers = tableCells({ line: lines[lineNumber] ?? '' })
   const divider = tableCells({ line: lines[lineNumber + 1] ?? '' })
   if (!isTableHeader({ cells: headers })) return null

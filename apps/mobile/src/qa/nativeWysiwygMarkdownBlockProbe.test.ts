@@ -8,6 +8,7 @@ import {
   nativeWysiwygMarkdownBlockProbePayloads,
   nativeWysiwygMarkdownBlockProof,
   nativeWysiwygMarkdownBlockStructuredCodeBlock,
+  nativeWysiwygMarkdownBlockStructuredTable,
   parseNativeWysiwygMarkdownBlockProofs,
 } from './nativeWysiwygMarkdownBlockProbe'
 
@@ -41,6 +42,7 @@ describe('native WYSIWYG markdown block probe', () => {
       content: markdownBlockProofContent({ title: 'Intro' }),
       mathBlockRendered: true,
       noteId: 'note.md',
+      tableStructured: true,
     })
 
     expect(parseNativeWysiwygMarkdownBlockProofs(nativeWysiwygMarkdownBlockLogLine(proof))).toEqual([proof])
@@ -87,39 +89,42 @@ describe('native WYSIWYG markdown block probe', () => {
         message: 'Native WYSIWYG table insertion saves as desktop markdown table source lines',
       },
       {
+        id: 'editor.wysiwyg.markdownBlocks.tableStructured',
+        message: 'Native WYSIWYG table insertion remains a structured TenTap table before save',
+      },
+      {
         id: 'editor.wysiwyg.markdownBlocks.whiteboard',
         message: 'Native WYSIWYG whiteboard insertion saves as desktop tldraw fenced markdown',
       },
     ])
   })
 
-  it('detects structured code-block nodes in native TenTap JSON', () => {
-    expect(nativeWysiwygMarkdownBlockStructuredCodeBlock({
-      content: [
-        {
-          attrs: { language: 'text' },
-          content: [{ text: 'code', type: 'text' }],
-          type: 'codeBlock',
-        },
-      ],
-      type: 'doc',
-    })).toBe(true)
-
-    expect(nativeWysiwygMarkdownBlockStructuredCodeBlock({
-      content: [
-        {
-          content: [
-            { text: '```text', type: 'text' },
-            { type: 'hardBreak' },
-            { text: 'code', type: 'text' },
-            { type: 'hardBreak' },
-            { text: '```', type: 'text' },
-          ],
-          type: 'paragraph',
-        },
-      ],
-      type: 'doc',
-    })).toBe(false)
+  it.each([
+    {
+      detect: nativeWysiwygMarkdownBlockStructuredCodeBlock,
+      name: 'code-block',
+      sourceBackedJson: documentNode(sourceParagraph(['```text', 'code', '```'])),
+      structuredJson: documentNode({
+        attrs: { language: 'text' },
+        content: [{ text: 'code', type: 'text' }],
+        type: 'codeBlock',
+      }),
+    },
+    {
+      detect: nativeWysiwygMarkdownBlockStructuredTable,
+      name: 'table',
+      sourceBackedJson: documentNode(sourceParagraph(['| Column | Value |', '| --- | --- |', '| Item | Detail |'])),
+      structuredJson: documentNode({
+        content: [
+          tableRowNode('tableHeader', ['Column', 'Value']),
+          tableRowNode('tableCell', ['Item', 'Detail']),
+        ],
+        type: 'table',
+      }),
+    },
+  ])('detects structured $name nodes in native TenTap JSON', ({ detect, sourceBackedJson, structuredJson }) => {
+    expect(detect(structuredJson)).toBe(true)
+    expect(detect(sourceBackedJson)).toBe(false)
   })
 
   it('detects the native QA query flag', () => {
@@ -137,6 +142,7 @@ function expectPassingMarkdownBlockProof(
     content,
     mathBlockRendered: true,
     noteId: 'note.md',
+    tableStructured: true,
   })).toMatchObject({
     codeBlockSaved: true,
     codeBlockStructured: true,
@@ -145,9 +151,34 @@ function expectPassingMarkdownBlockProof(
     mermaidSaved: true,
     plainTextSaved: true,
     tableSaved: true,
+    tableStructured: true,
     whiteboardSaved: true,
     ...expected,
   })
+}
+
+function tableRowNode(cellType: 'tableCell' | 'tableHeader', cells: string[]) {
+  return {
+    content: cells.map((text) => ({
+      content: [{ content: [{ text, type: 'text' }], type: 'paragraph' }],
+      type: cellType,
+    })),
+    type: 'tableRow',
+  }
+}
+
+function documentNode(...content: unknown[]) {
+  return { content, type: 'doc' }
+}
+
+function sourceParagraph(lines: string[]) {
+  return {
+    content: lines.flatMap((line, index) => [
+      ...(index > 0 ? [{ type: 'hardBreak' }] : []),
+      { text: line, type: 'text' },
+    ]),
+    type: 'paragraph',
+  }
 }
 
 function markdownBlockProofContent({

@@ -20,6 +20,7 @@ import { MobileMarkdownFormattingToolbar } from './MobileMarkdownFormattingToolb
 import { mobileWysiwygTentapEditorHtml } from './MobileWysiwygTentapEditorHtml'
 import { MobileCodeBlockBridge } from './MobileWysiwygCodeBlockBridge'
 import { MobileMathInlineBridge } from './MobileWysiwygMathBridge'
+import { MobileTableBridge } from './MobileWysiwygTableBridge'
 import { mobileTentapEditorCss } from './MobileWysiwygMarkdownEditorCss'
 import {
   applyNativeWysiwygFormat,
@@ -73,6 +74,7 @@ import {
   nativeWysiwygMarkdownBlockProbePayloads,
   nativeWysiwygMarkdownBlockProbePlainTextPayload,
   nativeWysiwygMarkdownBlockStructuredCodeBlock,
+  nativeWysiwygMarkdownBlockStructuredTable,
   publishNativeWysiwygMarkdownBlockProof,
 } from '../../qa/nativeWysiwygMarkdownBlockProbe'
 
@@ -185,7 +187,12 @@ type SelectionSettableEditorBridge = EditorBridge & {
   setSelection: (from: number, to: number) => void
 }
 
-const mobileTenTapBridgeExtensions = [...TenTapStartKit, MobileCodeBlockBridge, MobileMathInlineBridge]
+const mobileTenTapBridgeExtensions = [
+  ...TenTapStartKit,
+  MobileCodeBlockBridge,
+  MobileMathInlineBridge,
+  MobileTableBridge,
+]
 
 export function MobileWysiwygMarkdownEditor({
   blocks,
@@ -618,6 +625,7 @@ function writeEditorJsonToMarkdown({
         content: nextContent.content,
         mathBlockRendered: refs.markdownBlockRenderProofRef.current,
         noteId,
+        tableStructured: nativeWysiwygMarkdownBlockStructuredTable(json),
       })
     }
     if (mutationProbeEnabled) publishNativeWysiwygMutationProof(noteId, nextContent.content)

@@ -19,6 +19,7 @@ export type NativeWysiwygMarkdownBlockProof = {
   noteId: NoteId
   plainTextSaved: boolean
   tableSaved: boolean
+  tableStructured: boolean
   whiteboardSaved: boolean
 }
 
@@ -45,6 +46,7 @@ type NativeWysiwygMarkdownBlockProofInput = {
   content: MarkdownContent
   mathBlockRendered?: boolean
   noteId: NoteId
+  tableStructured?: boolean
 }
 
 const expectedDivider = '---'
@@ -75,6 +77,7 @@ const proofFieldTypes = {
   noteId: 'string',
   plainTextSaved: 'boolean',
   tableSaved: 'boolean',
+  tableStructured: 'boolean',
   whiteboardSaved: 'boolean',
 } as const satisfies Record<ProofFieldName, ProofFieldType>
 
@@ -100,6 +103,7 @@ export function nativeWysiwygMarkdownBlockProof({
   content,
   mathBlockRendered = false,
   noteId,
+  tableStructured = false,
 }: NativeWysiwygMarkdownBlockProofInput): NativeWysiwygMarkdownBlockProof {
   const normalizedContent = normalizedMarkdown(content)
 
@@ -114,6 +118,7 @@ export function nativeWysiwygMarkdownBlockProof({
     noteId,
     plainTextSaved: normalizedContent.includes(expectedPlainText),
     tableSaved: normalizedContent.includes(expectedTable),
+    tableStructured,
     whiteboardSaved: expectedWhiteboardFence.test(normalizedContent),
   }
 }
@@ -190,6 +195,11 @@ export function assertNativeWysiwygMarkdownBlockProofs(
       'Native WYSIWYG table insertion saves as desktop markdown table source lines',
     ),
     proofFailure(
+      latest.tableStructured,
+      'editor.wysiwyg.markdownBlocks.tableStructured',
+      'Native WYSIWYG table insertion remains a structured TenTap table before save',
+    ),
+    proofFailure(
       latest.whiteboardSaved,
       'editor.wysiwyg.markdownBlocks.whiteboard',
       'Native WYSIWYG whiteboard insertion saves as desktop tldraw fenced markdown',
@@ -209,6 +219,10 @@ export function nativeWysiwygMarkdownBlockProbeEnabled(searchParams: URLSearchPa
 
 export function nativeWysiwygMarkdownBlockStructuredCodeBlock(json: unknown): boolean {
   return hasCodeBlockNode(json)
+}
+
+export function nativeWysiwygMarkdownBlockStructuredTable(json: unknown): boolean {
+  return hasTableNode(json)
 }
 
 function parseProofLine(line: ProbeLine): NativeWysiwygMarkdownBlockProof | null {
@@ -238,6 +252,7 @@ function parsedProof(value: unknown): NativeWysiwygMarkdownBlockProof | null {
     noteId: value.noteId,
     plainTextSaved: value.plainTextSaved,
     tableSaved: value.tableSaved,
+    tableStructured: value.tableStructured,
     whiteboardSaved: value.whiteboardSaved,
   }
 }
@@ -259,6 +274,13 @@ function hasCodeBlockNode(value: unknown): boolean {
   return tiptapChildNodes(value).some(hasCodeBlockNode)
 }
 
+function hasTableNode(value: unknown): boolean {
+  if (!isTiptapJsonNode(value)) return false
+  if (isProbeTableNode(value)) return true
+
+  return tiptapChildNodes(value).some(hasTableNode)
+}
+
 function isProbeCodeBlockNode(node: TiptapJsonNode): boolean {
   return node.type === 'codeBlock'
     && node.attrs?.language === 'text'
@@ -267,6 +289,22 @@ function isProbeCodeBlockNode(node: TiptapJsonNode): boolean {
 
 function isProbeCodeTextNode(node: TiptapJsonNode): boolean {
   return node.type === 'text' && node.text === 'code'
+}
+
+function isProbeTableNode(node: TiptapJsonNode): boolean {
+  if (node.type !== 'table') return false
+
+  const text = plainText(tiptapChildNodes(node))
+  return text.includes('Column')
+    && text.includes('Value')
+    && text.includes('Item')
+    && text.includes('Detail')
+}
+
+function plainText(nodes: TiptapJsonNode[]): string {
+  return nodes.map((node) => (
+    node.type === 'text' ? node.text ?? '' : plainText(tiptapChildNodes(node))
+  )).join(' ')
 }
 
 function tiptapChildNodes(node: TiptapJsonNode): TiptapJsonNode[] {
