@@ -80,7 +80,7 @@ import {
   typeSchemaSourceNote,
 } from './tabletWorkspaceTypeSchemaActions'
 import { typeDefinitionSaveEdit } from './tabletWorkspaceTypeDefinitionSave'
-import { editPropertyFields, propertyEditFromForm } from './tabletWorkspacePropertyActions'
+import { addPropertyFields, editPropertyFields, propertyEditFromForm } from './tabletWorkspacePropertyActions'
 import { createViewInitialFilters } from './tabletWorkspaceViewHelpers'
 
 const emptyReadOnlyForm: TabletReadOnlyForm = {
@@ -386,7 +386,7 @@ function actionSheetWorkspaceActions({
 
   return {
     onCloseAction: closeAction,
-    ...coreWorkspaceActionOpeners({ navigation, openAction, setOpenAction, updateReadOnlyForm }),
+    ...coreWorkspaceActionOpeners({ navigation, openAction, setOpenAction, updateReadOnlyForm, workspaceSnapshot }),
     ...noteWorkspaceActionOpeners({ openAction, selectedNote, setOpenAction }),
     ...sidebarWorkspaceActionOpeners({ setOpenAction, updateReadOnlyForm, workspaceSnapshot }),
   }
@@ -397,14 +397,16 @@ function coreWorkspaceActionOpeners({
   openAction,
   setOpenAction,
   updateReadOnlyForm,
+  workspaceSnapshot,
 }: {
   navigation: TabletWorkspaceNavigation
   openAction: ReturnType<typeof workspaceActionOpener>
   setOpenAction: SetOpenAction
   updateReadOnlyForm: ReadOnlyFormUpdater
+  workspaceSnapshot: MobileWorkspaceSnapshot
 }) {
   return {
-    onAddProperty: (key?: string) => openAction('addProperty', addPropertyFields(key)),
+    onAddProperty: (key?: string) => openAction('addProperty', addPropertyFields(key, workspaceSnapshot.vaultConfig?.propertyDisplayModes)),
     onAddRelationship: (key?: string) => openAction('addRelationship', addRelationshipFields(key)),
     onOpenCreateFolder: () => openWorkspaceAction({
       action: 'createFolder',
@@ -867,14 +869,6 @@ function filenameStemForNote(note: MobileNote | null): string {
   const path = note?.path ?? note?.id ?? ''
   const filename = path.split('/').filter(Boolean).at(-1) ?? path
   return filename.replace(/\.md$/u, '')
-}
-
-function addPropertyFields(key?: string): ReadOnlyFormField[] {
-  return [
-    { key: 'propertyName', value: key ?? '' },
-    { key: 'propertyValue', value: '' },
-    { key: 'propertyValueKind', value: mobilePropertyValueKindForKey(key ?? '', 'string') },
-  ]
 }
 
 function addRelationshipFields(key?: string): ReadOnlyFormField[] {

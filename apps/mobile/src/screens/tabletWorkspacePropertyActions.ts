@@ -7,6 +7,7 @@ import {
   mobilePropertyDisplayModeFromValueKind,
   mobilePropertyValueFormText,
   mobilePropertyValueKind,
+  mobilePropertyValueKindForKey,
   parseMobilePropertyValue,
 } from '../workspace/mobilePropertyValues'
 import type { TabletReadOnlyForm } from './tabletWorkspaceTypes'
@@ -24,6 +25,18 @@ export function editPropertyFields(
     { key: 'propertyName', value: key },
     { key: 'propertyValue', value: mobilePropertyValueFormText(value) },
     { key: 'propertyValueKind', value: mobilePropertyValueKind(key, value, displayModes) },
+  ]
+}
+
+export function addPropertyFields(
+  key?: string,
+  displayModes?: Record<string, MobilePropertyDisplayMode> | null,
+): TabletReadOnlyFormField[] {
+  const propertyName = key ?? ''
+  return [
+    { key: 'propertyName', value: propertyName },
+    { key: 'propertyValue', value: '' },
+    { key: 'propertyValueKind', value: mobilePropertyValueKindForKey(propertyName, 'string', displayModes) },
   ]
 }
 
