@@ -17,6 +17,7 @@ import type { MobileEditorBlock, MobileNote } from '../../workspace/mobileWorksp
 import { probeProps, type MobileLayoutProbe } from '../../qa/mobileLayoutProbe'
 import { mobileColors, mobileSpace } from '../../ui/tokens'
 import { MobileMarkdownFormattingToolbar } from './MobileMarkdownFormattingToolbar'
+import { mobileWysiwygTentapEditorHtml } from './MobileWysiwygTentapEditorHtml'
 import { MobileMathInlineBridge } from './MobileWysiwygMathBridge'
 import { mobileTentapEditorCss } from './MobileWysiwygMarkdownEditorCss'
 import {
@@ -104,6 +105,9 @@ type EditorStateReadableBridge = EditorBridge & {
       to?: unknown
     }
   }
+}
+type MathInlineRenderableEditorBridge = EditorBridge & {
+  getMathInlineRenderProof: () => Promise<boolean>
 }
 
 type CssInjectableEditorBridge = EditorBridge & {
@@ -422,6 +426,7 @@ function useNativeTentapEditorBridge({
   const editor = useEditorBridge({
     avoidIosKeyboard: true,
     bridgeExtensions: mobileTenTapBridgeExtensions,
+    customSource: mobileWysiwygTentapEditorHtml,
     initialContent,
     onChange: scheduleEditorChange,
   })
@@ -781,12 +786,26 @@ async function runNativeWysiwygInputTransformProbeStep(
     selection,
   })
   if (nextJson) editor.setContent(nextJson)
+  const mathInlineRendered = nextJson ? await nativeWysiwygInputTransformMathRenderProof(editor) : false
 
   console.info(nativeWysiwygInputTransformLogLine(nativeWysiwygInputTransformProof({
     json: nextJson ?? insertedJson,
+    mathInlineRendered,
     step: step.step,
     transformed: nextJson !== null,
   })))
+}
+
+async function nativeWysiwygInputTransformMathRenderProof(editor: EditorBridge): Promise<boolean> {
+  if (!isMathInlineRenderableEditorBridge(editor)) return false
+  await settleNativeWysiwygEditorContent()
+  return editor.getMathInlineRenderProof()
+}
+
+function settleNativeWysiwygEditorContent(): Promise<void> {
+  return new Promise((resolve) => {
+    setTimeout(resolve, 60)
+  })
 }
 
 function useNativeWysiwygFormatCommandProbe({
@@ -1220,6 +1239,12 @@ function isCssInjectableEditorBridge(editor: EditorBridge | null): editor is Css
 
 function isEditorStateReadableBridge(editor: EditorBridge | null): editor is EditorStateReadableBridge {
   return typeof (editor as Partial<EditorStateReadableBridge> | null)?.getEditorState === 'function'
+}
+
+function isMathInlineRenderableEditorBridge(
+  editor: EditorBridge | null,
+): editor is MathInlineRenderableEditorBridge {
+  return typeof (editor as Partial<MathInlineRenderableEditorBridge> | null)?.getMathInlineRenderProof === 'function'
 }
 
 function isContentSettableEditorBridge(editor: EditorBridge | null): editor is ContentSettableEditorBridge {

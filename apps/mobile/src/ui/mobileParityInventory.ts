@@ -253,11 +253,18 @@ export const mobileParityInventory = [
     surface: 'Markdown formatting toolbar',
   },
   {
-    assertions: ['TenTap native simulator rendering', 'native WYSIWYG layout metric contract', 'native WYSIWYG rich bridge mutation/save proof for inline marks, wikilinks, lists, quotes, code fences, horizontal rules, H1, and table-source lines', 'native WYSIWYG Expo FileSystem persistence proof', 'native WYSIWYG formatting command mapping tests for H1-H6 headings and supported rich commands', 'native WYSIWYG input-transform tests and native iOS proof for desktop arrow ligatures, escaped arrow literals, completed highlight syntax, and inline math nodes', 'native WYSIWYG full-document save serialization tests', 'Tolaria-owned native formatting toolbar for supported rich commands', 'document-content hydration and serialization with raw frontmatter, desktop highlight, escaped inline markdown punctuation, wikilink alias/no-alias, angle-wrapped attachment links, URL/email autolinks, bare URL/email save preservation, image titles, remote image URLs with balanced parentheses, inline image source paragraphs, empty headings, empty list items, mixed nested list kinds, list continuation and list hard-break source blocks, non-1 ordered list starts, ordered-paren and repeated-marker source lists, blank blockquotes, display math, hard-break, blockquote paragraphs, unsupported-table, details/html-comment blocks, root image, and indented image/heading/list/code-fence/display-math/text source regression checks'],
+    assertions: ['TenTap native simulator rendering with Tolaria custom WebView source', 'native WYSIWYG layout metric contract', 'native WYSIWYG rich bridge mutation/save proof for inline marks, wikilinks, lists, quotes, code fences, horizontal rules, H1, and table-source lines', 'native WYSIWYG Expo FileSystem persistence proof', 'native WYSIWYG formatting command mapping tests for H1-H6 headings and supported rich commands', 'native WYSIWYG input-transform tests and native iOS proof for desktop arrow ligatures, escaped arrow literals, completed highlight syntax, and rendered inline math nodes', 'native WYSIWYG full-document save serialization tests', 'Tolaria-owned native formatting toolbar for supported rich commands', 'document-content hydration and serialization with raw frontmatter, desktop highlight, escaped inline markdown punctuation, wikilink alias/no-alias, angle-wrapped attachment links, URL/email autolinks, bare URL/email save preservation, image titles, remote image URLs with balanced parentheses, inline image source paragraphs, empty headings, empty list items, mixed nested list kinds, list continuation and list hard-break source blocks, non-1 ordered list starts, ordered-paren and repeated-marker source lists, blank blockquotes, display math, hard-break, blockquote paragraphs, unsupported-table, details/html-comment blocks, root image, and indented image/heading/list/code-fence/display-math/text source regression checks'],
     contracts: ['desktopEditorParity', 'desktopToolbarActionParity'],
     desktopSource: 'EditorTheme.css, theme.json, BlockNote/Tiptap document editing, richEditorInputTransformExtension, and desktop markdown serialization',
     mobileFile: 'src/components/workspace/MobileWysiwygMarkdownEditor.native.tsx',
     surface: 'Native WYSIWYG document editor',
+  },
+  {
+    assertions: ['custom TenTap WebView source includes Tolaria-owned Tiptap extensions', 'native iOS WYSIWYG input-transform proof covers rendered inline math'],
+    contracts: ['desktopEditorParity', 'desktopToolbarActionParity'],
+    desktopSource: 'BlockNote/Tiptap editor schema extensions and desktop editor rendering boundary',
+    mobileFile: 'src/components/workspace/MobileWysiwygTentapWebEditor.tsx',
+    surface: 'Native WYSIWYG WebView editor source',
   },
   {
     assertions: ['WYSIWYG wikilink picker suggestion tests', 'native iOS WYSIWYG wikilink insertion proof'],

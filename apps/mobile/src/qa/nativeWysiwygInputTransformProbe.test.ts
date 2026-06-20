@@ -39,6 +39,7 @@ describe('native WYSIWYG input transform probe', () => {
       })
       return nativeWysiwygInputTransformProof({
         json,
+        mathInlineRendered: step.step === 'inlineMath',
         step: step.step,
         transformed: json !== null,
       })

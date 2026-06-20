@@ -3,11 +3,20 @@ import type { TiptapJsonNode } from '../workspace/mobileDocumentContent'
 type ProbeLogText = string
 type ProbeLine = string
 type StepId = 'arrow' | 'escapedArrow' | 'highlight' | 'inlineMath'
+type BooleanProofField = 'highlightMarkApplied' | 'mathInlineApplied' | 'mathInlineRendered' | 'transformed'
+
+const booleanProofFields: readonly BooleanProofField[] = [
+  'highlightMarkApplied',
+  'mathInlineApplied',
+  'mathInlineRendered',
+  'transformed',
+]
 
 export type NativeWysiwygInputTransformProof = {
   highlightMarkApplied: boolean
   markdown: string
   mathInlineApplied: boolean
+  mathInlineRendered: boolean
   step: StepId
   transformed: boolean
 }
@@ -57,10 +66,12 @@ export function nativeWysiwygInputTransformProbeSteps(): NativeWysiwygInputTrans
 
 export function nativeWysiwygInputTransformProof({
   json,
+  mathInlineRendered = false,
   step,
   transformed,
 }: {
   json: unknown
+  mathInlineRendered?: boolean
   step: StepId
   transformed: boolean
 }): NativeWysiwygInputTransformProof {
@@ -68,6 +79,7 @@ export function nativeWysiwygInputTransformProof({
     highlightMarkApplied: containsHighlightMark(json),
     markdown: probeMarkdownFromJson(json),
     mathInlineApplied: containsMathInline(json),
+    mathInlineRendered,
     step,
     transformed,
   }
@@ -108,9 +120,9 @@ export function assertNativeWysiwygInputTransformProofs(
       'Native WYSIWYG applies completed desktop highlight syntax as a mark',
     ),
     proofFailure(
-      hasProof(proofs, { markdown: 'Inline $x^2$ ', mathInlineApplied: true, step: 'inlineMath', transformed: true }),
+      hasProof(proofs, { markdown: 'Inline $x^2$ ', mathInlineApplied: true, mathInlineRendered: true, step: 'inlineMath', transformed: true }),
       'editor.wysiwyg.inputTransform.inlineMath',
-      'Native WYSIWYG applies completed desktop inline math syntax as a math node',
+      'Native WYSIWYG applies completed desktop inline math syntax as a rendered math node',
     ),
   ].filter((failure): failure is NativeWysiwygInputTransformAssertionFailure => failure !== null)
 }
@@ -150,22 +162,37 @@ function parseProofLine(line: ProbeLine): NativeWysiwygInputTransformProof | nul
 }
 
 function parsedProof(value: unknown): NativeWysiwygInputTransformProof | null {
-  if (!value || typeof value !== 'object') return null
+  const candidate = proofCandidate(value)
+  if (!candidate) return null
 
-  const candidate = value as Partial<NativeWysiwygInputTransformProof>
-  if (!isStepId(candidate.step)) return null
-  if (typeof candidate.markdown !== 'string') return null
-  if (typeof candidate.transformed !== 'boolean') return null
-  if (typeof candidate.highlightMarkApplied !== 'boolean') return null
-  if (typeof candidate.mathInlineApplied !== 'boolean') return null
+  return nativeWysiwygInputTransformProofFromCandidate(candidate)
+}
 
-  return {
+function proofCandidate(value: unknown): Partial<NativeWysiwygInputTransformProof> | null {
+  return value && typeof value === 'object'
+    ? value as Partial<NativeWysiwygInputTransformProof>
+    : null
+}
+
+function nativeWysiwygInputTransformProofFromCandidate(
+  candidate: Partial<NativeWysiwygInputTransformProof>,
+): NativeWysiwygInputTransformProof | null {
+  return isNativeWysiwygInputTransformProof(candidate) ? {
     highlightMarkApplied: candidate.highlightMarkApplied,
     markdown: candidate.markdown,
     mathInlineApplied: candidate.mathInlineApplied,
+    mathInlineRendered: candidate.mathInlineRendered,
     step: candidate.step,
     transformed: candidate.transformed,
-  }
+  } : null
+}
+
+function isNativeWysiwygInputTransformProof(
+  candidate: Partial<NativeWysiwygInputTransformProof>,
+): candidate is NativeWysiwygInputTransformProof {
+  return isStepId(candidate.step)
+    && typeof candidate.markdown === 'string'
+    && booleanProofFields.every((field) => typeof candidate[field] === 'boolean')
 }
 
 function hasProof(
@@ -184,6 +211,7 @@ function proofMatchesExpected(
     && optionalProofFieldMatches(proof.transformed, expected.transformed)
     && optionalProofFieldMatches(proof.highlightMarkApplied, expected.highlightMarkApplied)
     && optionalProofFieldMatches(proof.mathInlineApplied, expected.mathInlineApplied)
+    && optionalProofFieldMatches(proof.mathInlineRendered, expected.mathInlineRendered)
 }
 
 function optionalProofFieldMatches<T>(actual: T, expected: T | undefined): boolean {
