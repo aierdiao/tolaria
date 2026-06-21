@@ -33,7 +33,7 @@ async function writeWhiteboardFence(page: Page) {
     '```',
   ].join('\n'))
   await page.getByTestId('editor-edit-action').click()
-  await expect(page.getByTestId('editor-title')).toHaveText('Whiteboard Source')
+  await expect(page.getByTestId('editor-toolbar-title')).toHaveText('Whiteboard Source')
 }
 
 async function editWhiteboardFence(page: Page) {
@@ -46,6 +46,13 @@ async function editWhiteboardFence(page: Page) {
   await page.getByTestId('workspace-whiteboard-snapshot-input').fill(JSON.stringify(desktopStoreSnapshot({ name: 'Tablet board' })))
   await page.getByTestId('workspace-whiteboard-text-shape-input').fill('Tablet board note')
   await page.getByTestId('workspace-whiteboard-structured-editor').getByRole('button', { name: 'Add' }).click()
+  await expect(page.getByTestId('workspace-whiteboard-text-shape-0-input')).toHaveValue('Tablet board note')
+  await page.getByTestId('workspace-whiteboard-text-shape-0-input').fill('Edited tablet board note')
+  await page.getByTestId('workspace-whiteboard-text-shape-input').fill('Temporary tablet board note')
+  await page.getByTestId('workspace-whiteboard-structured-editor').getByRole('button', { name: 'Add' }).click()
+  await expect(page.getByTestId('workspace-whiteboard-text-shape-1-input')).toHaveValue('Temporary tablet board note')
+  await page.getByTestId('workspace-whiteboard-text-shape-1').getByRole('button', { name: 'Remove' }).click()
+  await expect(page.getByTestId('workspace-whiteboard-text-shape-1')).toBeHidden()
   await page.getByTestId('workspace-whiteboard-editor').getByRole('button', { name: 'Save' }).click()
   await expect(page.getByTestId('workspace-action-sheet')).toBeHidden()
 }
@@ -54,7 +61,8 @@ async function assertWhiteboardFenceSource(page: Page) {
   await page.getByTestId('editor-source-action').click()
   await expect(page.getByTestId('editor-markdown-input')).toHaveValue(/```tldraw id="qa-board" height="640" width="900"/u)
   await expect(page.getByTestId('editor-markdown-input')).toHaveValue(/"schemaVersion": 2/u)
-  await expect(page.getByTestId('editor-markdown-input')).toHaveValue(/Tablet board note/u)
+  await expect(page.getByTestId('editor-markdown-input')).toHaveValue(/Edited tablet board note/u)
+  await expect(page.getByTestId('editor-markdown-input')).not.toHaveValue(/Temporary tablet board note/u)
   await expect(page.getByTestId('editor-markdown-input')).toHaveValue(/"type": "text"/u)
 }
 
