@@ -288,7 +288,7 @@ export const mobileParityInventory = [
     surface: 'Native WYSIWYG wikilink picker',
   },
   {
-    assertions: ['single document source edit user-flow checks', 'native source selection plus wikilink, person, emoji, and slash-command autocomplete preservation proof', 'wikilink, person, emoji, and slash-command autocomplete user-flow checks'],
+    assertions: ['single document source edit user-flow checks', 'source YAML warning and incomplete-frontmatter metadata preservation checks', 'native source selection plus wikilink, person, emoji, and slash-command autocomplete preservation proof', 'wikilink, person, emoji, and slash-command autocomplete user-flow checks'],
     contracts: ['desktopEditorParity', 'desktopToolbarActionParity'],
     desktopSource: 'RawEditorView, BlockNote markdown commands, slash-command menu, and editor wikilink/person suggestion menus',
     mobileFile: 'src/components/workspace/MobileMarkdownSourceEditor.tsx',

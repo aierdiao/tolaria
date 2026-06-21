@@ -38,6 +38,10 @@ import {
 } from '../../workspace/mobileMarkdownSourceSelection'
 import { mobileNoteEditableContent } from '../../workspace/mobileDocumentContent'
 import {
+  mobileSourceFrontmatterIssue,
+  type MobileSourceFrontmatterIssue,
+} from '../../workspace/mobileSourceFrontmatterValidation'
+import {
   commitMobileEditorDraft,
   createMobileEditorDraft,
   editMobileEditorDraft,
@@ -183,6 +187,7 @@ function MarkdownSourceEditor(props: Omit<MobileMarkdownSourceEditorProps, 'plai
     sourceNote: note,
     onUpdateContent: editorDraft.updateContent,
   })
+  const frontmatterIssue = mobileSourceFrontmatterIssue(editorDraft.content)
   useRegisteredMobileEditorCommands(onRegisterEditorCommands, {
     pastePlainText: () => {
       void autocomplete.applyFormat('pastePlainText')
@@ -194,6 +199,7 @@ function MarkdownSourceEditor(props: Omit<MobileMarkdownSourceEditorProps, 'plai
   return (
     <View style={editorStyles.container} testID="editor-markdown-form">
       <MobileMarkdownFormattingToolbar onFormat={autocomplete.applyFormat} />
+      <MobileSourceFrontmatterIssueBanner issue={frontmatterIssue} />
       <Input
         multiline
         scrollEnabled
@@ -225,6 +231,22 @@ function MarkdownSourceEditor(props: Omit<MobileMarkdownSourceEditorProps, 'plai
       ) : null}
     </View>
   )
+}
+
+function MobileSourceFrontmatterIssueBanner({ issue }: { issue: MobileSourceFrontmatterIssue | null }) {
+  if (!issue) return null
+
+  return (
+    <View accessibilityRole="alert" style={editorStyles.frontmatterIssue} testID="editor-markdown-yaml-error">
+      <Text selectable style={editorStyles.frontmatterIssueLabel}>{mobileText('editor.source.yamlErrorLabel')}</Text>
+      <Text selectable style={editorStyles.frontmatterIssueText}>{mobileSourceFrontmatterIssueText(issue)}</Text>
+    </View>
+  )
+}
+
+function mobileSourceFrontmatterIssueText(issue: MobileSourceFrontmatterIssue) {
+  if (issue === 'tabIndentation') return mobileText('editor.source.yamlError.tabIndentation')
+  return mobileText('editor.source.yamlError.unclosedFrontmatter')
 }
 
 function MobilePlainTextSourceEditor({
@@ -649,6 +671,27 @@ const editorStyles = StyleSheet.create({
   },
   inputCompact: {
     minHeight: 360,
+  },
+  frontmatterIssue: {
+    alignItems: 'center',
+    backgroundColor: '#FEF3C7',
+    borderColor: '#D97706',
+    borderRadius: mobileRadius.md,
+    borderWidth: StyleSheet.hairlineWidth,
+    flexDirection: 'row',
+    gap: mobileSpace.xs,
+    paddingHorizontal: mobileSpace.md,
+    paddingVertical: mobileSpace.sm,
+  },
+  frontmatterIssueLabel: {
+    color: '#92400E',
+    fontSize: mobileType.caption,
+    fontWeight: '600',
+  },
+  frontmatterIssueText: {
+    color: '#92400E',
+    flex: 1,
+    fontSize: mobileType.caption,
   },
   suggestionRow: {
     minHeight: 32,

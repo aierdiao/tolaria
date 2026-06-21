@@ -11,6 +11,7 @@ test.describe('phone editor command parity', () => {
     await insertPhonePersonMention(page)
     await insertPhoneWikilink(page)
     await insertPhoneEmojiShortcode(page)
+    await assertPhoneSourceFrontmatterWarning(page)
     await applyPhoneFormattingCommands(page)
     await assertRenderedPhoneMarkdown(page)
     await openPhoneTableOfContents(page)
@@ -26,6 +27,15 @@ async function createPhonePersonNote(page: Page) {
   await expect(page.getByTestId('workspace-action-sheet')).toBeHidden()
   await page.getByTestId('phone-back-action').click()
   await expect(page.getByTestId('phone-note-list-screen')).toBeVisible()
+}
+
+async function assertPhoneSourceFrontmatterWarning(page: Page) {
+  const input = page.getByTestId('editor-markdown-input')
+
+  await input.fill('---\ntype: Essay\n\n# Phone Editor Commands')
+  await expect(page.getByTestId('editor-markdown-yaml-error')).toContainText('Unclosed frontmatter')
+  await input.fill('---\ntype: Essay\n---\n\n# Phone Editor Commands')
+  await expect(page.getByTestId('editor-markdown-yaml-error')).toBeHidden()
 }
 
 async function createPhoneCommandDraft(page: Page) {

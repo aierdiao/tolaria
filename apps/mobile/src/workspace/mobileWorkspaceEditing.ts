@@ -76,6 +76,11 @@ import {
 import { writeMobileFrontmatterValue } from './mobileFrontmatterWrites'
 import { normalizeMobileNoteWidth } from './mobileNoteWidth'
 import {
+  mobileRelationshipRefValue,
+  preservedMobileSourceFrontmatterMetadata,
+} from './mobileSourceFrontmatterMetadata'
+import { hasMobileSourceFrontmatterIssue } from './mobileSourceFrontmatterValidation'
+import {
   mobileNoteForWikilinkTarget,
   mobileWikilinkTargetForNote,
   parseMobileWikilink,
@@ -814,6 +819,10 @@ function deriveMobileNote(note: MobileNote, typeDefinitions?: MobileTypeDefiniti
   if (!canApplyMobileMarkdownEdit(note)) return null
 
   const editable = withEditableContent(note)
+  if (hasMobileSourceFrontmatterIssue(editable.rawContent)) {
+    return preservedMobileSourceFrontmatterMetadata(editable)
+  }
+
   return deriveEditableNote({ fallback: editable, rawContent: editable.rawContent, typeDefinitions })
 }
 
@@ -822,6 +831,10 @@ function deriveEditedNote(
   rawContent: MarkdownContent,
   typeDefinitions?: MobileTypeDefinitions,
 ): MobileNote {
+  if (hasMobileSourceFrontmatterIssue(rawContent)) {
+    return preservedMobileSourceFrontmatterMetadata({ ...fallback, rawContent }).note
+  }
+
   return deriveEditableNote({ fallback, rawContent, typeDefinitions }).note
 }
 
@@ -1244,13 +1257,9 @@ function fallbackPropertyFrontmatter(note: MobileNote): LocalVaultFrontmatter {
 function fallbackRelationshipFrontmatter(note: MobileNote): LocalVaultFrontmatter {
   const frontmatter: LocalVaultFrontmatter = {}
   for (const relationship of note.relationships) {
-    frontmatter[sharedRelationshipFrontmatterKey(relationship)] = relationship.values.map(relationshipRefValue)
+    frontmatter[sharedRelationshipFrontmatterKey(relationship)] = relationship.values.map(mobileRelationshipRefValue)
   }
   return frontmatter
-}
-
-function relationshipRefValue(value: MobileRelationshipValue): WikilinkRef {
-  return value.ref ?? `[[${value.title}]]`
 }
 
 function addFrontmatterValue(
