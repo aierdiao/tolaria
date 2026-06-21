@@ -20,7 +20,7 @@ describe('mobileRelationshipValueMetricSegments', () => {
     ])).toEqual([
       'llm-workflow',
       'llm-workflow-2',
-      'llm-workflow-projects-llm-workflow',
+      'llm-workflow-3',
     ])
   })
 })

@@ -100,6 +100,10 @@ describe('localVaultMarkdown', () => {
     expect(localVaultEditorBullets(blocks)).toEqual(['First item', 'Nested Target'])
   })
 
+  it('does not render blank initial title placeholders as empty paragraphs', () => {
+    expect(localVaultEditorBlocks(['# ', '', ''].join('\n'))).toEqual([])
+  })
+
   it('extracts desktop body wikilink targets while ignoring fenced code', () => {
     const body = [
       'Body with [[Target Note|display]] and [[Folder/Other Note]].',

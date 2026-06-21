@@ -145,7 +145,8 @@ function humanizeFilename(filename: NoteFilename): NoteTitle {
 function stripInitialH1(body: MarkdownBody): MarkdownBody {
   const lines = body.split(/\r?\n/)
   const firstContentIndex = lines.findIndex((line) => line.trim())
-  if (firstContentIndex < 0 || !lines[firstContentIndex].trim().startsWith('# ')) return body
+  const firstContentLine = lines[firstContentIndex]?.trim()
+  if (firstContentIndex < 0 || (firstContentLine !== '#' && !firstContentLine?.startsWith('# '))) return body
 
   return [
     ...lines.slice(0, firstContentIndex),

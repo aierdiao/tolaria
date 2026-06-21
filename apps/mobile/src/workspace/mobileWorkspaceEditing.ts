@@ -93,6 +93,10 @@ import { applyMobileTypeEdit } from './mobileWorkspaceTypeEditing'
 import { applyMobileRestorationEdit } from './mobileWorkspaceRestoration'
 import { moveMobileFavorite } from './mobileWorkspaceFavoriteOrdering'
 import {
+  selectedMobileEditorBlocks,
+  selectedMobileEditorBullets,
+} from './mobileSelectedEditorFallback'
+import {
   applyMobileTextFileContentEdit,
   canApplyMobileMarkdownEdit,
   isMobileTextFileContentEdit,
@@ -778,8 +782,8 @@ function rebuildSnapshot(
   return {
     ...snapshot,
     allNotes: snapshot.allNotes ? resolvedAllNotes : undefined,
-    editorBlocks: selectedNote?.editorBlocks ?? [],
-    editorBullets: selectedNote?.editorBullets ?? [],
+    editorBlocks: selectedMobileEditorBlocks(selectedNote, snapshot.editorBlocks),
+    editorBullets: selectedMobileEditorBullets(selectedNote, snapshot.editorBullets),
     noteListSubtitle: noteListSubtitle(resolvedNotes),
     notes: resolvedNotes,
     selectedNoteId: selectedNote?.id,

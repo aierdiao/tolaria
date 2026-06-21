@@ -12,11 +12,15 @@ import type {
   MobileEditorOrderedListItem,
   MobileEditorTaskItem,
 } from '../../workspace/mobileWorkspaceModel'
-import { mobileTableOfContentsTargetIdsForBlocks } from '../../workspace/mobileTableOfContents'
+import {
+  mobileTableOfContentsTargetIdsForBlocks,
+  mobileTableOfContentsTitleTargetId,
+} from '../../workspace/mobileTableOfContents'
 
 type MobileEditorBlocksProps = {
   blocks: MobileEditorBlock[]
   fallbackBullets: string[]
+  renderTitleBlock?: boolean
   tableOfContentsTitle?: string
   onTableOfContentsTargetLayout?: (targetId: string, event: LayoutChangeEvent) => void
   onOpenLink?: (href: string) => void
@@ -48,6 +52,7 @@ const bulletSymbols = ['•', '◦', '▪'] as const
 export function MobileEditorBlocks({
   blocks,
   fallbackBullets,
+  renderTitleBlock = true,
   tableOfContentsTitle = '',
   onTableOfContentsTargetLayout,
   onOpenLink,
@@ -61,9 +66,18 @@ export function MobileEditorBlocks({
     blocks,
     title: tableOfContentsTitle,
   })
+  const titleText = tableOfContentsTitle.trim()
+  const renderStandaloneTitleBlock = shouldRenderTitleBlock(blocks, titleText, renderTitleBlock)
 
   return (
     <>
+      {renderStandaloneTitleBlock ? (
+        <EditorTitleBlock
+          text={titleText}
+          tableOfContentsTargetId={mobileTableOfContentsTitleTargetId}
+          onTableOfContentsTargetLayout={onTableOfContentsTargetLayout}
+        />
+      ) : null}
       {blocks.map((block, index) => {
         return (
           <EditorBlock
@@ -154,6 +168,16 @@ function EditorHeading({
   tableOfContentsTargetId?: string
   onTableOfContentsTargetLayout?: (targetId: string, event: LayoutChangeEvent) => void
 }) {
+  if (block.level === 1) {
+    return (
+      <EditorTitleBlock
+        text={block.text}
+        tableOfContentsTargetId={tableOfContentsTargetId}
+        onTableOfContentsTargetLayout={onTableOfContentsTargetLayout}
+      />
+    )
+  }
+
   return (
     <Text
       onLayout={tableOfContentsTargetId ? (event) => onTableOfContentsTargetLayout?.(tableOfContentsTargetId, event) : undefined}
@@ -162,6 +186,28 @@ function EditorHeading({
     >
       {block.text}
     </Text>
+  )
+}
+
+function EditorTitleBlock({
+  text,
+  tableOfContentsTargetId,
+  onTableOfContentsTargetLayout,
+}: {
+  text: string
+  tableOfContentsTargetId?: string
+  onTableOfContentsTargetLayout?: (targetId: string, event: LayoutChangeEvent) => void
+}) {
+  return (
+    <View
+      onLayout={tableOfContentsTargetId ? (event) => onTableOfContentsTargetLayout?.(tableOfContentsTargetId, event) : undefined}
+      style={titleBlockStyles.container}
+      testID="editor-title-block"
+    >
+      <Text style={headingStylesForLevel(1)} testID="editor-title">
+        {text}
+      </Text>
+    </View>
   )
 }
 
@@ -396,6 +442,13 @@ function listDepthStyle(depth: number | undefined) {
   return depth ? { paddingLeft: depth * desktopEditorParity.listIndentSize } : null
 }
 
+function shouldRenderTitleBlock(blocks: MobileEditorBlock[], title: string, enabled: boolean) {
+  if (!enabled || !title) return false
+  if (blocks.length === 0) return false
+  const firstBlock = blocks[0]
+  return firstBlock?.kind !== 'heading' || firstBlock.level !== 1
+}
+
 function testIdSegment(value: string) {
   return value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
 }
@@ -423,8 +476,10 @@ const textStyles = StyleSheet.create({
   },
   headingOne: {
     fontSize: desktopEditorParity.h1FontSize,
+    fontWeight: '700',
     lineHeight: desktopEditorParity.h1LineHeight,
-    marginBottom: desktopEditorParity.h1MarginBottom,
+    marginBottom: 0,
+    marginTop: 0,
   },
   headingSmall: {
     fontSize: desktopEditorParity.h3FontSize,
@@ -437,6 +492,15 @@ const textStyles = StyleSheet.create({
     fontSize: desktopEditorParity.bodyFontSize,
     lineHeight: desktopEditorParity.bodyLineHeight,
     marginBottom: desktopEditorParity.paragraphSpacing,
+  },
+})
+
+const titleBlockStyles = StyleSheet.create({
+  container: {
+    borderBottomColor: mobileColors.border,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    marginBottom: desktopEditorParity.h1MarginBottom,
+    paddingBottom: desktopEditorParity.h1PaddingBottom,
   },
 })
 

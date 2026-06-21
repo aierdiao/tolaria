@@ -534,10 +534,14 @@ function EditorContent({
     )
   }
 
+  const readBlocks = note.editorBlocks ?? blocks
+  const readBullets = note.editorBullets ?? bullets
+
   return (
     <MobileEditorBlocks
-      blocks={blocks}
-      fallbackBullets={bullets}
+      blocks={readBlocks}
+      fallbackBullets={readBullets}
+      renderTitleBlock={shouldRenderReadTitleBlock(note, readBlocks)}
       tableOfContentsTitle={note.title}
       onTableOfContentsTargetLayout={onTableOfContentsTargetLayout}
       onOpenLink={onOpenLink}
@@ -545,6 +549,14 @@ function EditorContent({
     />
   )
 }
+
+function shouldRenderReadTitleBlock(note: MobileNote, blocks: MobileEditorBlock[]) {
+  if (blocks.length === 0) return false
+  if (generatedUntitledTitlePattern.test(note.title)) return false
+  return note.title.trim().length > 0
+}
+
+const generatedUntitledTitlePattern = /^Untitled\s+\S+\s+\d+$/u
 
 function editorFileMode(note: MobileNote): EditorFileMode {
   const actionMode = mobileNoteActionMode(note)

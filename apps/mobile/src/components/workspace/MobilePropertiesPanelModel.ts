@@ -15,8 +15,7 @@ export function mobileRelationshipValueMetricSegments(
 }
 
 function relationshipValueBaseSegment(value: MobileRelationship['values'][number]) {
-  const identity = value.ref ?? value.id
-  return testIdSegment(identity ? `${value.title}-${identity}` : value.title)
+  return testIdSegment(value.title)
 }
 
 function testIdSegment(value: string) {
