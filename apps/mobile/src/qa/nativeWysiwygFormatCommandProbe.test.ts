@@ -4,6 +4,11 @@ import {
   assertNativeWysiwygFormatCommandProofs,
   formatNativeWysiwygFormatCommandFailures,
   nativeWysiwygFormatCommandLogLine,
+  nativeWysiwygFormatCommandEffectContent,
+  nativeWysiwygFormatCommandEffectMarkdown,
+  nativeWysiwygFormatCommandEffectProbeActions,
+  nativeWysiwygFormatCommandEffectSelection,
+  nativeWysiwygFormatCommandExpectedEffectMarkdown,
   nativeWysiwygFormatCommandHighlightColor,
   nativeWysiwygFormatCommandProbeActions,
   nativeWysiwygFormatCommandProbeEnabled,
@@ -19,7 +24,6 @@ describe('native WYSIWYG format command probe', () => {
       'strike',
       'code',
       'highlight',
-      'link',
       'heading1',
       'heading2',
       'heading3',
@@ -70,14 +74,40 @@ describe('native WYSIWYG format command probe', () => {
   })
 
   it('parses and asserts simulator log proofs for all native format commands', () => {
-    const proofs = nativeWysiwygFormatCommandProbeActions.map((action) => nativeWysiwygFormatCommandProof({
-      action,
-      editor: completeNativeEditorBridge(),
-    }))
+    const proofs = [
+      ...nativeWysiwygFormatCommandProbeActions.map((action) => nativeWysiwygFormatCommandProof({
+        action,
+        editor: completeNativeEditorBridge(),
+      })),
+      ...nativeWysiwygFormatCommandEffectProbeActions.map((action) => nativeWysiwygFormatCommandProof({
+        action,
+        editor: completeNativeEditorBridge(),
+        effectMarkdown: nativeWysiwygFormatCommandExpectedEffectMarkdown(action) ?? '',
+      })),
+    ]
     const logText = proofs.map(nativeWysiwygFormatCommandLogLine).join('\n')
 
     expect(parseNativeWysiwygFormatCommandProofs(logText)).toEqual(proofs)
     expect(assertNativeWysiwygFormatCommandProofs(proofs)).toEqual([])
+  })
+
+  it('defines a selected-text effect probe document for native command serialization', () => {
+    expect(nativeWysiwygFormatCommandEffectProbeActions).toEqual([
+      'bold',
+      'italic',
+      'strike',
+      'code',
+      'highlight',
+      'heading2',
+      'bulletList',
+      'orderedList',
+      'taskList',
+      'quote',
+    ])
+    expect(nativeWysiwygFormatCommandEffectSelection()).toEqual({ from: 1, to: 10 })
+    expect(nativeWysiwygFormatCommandEffectMarkdown(nativeWysiwygFormatCommandEffectContent())).toBe('Format me')
+    expect(nativeWysiwygFormatCommandExpectedEffectMarkdown('bold')).toBe('**Format me**')
+    expect(nativeWysiwygFormatCommandExpectedEffectMarkdown('tableAddRowAfter')).toBeNull()
   })
 
   it('reports missing and failed command proofs', () => {
@@ -88,6 +118,10 @@ describe('native WYSIWYG format command probe', () => {
       {
         id: 'editor.wysiwyg.formatCommands.bold',
         message: 'Native WYSIWYG forwards bold to TenTap toggleBold',
+      },
+      {
+        id: 'editor.wysiwyg.formatCommands.effect.bold',
+        message: 'Native WYSIWYG bold command serializes back to desktop Markdown',
       },
       {
         id: 'editor.wysiwyg.formatCommands.heading2',

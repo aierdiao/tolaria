@@ -12,6 +12,12 @@ import type {
   MobileWorkspaceSnapshot,
 } from './mobileWorkspaceModel'
 import type { MobileNoteListFilter } from './mobileNoteFilters'
+import {
+  isMobileMarkdownActionNote,
+  isMobileNonMarkdownActionNote,
+  isMobileTextLikeActionNote,
+} from './mobileNoteActionMode'
+import { mobileTypeNameFromSidebarLabel } from './mobileTypeNames'
 
 type DesktopCommandKey = keyof typeof appCommandManifest.commands
 
@@ -47,6 +53,7 @@ export type MobileCommandPaletteHandlers = {
   onCreateNoteOfType?: (typeName: string) => void
   onOpenBacklinks?: () => void
   onOpenChangeNoteType?: () => void
+  onOpenCommandPalette?: () => void
   onOpenCreateNote: () => void
   onOpenCreateType: () => void
   onCopyFilePath?: () => void
@@ -137,7 +144,7 @@ const commandGroupOrder: MobileCommandGroup[] = ['Navigation', 'Note', 'View', '
 const selectedNoteCommandSpecs: SelectedNoteCommandSpec[] = [
   {
     desktopCommand: 'fileSave',
-    enabled: (handlers, note) => selectedNoteCommandEnabled(note, handlers.onUpdateNoteContent),
+    enabled: (handlers, note) => textLikeSelectedNoteCommandEnabled(note, handlers.onSaveActiveEditor ?? handlers.onUpdateNoteContent),
     execute: saveSelectedNote,
     kind: 'desktop',
     keywords: ['save', 'write'],
@@ -416,14 +423,19 @@ function folderNavigationCommands(handlers: MobileCommandPaletteHandlers): Mobil
 }
 
 function typeSectionNavigationCommands(handlers: MobileCommandPaletteHandlers): MobileCommandPaletteCommand[] {
-  return typeSidebarItems(handlers.snapshot).map((item) => dynamicCommand({
-    enabled: true,
-    execute: () => handlers.onSelectSidebarItem(sidebarSelectionFromTypeItem(item)),
-    group: 'Navigation',
-    id: `list-${commandSlug(item.typeName ?? item.label)}`,
-    keywords: ['list', 'show', 'filter', item.label, item.typeName ?? 'type'],
-    label: mobileText('command.navigation.listType').replace('{type}', item.label),
-  }))
+  return typeSidebarItems(handlers.snapshot).flatMap((item) => {
+    const typeName = typeNameForCommand(item)
+    if (!typeName) return []
+
+    return [dynamicCommand({
+      enabled: true,
+      execute: () => handlers.onSelectSidebarItem(sidebarSelectionFromTypeItem(item)),
+      group: 'Navigation',
+      id: `list-${commandSlug(typeName)}`,
+      keywords: ['list', 'show', 'filter', item.label, typeName],
+      label: mobileText('command.navigation.listType').replace('{type}', item.label),
+    })]
+  })
 }
 
 function noteListFilterCommands(handlers: MobileCommandPaletteHandlers): MobileCommandPaletteCommand[] {
@@ -473,7 +485,7 @@ function typedNoteCreationCommands(handlers: MobileCommandPaletteHandlers): Mobi
 
   return typeSidebarItems(handlers.snapshot).flatMap((item) => {
     const typeName = typeNameForCommand(item)
-    if (genericTypeCommandName(typeName)) return []
+    if (!typeName || genericTypeCommandName(typeName)) return []
 
     return [dynamicCommand({
       enabled: true,
@@ -519,6 +531,7 @@ function noteFindCommands(handlers: MobileCommandPaletteHandlers): MobileCommand
   return [
     command({
       desktopCommand: 'editFindInNote',
+      enabled: textLikeSelectedNoteCommandEnabled(handlers.selectedNote, handlers.onOpenFindInNote),
       execute: handlers.onOpenFindInNote,
       group: 'Note',
       keywords: ['find', 'search', 'current note'],
@@ -526,6 +539,7 @@ function noteFindCommands(handlers: MobileCommandPaletteHandlers): MobileCommand
     }),
     command({
       desktopCommand: 'editReplaceInNote',
+      enabled: textLikeSelectedNoteCommandEnabled(handlers.selectedNote, handlers.onOpenReplaceInNote),
       execute: handlers.onOpenReplaceInNote,
       group: 'Note',
       keywords: ['replace', 'find', 'current note'],
@@ -579,15 +593,15 @@ function hasSelectedNote(note: MobileNote | null): boolean {
 }
 
 function isMarkdownSelectedNote(note: MobileNote | null): boolean {
-  return note !== null && (note.fileKind ?? 'markdown') === 'markdown'
+  return isMobileMarkdownActionNote(note)
 }
 
 function isNonMarkdownSelectedNote(note: MobileNote | null): boolean {
-  return note !== null && (note.fileKind ?? 'markdown') !== 'markdown'
+  return isMobileNonMarkdownActionNote(note)
 }
 
 function isTextLikeSelectedNote(note: MobileNote | null): boolean {
-  return note !== null && note.fileKind !== 'binary'
+  return isMobileTextLikeActionNote(note)
 }
 
 function selectedNoteCommandEnabled(
@@ -629,7 +643,8 @@ function saveSelectedNote(
   handlers: MobileCommandPaletteHandlers,
   note: MobileNote | null,
 ): (() => void) | undefined {
-  if (note && handlers.onSaveActiveEditor) return handlers.onSaveActiveEditor
+  if (!isTextLikeSelectedNote(note)) return undefined
+  if (handlers.onSaveActiveEditor) return handlers.onSaveActiveEditor
 
   const saveContent = handlers.onUpdateNoteContent
   if (!note || saveContent === undefined) return undefined
@@ -676,6 +691,14 @@ function archiveLabelKey(note: MobileNote | null) {
 function viewCommands(handlers: MobileCommandPaletteHandlers): MobileCommandPaletteCommand[] {
   return [
     command({
+      desktopCommand: 'viewCommandPalette',
+      enabled: handlers.onOpenCommandPalette !== undefined,
+      execute: handlers.onOpenCommandPalette,
+      group: 'View',
+      keywords: ['command', 'palette', 'launcher', 'shortcut'],
+      label: mobileText('menu.view.commandPalette'),
+    }),
+    command({
       desktopCommand: 'viewEditorOnly',
       execute: handlers.onViewEditorOnly,
       group: 'View',
@@ -705,7 +728,7 @@ function viewCommands(handlers: MobileCommandPaletteHandlers): MobileCommandPale
     }),
     command({
       desktopCommand: 'viewToggleTableOfContents',
-      enabled: handlers.selectedNote !== null,
+      enabled: isMarkdownSelectedNote(handlers.selectedNote),
       execute: handlers.onOpenTableOfContents,
       group: 'View',
       keywords: ['toc', 'headings', 'outline'],
@@ -721,7 +744,7 @@ function viewCommands(handlers: MobileCommandPaletteHandlers): MobileCommandPale
     }),
     command({
       desktopCommand: 'editToggleRawEditor',
-      enabled: handlers.selectedNote !== null && handlers.onToggleRawEditor !== undefined,
+      enabled: markdownSelectedNoteCommandEnabled(handlers.selectedNote, handlers.onToggleRawEditor),
       execute: handlers.onToggleRawEditor,
       group: 'View',
       keywords: ['raw', 'source', 'markdown', 'frontmatter'],
@@ -955,7 +978,7 @@ function primaryColumnsCommandConfig(
 }
 
 function typeNameForCommand(item: MobileSidebarItem): string {
-  return (item.typeName ?? item.label).trim()
+  return mobileTypeNameFromSidebarLabel(item.label, item.typeName) ?? ''
 }
 
 function genericTypeCommandName(typeName: string): boolean {

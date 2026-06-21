@@ -30,7 +30,6 @@ import { MobileLayoutProbeReadout } from '../qa/MobileLayoutProbeReadout'
 import { useMobileLayoutProbe, type MobileLayoutProbe } from '../qa/mobileLayoutProbe'
 import type { MobileEditorBlock, MobileNote } from '../workspace/mobileWorkspaceModel'
 import {
-  mobileTableOfContentsTitleTargetId,
   type MobileTableOfContentsTarget,
 } from '../workspace/mobileTableOfContents'
 import {
@@ -45,8 +44,11 @@ import {
   useMobileAttachmentLinkOpener,
   type MobileAttachmentLinkOpener,
 } from '../workspace/mobileAttachmentOpen'
-import type { RegisterMobileEditorCommands } from '../workspace/mobileEditorCommands'
-import { shouldRenderEditorDocumentTitle } from './tabletEditorDocumentTitle'
+import {
+  useRegisteredMobileEditorCommands,
+  type RegisterMobileEditorCommands,
+} from '../workspace/mobileEditorCommands'
+import { mobileNoteActionMode } from '../workspace/mobileNoteActionMode'
 
 type TabletEditorPanelProps = {
   blocks: MobileEditorBlock[]
@@ -68,6 +70,7 @@ type TabletEditorPanelProps = {
   tableOfContentsTarget?: MobileTableOfContentsTarget | null
   vaultRootUri?: string | null
   wysiwygAutocompleteProbe?: boolean
+  wysiwygExternalLinkProbe?: boolean
   wysiwygFormatCommandProbe?: boolean
   wysiwygInputTransformProbe?: boolean
   wysiwygMarkdownBlockProbe?: boolean
@@ -116,6 +119,7 @@ type EditorContentProps = {
   sourceSelectionProbe?: boolean
   vaultRootUri?: string | null
   wysiwygAutocompleteProbe?: boolean
+  wysiwygExternalLinkProbe?: boolean
   wysiwygFormatCommandProbe?: boolean
   wysiwygInputTransformProbe?: boolean
   wysiwygMarkdownBlockProbe?: boolean
@@ -153,6 +157,7 @@ export function TabletEditorPanel(props: TabletEditorPanelProps) {
     tableOfContentsTarget = null,
     vaultRootUri = null,
     wysiwygAutocompleteProbe = false,
+    wysiwygExternalLinkProbe = false,
     wysiwygFormatCommandProbe = false,
     wysiwygInputTransformProbe = false,
     wysiwygMarkdownBlockProbe = false,
@@ -183,6 +188,9 @@ export function TabletEditorPanel(props: TabletEditorPanelProps) {
     }
     setEditingMode((current) => current === 'source' ? 'wysiwyg' : 'source')
   }, [editing])
+  useRegisteredMobileEditorCommands(onRegisterEditorCommands, {
+    toggleRawEditor: note && editorFileMode(note) === 'markdown' ? toggleSourceMode : undefined,
+  })
 
   if (!note) {
     return <EmptyEditorPanel />
@@ -212,6 +220,7 @@ export function TabletEditorPanel(props: TabletEditorPanelProps) {
     sourceSelectionProbe,
     vaultRootUri,
     wysiwygAutocompleteProbe,
+    wysiwygExternalLinkProbe,
     wysiwygFormatCommandProbe,
     wysiwygInputTransformProbe,
     wysiwygMarkdownBlockProbe,
@@ -275,6 +284,7 @@ function EditorPanelBody({
       onScroll={onScroll}
       ref={onScrollViewRef}
       scrollEventThrottle={16}
+      style={panelStyles.editorHost}
       testID="editor-scroll"
     >
       <EditorContent {...contentProps} />
@@ -286,17 +296,21 @@ function useTableOfContentsScroll(
   target: MobileTableOfContentsTarget | null,
   onProof?: (proof: NativeTableOfContentsProof) => void,
 ): TableOfContentsScroll {
+  const [layoutVersion, setLayoutVersion] = useState(0)
+  const [scrollViewVersion, setScrollViewVersion] = useState(0)
   const scrollViewRef = useRef<ScrollView | null>(null)
   const scrollYRef = useRef(0)
   const targetOffsetsRef = useRef<Record<string, number>>({})
   const setScrollViewNode = useCallback((node: ScrollView | null) => {
     scrollViewRef.current = node
+    setScrollViewVersion((current) => current + 1)
   }, [])
   const onScroll = useCallback((event: NativeSyntheticEvent<NativeScrollEvent>) => {
     scrollYRef.current = event.nativeEvent.contentOffset.y
   }, [])
   const onTargetLayout = useCallback((targetId: string, event: LayoutChangeEvent) => {
     targetOffsetsRef.current[targetId] = event.nativeEvent.layout.y
+    setLayoutVersion((current) => current + 1)
   }, [])
 
   useEffect(() => {
@@ -304,10 +318,12 @@ function useTableOfContentsScroll(
 
     const y = targetOffsetsRef.current[target.id]
     if (typeof y !== 'number') return
+    const scrollView = scrollViewRef.current
+    if (!scrollView) return
 
     const beforeY = scrollYRef.current
     const expectedY = Math.max(0, y - desktopEditorParity.contentPaddingVertical)
-    scrollViewRef.current?.scrollTo({
+    scrollView.scrollTo({
       animated: true,
       y: expectedY,
     })
@@ -324,7 +340,7 @@ function useTableOfContentsScroll(
     }, 900)
 
     return () => clearTimeout(proofTimeout)
-  }, [onProof, target])
+  }, [layoutVersion, onProof, scrollViewVersion, target])
 
   return { onScroll, onTargetLayout, setScrollViewNode }
 }
@@ -459,6 +475,7 @@ function EditorContent({
   sourceSelectionProbe = false,
   vaultRootUri = null,
   wysiwygAutocompleteProbe = false,
+  wysiwygExternalLinkProbe = false,
   wysiwygFormatCommandProbe = false,
   wysiwygInputTransformProbe = false,
   wysiwygMarkdownBlockProbe = false,
@@ -500,6 +517,7 @@ function EditorContent({
         onUpdateContent={onUpdateContent}
         vaultRootUri={vaultRootUri}
         wysiwygAutocompleteProbe={wysiwygAutocompleteProbe}
+        wysiwygExternalLinkProbe={wysiwygExternalLinkProbe}
         wysiwygFormatCommandProbe={wysiwygFormatCommandProbe}
         wysiwygInputTransformProbe={wysiwygInputTransformProbe}
         wysiwygMarkdownBlockProbe={wysiwygMarkdownBlockProbe}
@@ -511,30 +529,21 @@ function EditorContent({
   }
 
   return (
-    <>
-      {shouldRenderEditorDocumentTitle(note) ? (
-        <View
-          onLayout={(event) => onTableOfContentsTargetLayout(mobileTableOfContentsTitleTargetId, event)}
-          style={panelStyles.titleBlock}
-          testID="editor-title-block"
-        >
-          <Text style={[panelStyles.title, compact ? panelStyles.titleCompact : null]} testID="editor-title">{note.title}</Text>
-        </View>
-      ) : null}
-      <MobileEditorBlocks
-        blocks={blocks}
-        fallbackBullets={bullets}
-        onTableOfContentsTargetLayout={onTableOfContentsTargetLayout}
-        onOpenLink={onOpenLink}
-        onNavigateWikilink={onNavigateWikilink}
-      />
-    </>
+    <MobileEditorBlocks
+      blocks={blocks}
+      fallbackBullets={bullets}
+      tableOfContentsTitle={note.title}
+      onTableOfContentsTargetLayout={onTableOfContentsTargetLayout}
+      onOpenLink={onOpenLink}
+      onNavigateWikilink={onNavigateWikilink}
+    />
   )
 }
 
 function editorFileMode(note: MobileNote): EditorFileMode {
-  if (note.fileKind === 'binary') return 'binary'
-  return note.fileKind === 'text' ? 'text' : 'markdown'
+  const actionMode = mobileNoteActionMode(note)
+  if (actionMode === 'binary-file') return 'binary'
+  return actionMode === 'text-file' ? 'text' : 'markdown'
 }
 
 function editorToolbarChipLabel(fileMode: EditorFileMode, note: MobileNote): string {
@@ -630,21 +639,5 @@ const panelStyles = StyleSheet.create({
   },
   panel: {
     flex: 1,
-  },
-  title: {
-    color: mobileColors.text,
-    fontSize: desktopEditorParity.h1FontSize,
-    fontWeight: '700',
-    lineHeight: desktopEditorParity.h1LineHeight,
-  },
-  titleBlock: {
-    borderBottomColor: mobileColors.border,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    marginBottom: desktopEditorParity.h1MarginBottom,
-    paddingBottom: desktopEditorParity.h1PaddingBottom,
-  },
-  titleCompact: {
-    fontSize: 30,
-    lineHeight: 36,
   },
 })

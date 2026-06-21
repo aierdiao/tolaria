@@ -28,6 +28,7 @@ const typeSystemMetadataAliases = {
 } as const
 
 export type MobileTypeDefinitionPatch = {
+  color?: string | null
   icon?: string | null
   label?: string | null
   listPropertiesDisplay?: string[]
@@ -91,6 +92,7 @@ export function typeDefinitionsWithPatch(
 
 function normalizedTypePatch(patch: MobileTypeDefinitionPatch): MobileTypeDefinitionPatch {
   const normalized: MobileTypeDefinitionPatch = { ...patch }
+  if (patch.color !== undefined) normalized.color = normalizedTextPatch(patch.color)
   if (patch.label !== undefined) normalized.label = normalizedTextPatch(patch.label)
   if (patch.listPropertiesDisplay !== undefined) normalized.listPropertiesDisplay = normalizedListPatch(patch.listPropertiesDisplay)
   if (patch.properties !== undefined) normalized.properties = normalizedPropertiesPatch(patch.properties)
@@ -166,7 +168,7 @@ function patchedTypeFrontmatter(
   const nextFrontmatter = { ...frontmatter }
   writeFrontmatterValue(nextFrontmatter, 'type', 'Type')
   writeOptionalSystemMetadataValue(nextFrontmatter, typeSystemMetadataAliases.sidebarLabel, patch.label)
-  writeOptionalFrontmatterValue(nextFrontmatter, 'color', patch.tone)
+  writeOptionalFrontmatterValue(nextFrontmatter, 'color', patch.color !== undefined ? patch.color : patch.tone)
   writeOptionalSystemMetadataValue(nextFrontmatter, typeSystemMetadataAliases.icon, patch.icon)
   writeOptionalFrontmatterValue(nextFrontmatter, 'template', patch.template)
   writeOptionalSystemMetadataValue(nextFrontmatter, typeSystemMetadataAliases.sort, patch.sort)

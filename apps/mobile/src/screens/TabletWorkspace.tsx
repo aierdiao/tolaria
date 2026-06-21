@@ -17,6 +17,7 @@ import { useHorizontalSwipe } from '../ui/useHorizontalSwipe'
 import { useMobileEditorCommandRegistry, type RegisterMobileEditorCommands } from '../workspace/mobileEditorCommands'
 import { mobileNoteIdForWikilinkTarget } from '../workspace/mobileWikilinks'
 import { buildMobileCommandPaletteCommands } from '../workspace/mobileCommandPalette'
+import { logNativeMobileCommandPaletteProof } from '../qa/nativeMobileCommandPaletteProbe'
 import {
   mobileTableOfContentsHeadingTargetId,
   type MobileTableOfContentsTarget,
@@ -31,6 +32,7 @@ export function TabletWorkspace({
   forceDesktopPanels = false,
   initialEditorEditing = false,
   initialEditorEditingMode = 'wysiwyg',
+  commandPaletteProbe = false,
   layoutProbe = false,
   onOpenNativeVault,
   onTableOfContentsScrollProof,
@@ -41,6 +43,7 @@ export function TabletWorkspace({
   snapshot,
   tableOfContentsProbe = false,
   wysiwygAutocompleteProbe = false,
+  wysiwygExternalLinkProbe = false,
   wysiwygFormatCommandProbe = false,
   wysiwygInputTransformProbe = false,
   wysiwygMarkdownBlockProbe = false,
@@ -51,6 +54,7 @@ export function TabletWorkspace({
   forceDesktopPanels?: boolean
   initialEditorEditing?: boolean
   initialEditorEditingMode?: TabletWorkspaceChromeProps['initialEditorEditingMode']
+  commandPaletteProbe?: boolean
   layoutProbe?: boolean
   onOpenNativeVault?: () => void
   onTableOfContentsScrollProof?: TabletWorkspaceChromeProps['onTableOfContentsScrollProof']
@@ -61,6 +65,7 @@ export function TabletWorkspace({
   snapshot: MobileWorkspaceSnapshot
   tableOfContentsProbe?: boolean
   wysiwygAutocompleteProbe?: boolean
+  wysiwygExternalLinkProbe?: boolean
   wysiwygFormatCommandProbe?: boolean
   wysiwygInputTransformProbe?: boolean
   wysiwygMarkdownBlockProbe?: boolean
@@ -75,6 +80,7 @@ export function TabletWorkspace({
     <View style={styles.shellRoot}>
       <TabletWorkspaceChrome
         compactTablet={compactTablet}
+        commandPaletteProbe={commandPaletteProbe}
         defaultPropertiesVisible={defaultPropertiesVisible}
         initialEditorEditing={initialEditorEditing}
         initialEditorEditingMode={initialEditorEditingMode}
@@ -85,6 +91,7 @@ export function TabletWorkspace({
         sourceSelectionProbe={sourceSelectionProbe}
         tableOfContentsProbe={tableOfContentsProbe}
         wysiwygAutocompleteProbe={wysiwygAutocompleteProbe}
+        wysiwygExternalLinkProbe={wysiwygExternalLinkProbe}
         wysiwygFormatCommandProbe={wysiwygFormatCommandProbe}
         wysiwygInputTransformProbe={wysiwygInputTransformProbe}
         wysiwygMarkdownBlockProbe={wysiwygMarkdownBlockProbe}
@@ -114,7 +121,7 @@ function useTabletScreenMode(forceDesktopPanels: boolean) {
 }
 
 function TabletWorkspaceChrome(props: TabletWorkspaceChromeProps) {
-  const { compactTablet, defaultPropertiesVisible, onOpenNativeVault, onSelectNote, snapshot } = props
+  const { commandPaletteProbe, compactTablet, defaultPropertiesVisible, onOpenNativeVault, onSelectNote, snapshot } = props
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false)
   const [tableOfContentsTarget, setTableOfContentsTarget] = useState<TabletTableOfContentsTargetRequest | null>(null)
   const editorCommandRegistry = useMobileEditorCommandRegistry()
@@ -124,15 +131,17 @@ function TabletWorkspaceChrome(props: TabletWorkspaceChromeProps) {
   const closeCommandPalette = useCallback(() => setCommandPaletteOpen(false), [])
   const commandPaletteCommands = useMemo(() => buildMobileCommandPaletteCommands({
     ...props,
+    onOpenCommandPalette: openCommandPalette,
     onOpenBacklinks: gestures.showProperties,
     onOpenNativeVault,
     onPastePlainText: editorCommandRegistry.commands.pastePlainText,
     onSaveActiveEditor: editorCommandRegistry.commands.save,
+    onToggleRawEditor: editorCommandRegistry.commands.toggleRawEditor,
     onToggleProperties: gestures.toggleProperties,
     onViewAll: gestures.showAllPanels,
     onViewEditorList: gestures.showEditorList,
     onViewEditorOnly: gestures.showEditorOnly,
-  }), [editorCommandRegistry.commands.pastePlainText, editorCommandRegistry.commands.save, gestures, onOpenNativeVault, props])
+  }), [editorCommandRegistry.commands.pastePlainText, editorCommandRegistry.commands.save, editorCommandRegistry.commands.toggleRawEditor, gestures, onOpenNativeVault, openCommandPalette, props])
   const handleNavigateWikilink = useCallback((target: string) => {
     const noteId = mobileNoteIdForWikilinkTarget(suggestionNotes, target)
     if (noteId) onSelectNote(noteId)
@@ -156,6 +165,10 @@ function TabletWorkspaceChrome(props: TabletWorkspaceChromeProps) {
 
     return () => clearTimeout(timeout)
   }, [handleSelectTableOfContentsTarget, props.tableOfContentsProbe, tableOfContentsTarget])
+
+  useEffect(() => {
+    if (commandPaletteProbe) logNativeMobileCommandPaletteProof(commandPaletteCommands)
+  }, [commandPaletteCommands, commandPaletteProbe])
 
   return (
     <View style={styles.shell}>
@@ -303,6 +316,7 @@ type TabletEditorPanelHostProps = Pick<
   | 'sourceSelectionProbe'
   | 'vaultRootUri'
   | 'wysiwygAutocompleteProbe'
+  | 'wysiwygExternalLinkProbe'
   | 'wysiwygFormatCommandProbe'
   | 'wysiwygInputTransformProbe'
   | 'wysiwygMarkdownBlockProbe'
@@ -336,6 +350,7 @@ function TabletEditorPanelHost({
   tableOfContentsTarget,
   vaultRootUri,
   wysiwygAutocompleteProbe,
+  wysiwygExternalLinkProbe,
   wysiwygFormatCommandProbe,
   wysiwygInputTransformProbe,
   wysiwygMarkdownBlockProbe,
@@ -364,6 +379,7 @@ function TabletEditorPanelHost({
       tableOfContentsTarget={tableOfContentsTarget}
       vaultRootUri={vaultRootUri}
       wysiwygAutocompleteProbe={wysiwygAutocompleteProbe}
+      wysiwygExternalLinkProbe={wysiwygExternalLinkProbe}
       wysiwygFormatCommandProbe={wysiwygFormatCommandProbe}
       wysiwygInputTransformProbe={wysiwygInputTransformProbe}
       wysiwygMarkdownBlockProbe={wysiwygMarkdownBlockProbe}

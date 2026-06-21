@@ -15,6 +15,21 @@ describe('tablet workspace create-note defaults', () => {
     expect(createNoteDefaultsForSelection(selection)).toEqual({ type: 'Project' })
   })
 
+  it('canonicalizes legacy type section labels when no explicit type name is present', () => {
+    expect(createNoteDefaultsForSelection({
+      id: 'type-people',
+      kind: 'item',
+      label: 'People',
+      sectionId: 'types',
+    })).toEqual({ type: 'Person' })
+    expect(createNoteDefaultsForSelection({
+      id: 'type-responsibilities',
+      kind: 'item',
+      label: 'Responsibilities',
+      sectionId: 'types',
+    })).toEqual({ type: 'Responsibility' })
+  })
+
   it('copies valued Type document defaults when creating from a type section', () => {
     const selection: TabletSidebarSelection = {
       id: 'type-project',

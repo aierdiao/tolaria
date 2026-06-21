@@ -2,10 +2,19 @@ import type { MobileMarkdownFormatAction } from '../workspace/mobileMarkdownForm
 
 type ProbeLogText = string
 type ProbeLine = string
+type ProbeJsonNode = {
+  attrs?: Record<string, unknown>
+  content?: ProbeJsonNode[]
+  marks?: { type?: string }[]
+  text?: string
+  type?: string
+}
 
 export type NativeWysiwygFormatCommandProof = {
   action: MobileMarkdownFormatAction
   args: readonly (number | string)[]
+  effectApplied?: boolean
+  effectMarkdown?: string
   forwarded: boolean
   method: string
 }
@@ -20,9 +29,14 @@ type NativeWysiwygFormatCommandProbeSpec = {
   args: readonly (number | string)[]
   method: string
 }
+type NativeWysiwygFormatEffectSpec = {
+  action: MobileMarkdownFormatAction
+  markdown: string
+}
 
 export const nativeWysiwygFormatCommandLogPrefix = 'TOLARIA_MOBILE_WYSIWYG_FORMAT_COMMAND_PROBE'
 export const nativeWysiwygFormatCommandHighlightColor = 'rgba(214, 158, 46, 0.1)'
+export const nativeWysiwygFormatCommandEffectText = 'Format me'
 
 export const nativeWysiwygFormatCommandProbeActions = [
   'bold',
@@ -30,7 +44,6 @@ export const nativeWysiwygFormatCommandProbeActions = [
   'strike',
   'code',
   'highlight',
-  'link',
   'heading1',
   'heading2',
   'heading3',
@@ -55,7 +68,6 @@ const nativeWysiwygFormatCommandProbeSpecs = [
   { action: 'strike', args: [], method: 'toggleStrike' },
   { action: 'code', args: [], method: 'toggleCode' },
   { action: 'highlight', args: [nativeWysiwygFormatCommandHighlightColor], method: 'toggleHighlight' },
-  { action: 'link', args: ['https://'], method: 'setLink' },
   { action: 'heading1', args: [1], method: 'toggleHeading' },
   { action: 'heading2', args: [2], method: 'toggleHeading' },
   { action: 'heading3', args: [3], method: 'toggleHeading' },
@@ -74,21 +86,83 @@ const nativeWysiwygFormatCommandProbeSpecs = [
   { action: 'tableDeleteRow', args: [], method: 'deleteRow' },
 ] as const satisfies readonly NativeWysiwygFormatCommandProbeSpec[]
 
+export const nativeWysiwygFormatCommandEffectProbeActions = [
+  'bold',
+  'italic',
+  'strike',
+  'code',
+  'highlight',
+  'heading2',
+  'bulletList',
+  'orderedList',
+  'taskList',
+  'quote',
+] as const satisfies readonly MobileMarkdownFormatAction[]
+
+const nativeWysiwygFormatCommandEffectSpecs = [
+  { action: 'bold', markdown: '**Format me**' },
+  { action: 'italic', markdown: '*Format me*' },
+  { action: 'strike', markdown: '~~Format me~~' },
+  { action: 'code', markdown: '`Format me`' },
+  { action: 'highlight', markdown: '==Format me==' },
+  { action: 'heading2', markdown: '## Format me' },
+  { action: 'bulletList', markdown: '- Format me' },
+  { action: 'orderedList', markdown: '1. Format me' },
+  { action: 'taskList', markdown: '- [ ] Format me' },
+  { action: 'quote', markdown: '> Format me' },
+] as const satisfies readonly NativeWysiwygFormatEffectSpec[]
+
 export function nativeWysiwygFormatCommandProof({
   action,
   editor,
+  effectMarkdown,
 }: {
   action: MobileMarkdownFormatAction
   editor: unknown
+  effectMarkdown?: string
 }): NativeWysiwygFormatCommandProof {
   const spec = nativeWysiwygFormatCommandSpec(action)
+  const effectSpec = nativeWysiwygFormatEffectSpec(action)
 
   return {
     action,
     args: spec.args,
+    ...(effectMarkdown === undefined || effectSpec === null ? {} : {
+      effectApplied: effectMarkdown === effectSpec.markdown,
+      effectMarkdown,
+    }),
     forwarded: typeof (editor as Record<string, unknown> | null)?.[spec.method] === 'function',
     method: spec.method,
   }
+}
+
+export function nativeWysiwygFormatCommandEffectContent(): ProbeJsonNode {
+  return {
+    content: [
+      {
+        content: [{ text: nativeWysiwygFormatCommandEffectText, type: 'text' }],
+        type: 'paragraph',
+      },
+    ],
+    type: 'doc',
+  }
+}
+
+export function nativeWysiwygFormatCommandEffectSelection(): { from: number; to: number } {
+  return {
+    from: 1,
+    to: nativeWysiwygFormatCommandEffectText.length + 1,
+  }
+}
+
+export function nativeWysiwygFormatCommandEffectMarkdown(json: unknown): string {
+  return probeMarkdownFromJson(json).trim()
+}
+
+export function nativeWysiwygFormatCommandExpectedEffectMarkdown(
+  action: MobileMarkdownFormatAction,
+): string | null {
+  return nativeWysiwygFormatEffectSpec(action)?.markdown ?? null
 }
 
 export function nativeWysiwygFormatCommandLogLine(
@@ -119,6 +193,11 @@ export function assertNativeWysiwygFormatCommandProofs(
       `editor.wysiwyg.formatCommands.${spec.action}`,
       `Native WYSIWYG forwards ${spec.action} to TenTap ${spec.method}`,
     ))
+    .concat(nativeWysiwygFormatCommandEffectSpecs.map((spec) => proofFailure(
+      hasFormatEffectProof(proofs, spec),
+      `editor.wysiwyg.formatCommands.effect.${spec.action}`,
+      `Native WYSIWYG ${spec.action} command serializes back to desktop Markdown`,
+    )))
     .filter((failure): failure is NativeWysiwygFormatCommandAssertionFailure => failure !== null)
 }
 
@@ -166,6 +245,8 @@ function parsedProof(value: unknown): NativeWysiwygFormatCommandProof | null {
   return {
     action: candidate.action,
     args: candidate.args.filter(isFormatProbeArg),
+    ...(typeof candidate.effectApplied === 'boolean' ? { effectApplied: candidate.effectApplied } : {}),
+    ...(typeof candidate.effectMarkdown === 'string' ? { effectMarkdown: candidate.effectMarkdown } : {}),
     forwarded: candidate.forwarded,
     method: candidate.method,
   }
@@ -183,6 +264,24 @@ function hasFormatCommandProof(
   ))
 }
 
+function hasFormatEffectProof(
+  proofs: NativeWysiwygFormatCommandProof[],
+  expected: NativeWysiwygFormatEffectSpec,
+): boolean {
+  return proofs.some((proof) => (
+    proof.action === expected.action
+    && proof.forwarded
+    && proof.effectApplied === true
+    && proof.effectMarkdown === expected.markdown
+  ))
+}
+
+function nativeWysiwygFormatEffectSpec(
+  action: MobileMarkdownFormatAction,
+): NativeWysiwygFormatEffectSpec | null {
+  return nativeWysiwygFormatCommandEffectSpecs.find((spec) => spec.action === action) ?? null
+}
+
 function sameArgs(actual: readonly (number | string)[], expected: readonly (number | string)[]): boolean {
   return actual.length === expected.length
     && actual.every((arg, index) => arg === expected[index])
@@ -195,6 +294,60 @@ function isFormatProbeAction(value: unknown): value is MobileMarkdownFormatActio
 
 function isFormatProbeArg(value: unknown): value is number | string {
   return typeof value === 'number' || typeof value === 'string'
+}
+
+function probeMarkdownFromJson(value: unknown): string {
+  if (!value || typeof value !== 'object') return ''
+  const node = value as ProbeJsonNode
+
+  if (node.type === 'text') return markedProbeText(node)
+  if (node.type === 'heading') return `${'#'.repeat(headingLevel(node))} ${probeChildMarkdown(node)}`
+  if (node.type === 'paragraph') return probeChildMarkdown(node)
+  if (node.type === 'blockquote') return quoteProbeMarkdown(probeChildMarkdown(node))
+  if (node.type === 'bulletList') return listProbeMarkdown(node, '- ')
+  if (node.type === 'orderedList') return listProbeMarkdown(node, '1. ')
+  if (node.type === 'taskList') return taskListProbeMarkdown(node)
+  if (node.type === 'doc') return (node.content ?? []).map(probeMarkdownFromJson).filter(Boolean).join('\n\n')
+  return probeChildMarkdown(node)
+}
+
+function probeChildMarkdown(node: ProbeJsonNode): string {
+  return (node.content ?? []).map(probeMarkdownFromJson).join('')
+}
+
+function markedProbeText(node: ProbeJsonNode): string {
+  return (node.marks ?? []).reduce((text, mark) => {
+    if (mark.type === 'bold') return `**${text}**`
+    if (mark.type === 'italic') return `*${text}*`
+    if (mark.type === 'strike') return `~~${text}~~`
+    if (mark.type === 'code') return `\`${text}\``
+    if (mark.type === 'highlight') return `==${text}==`
+    return text
+  }, node.text ?? '')
+}
+
+function headingLevel(node: ProbeJsonNode): number {
+  const level = node.attrs?.level
+  return typeof level === 'number' && level >= 1 && level <= 6 ? level : 1
+}
+
+function quoteProbeMarkdown(markdown: string): string {
+  return markdown.split('\n').map((line) => `> ${line}`).join('\n')
+}
+
+function listProbeMarkdown(node: ProbeJsonNode, marker: string): string {
+  return (node.content ?? [])
+    .map((item) => `${marker}${probeChildMarkdown(item)}`)
+    .join('\n')
+}
+
+function taskListProbeMarkdown(node: ProbeJsonNode): string {
+  return (node.content ?? [])
+    .map((item) => {
+      const checked = item.attrs?.checked === true ? 'x' : ' '
+      return `- [${checked}] ${probeChildMarkdown(item)}`
+    })
+    .join('\n')
 }
 
 function proofFailure(

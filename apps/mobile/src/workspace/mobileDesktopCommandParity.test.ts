@@ -17,6 +17,7 @@ import {
 
 type MobileDesktopDynamicCommandEntries = ReturnType<typeof mobileDesktopDynamicCommandParityEntries>
 type DesktopDynamicCommandSource = MobileDesktopDynamicCommandEntries[number]['source']
+type DesktopBackedDynamicCommandSource = Exclude<DesktopDynamicCommandSource, 'mobile-adapted-note-commands'>
 
 const noteBuilderCommandsCoveredByManifest = new Set([
   'archive-note',
@@ -34,7 +35,11 @@ const noteBuilderCommandsCoveredByManifest = new Set([
 ])
 
 const templateIdExpansions = new Map<string, string[]>([
+  ['`filter-${filter}`', ['filter-archived', 'filter-open']],
+  ['`list-${commandSlug(item.typeName ?? item.label)}`', ['list-{type}']],
+  ['`list-${commandSlug(typeName)}`', ['list-{type}']],
   ['`list-${slug}`', ['list-{type}']],
+  ['`new-${commandSlug(typeName)}`', ['new-{type}']],
   ['`move-view-${directionKeyword}`', ['move-view-down', 'move-view-up']],
   ['`new-${slug}`', ['new-{type}']],
   ['`set-default-note-width-${mode}`', ['set-default-note-width-normal', 'set-default-note-width-wide']],
@@ -70,7 +75,7 @@ describe('mobile desktop command parity', () => {
     const expectedIdsBySource = desktopDynamicCommandIdsBySource()
     const entries = mobileDesktopDynamicCommandParityEntries()
 
-    for (const source of Object.keys(expectedIdsBySource) as DesktopDynamicCommandSource[]) {
+    for (const source of Object.keys(expectedIdsBySource) as DesktopBackedDynamicCommandSource[]) {
       expect(idsForSource(entries, source), source).toEqual(expectedIdsBySource[source])
     }
   })
@@ -78,9 +83,19 @@ describe('mobile desktop command parity', () => {
   it('keeps mobile-relevant desktop dynamic command deferrals closed', () => {
     expect(mobileDesktopDynamicCommandParityGaps()).toEqual([])
   })
+
+  it('keeps every mobile dynamic command tied to the parity inventory', () => {
+    const mobileDynamicIds = commandIdsFromMobileCommandPalette()
+    const classifiedMobileIds = mobileDesktopDynamicCommandParityEntries()
+      .flatMap((entry) => entry.mobileId ? [entry.mobileId] : [])
+    const unclassifiedMobileDynamicIds = mobileDynamicIds
+      .filter((id) => !classifiedMobileIds.includes(id))
+
+    expect(unclassifiedMobileDynamicIds).toEqual([])
+  })
 })
 
-function desktopDynamicCommandIdsBySource(): Record<DesktopDynamicCommandSource, string[]> {
+function desktopDynamicCommandIdsBySource(): Record<DesktopBackedDynamicCommandSource, string[]> {
   return {
     'desktop-filter-commands': commandIdsFromDesktopSource('src/hooks/commands/filterCommands.ts'),
     'desktop-navigation-commands': commandIdsFromDesktopSource('src/hooks/commands/navigationCommands.ts'),
@@ -157,4 +172,8 @@ function idsForSource(
 
 function sortedUnique(values: string[]): string[] {
   return Array.from(new Set(values)).sort((left, right) => left.localeCompare(right))
+}
+
+function commandIdsFromMobileCommandPalette(): string[] {
+  return commandIdsFromDesktopSource('apps/mobile/src/workspace/mobileCommandPalette.ts')
 }

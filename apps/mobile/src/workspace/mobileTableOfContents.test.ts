@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   buildMobileTableOfContents,
   mobileTableOfContentsHeadingTargetId,
+  mobileTableOfContentsTargetIdsForBlocks,
   mobileTableOfContentsTitleTargetId,
 } from './mobileTableOfContents'
 import type { MobileNote } from './mobileWorkspaceModel'
@@ -70,6 +71,23 @@ describe('mobile table of contents', () => {
     })
 
     expect(toc.children.map((item) => item.title)).toEqual(['Source-backed section'])
+  })
+
+  it('aligns rendered heading target IDs with duplicate-title TOC entries', () => {
+    expect(mobileTableOfContentsTargetIdsForBlocks({
+      blocks: [
+        { kind: 'heading', level: 1, text: 'Workflow Orchestration Essay' },
+        { kind: 'paragraph', content: [{ text: 'Intro' }] },
+        { kind: 'heading', level: 2, text: 'Mobile parity notes' },
+        { kind: 'heading', level: 3, text: 'Relationships' },
+      ],
+      title: 'Workflow Orchestration Essay',
+    })).toEqual([
+      undefined,
+      undefined,
+      mobileTableOfContentsHeadingTargetId(0),
+      mobileTableOfContentsHeadingTargetId(1),
+    ])
   })
 })
 

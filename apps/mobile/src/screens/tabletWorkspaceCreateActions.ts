@@ -1,21 +1,20 @@
 import type { MobileWorkspaceAction } from '../components/workspace/MobileWorkspaceActionSheet'
 import { mobileCreateNoteDefaultsForType } from '../workspace/mobileCreateNoteDefaults'
-import {
-  normalizedDisplayProperties,
-  type MobileWorkspaceEdit,
-} from '../workspace/mobileWorkspaceEditing'
+import type { MobileWorkspaceEdit } from '../workspace/mobileWorkspaceEditing'
 import type {
   MobileCreateNoteDefaults,
-  MobileSidebarIcon,
-  MobileTone,
   MobileTypeDefinitions,
   MobileViewFilterGroup,
 } from '../workspace/mobileWorkspaceModel'
 import type { ReadOnlyWorkspaceRequest } from '../workspace/readOnlyWorkspaceRepository'
-import { mobileSidebarIconFromValue } from '../workspace/mobileWorkspaceMetadata'
 import { createNoteDefaultsForSelection } from './tabletWorkspaceCreateDefaults'
 import type { TabletSidebarSelection } from './tabletWorkspaceNavigation'
 import type { TabletReadOnlyForm } from './tabletWorkspaceTypes'
+import { viewDefinitionCreateEdit } from './tabletWorkspaceViewDefinitionSave'
+export {
+  normalizedOptionalIcon,
+  normalizedOptionalSort,
+} from './tabletWorkspaceViewDefinitionNormalization'
 
 type ApplyWorkspaceEdit = (edit: MobileWorkspaceEdit) => void
 type ReadOnlyFormUpdater = <Key extends keyof TabletReadOnlyForm>(key: Key, value: TabletReadOnlyForm[Key]) => void
@@ -89,31 +88,20 @@ export function createWorkspaceView({
   icon: string
   name: string
   sort: string
-  tone: MobileTone | null
+  tone: string | null
 }) {
-  const trimmedName = name.trim()
-  if (!trimmedName) return
-
-  applyEdit({
-    definition: {
-      color: tone,
-      filters,
-      icon: normalizedOptionalIcon(icon),
-      listPropertiesDisplay: normalizedDisplayProperties(displayProperties),
-      name: trimmedName,
-      sort: normalizedOptionalSort(sort),
-    },
-    type: 'createView',
+  const edit = viewDefinitionCreateEdit({
+    viewDisplayProperties: displayProperties,
+    viewFilters: filters,
+    viewIcon: icon,
+    viewName: name,
+    viewSort: sort,
+    viewTone: tone,
   })
+  if (!edit) return
+
+  applyEdit(edit)
   closeAction()
-}
-
-export function normalizedOptionalSort(sort: string) {
-  return sort.trim() || null
-}
-
-export function normalizedOptionalIcon(icon: string): MobileSidebarIcon | null {
-  return icon.trim() ? mobileSidebarIconFromValue(icon, 'view') : null
 }
 
 function createWorkspaceNoteFromDefaults({

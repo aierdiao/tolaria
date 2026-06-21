@@ -2,6 +2,7 @@ import type { MobileWorkspaceAction } from '../components/workspace/MobileWorksp
 import type { MobileSidebarItemSelection } from '../components/workspace/MobileWorkspaceSidebar'
 import type { MobileWorkspaceEdit } from '../workspace/mobileWorkspaceEditing'
 import type { MobileWorkspaceSnapshot } from '../workspace/mobileWorkspaceModel'
+import { moveFavoriteEdit } from './tabletWorkspaceSidebarEditActions'
 import type { TabletReadOnlyForm } from './tabletWorkspaceTypes'
 
 type ApplyWorkspaceEdit = (edit: MobileWorkspaceEdit) => void
@@ -63,9 +64,8 @@ function moveFavorite({
   direction: 'down' | 'up'
   noteId: string
 }) {
-  const trimmedNoteId = noteId.trim()
-  if (!trimmedNoteId) return
-  applyEdit({ direction, noteId: trimmedNoteId, type: 'moveFavorite' })
+  const edit = moveFavoriteEdit(noteId, direction)
+  if (edit) applyEdit(edit)
 }
 
 function canMoveFavorite(

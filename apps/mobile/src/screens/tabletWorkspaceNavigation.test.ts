@@ -65,6 +65,46 @@ describe('tablet workspace navigation', () => {
     expect(noteListPropertiesForSelection(snapshot, selection)).toEqual(['Priority', 'belongs_to'])
   })
 
+  it('derives canonical Type names from legacy plural sidebar labels', () => {
+    const snapshot: MobileWorkspaceSnapshot = {
+      ...workspaceSnapshot([
+        note({ id: 'responsibility', properties: [{ key: 'Owner', label: 'Owner', value: 'Luca' }], title: 'Roadmap', type: 'Responsibility' }),
+        note({ id: 'person', title: 'Ada', type: 'Person' }),
+        note({ id: 'wrong', title: 'Essay', type: 'Responsibilities' }),
+      ]),
+      sidebarSections: [{
+        id: 'types',
+        items: [
+          { count: '1', icon: 'tag', id: 'type-responsibilities', label: 'Responsibilities' },
+          { count: '1', icon: 'file', id: 'type-people', label: 'People' },
+        ],
+        label: 'Types',
+      }],
+      typeDefinitions: {
+        Person: { listPropertiesDisplay: ['Role'] },
+        Responsibility: { listPropertiesDisplay: ['Owner'] },
+      },
+    }
+
+    const responsibilities: TabletSidebarSelection = {
+      id: 'type-responsibilities',
+      kind: 'item',
+      label: 'Responsibilities',
+      sectionId: 'types',
+    }
+    const people: TabletSidebarSelection = {
+      id: 'type-people',
+      kind: 'item',
+      label: 'People',
+      sectionId: 'types',
+    }
+
+    expect(notesForSidebarSelection(snapshot, responsibilities).map((candidate) => candidate.id)).toEqual(['responsibility'])
+    expect(noteListPropertiesForSelection(snapshot, responsibilities)).toEqual(['Owner'])
+    expect(notesForSidebarSelection(snapshot, people).map((candidate) => candidate.id)).toEqual(['person'])
+    expect(noteListPropertiesForSelection(snapshot, people)).toEqual(['Role'])
+  })
+
   it('filters note lists by displayed desktop property and relationship chips', () => {
     const notes = [
       note({

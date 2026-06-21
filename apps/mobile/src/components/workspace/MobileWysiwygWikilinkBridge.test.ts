@@ -198,6 +198,25 @@ describe('native WYSIWYG wikilink bridge', () => {
     expect(tiptapJsonToMobileMarkdown(nextDocument)).toBe('Insert\n\n---\n\nTail')
   })
 
+  it.each([
+    ['heading2', 'Insert /heading2 later', '## Insert later'],
+    ['bulletList', 'Insert /bullet later', '- Insert later'],
+    ['taskList', 'Insert /todo later', '- [ ] Insert later'],
+    ['quote', 'Insert /quote later', '> Insert later'],
+  ] as const)('replaces a native slash-command query with a desktop %s block transform', (
+    action,
+    text,
+    expectedMarkdown,
+  ) => {
+    const nextDocument = nativeWysiwygDocumentWithInsertedSlashCommandBlock({
+      json: documentNode(paragraphNode(text)),
+      payload: { action },
+      selection: autocompleteRange(text, text.indexOf(' later') + 1),
+    })
+
+    expect(tiptapJsonToMobileMarkdown(nextDocument)).toBe(expectedMarkdown)
+  })
+
   it('inserts the wikilink at the current native editor selection', () => {
     expect(insertedWikilinkMarkdown({
       text: 'Read  today.',
@@ -218,6 +237,17 @@ describe('native WYSIWYG wikilink bridge', () => {
       selection: { from: 6, to: 10 },
       text: 'Read this note.',
     })).toBe('Read [[AI Ops Guide]] note.')
+  })
+
+  it('does not add a rich-editor separator before punctuation', () => {
+    expect(insertedWikilinkMarkdown({
+      payload: {
+        label: 'AI Ops Guide',
+        target: 'AI Ops Guide',
+      },
+      selection: { from: 6, to: 10 },
+      text: 'Read this.',
+    })).toBe('Read [[AI Ops Guide]].')
   })
 
   it('replaces selected native editor text with unformatted clipboard text', () => {
@@ -314,6 +344,13 @@ describe('native WYSIWYG wikilink bridge', () => {
       kind: 'person mention',
       payload: { label: 'Luca', target: 'People/Luca' },
       text: 'Ask @Lu about this',
+    },
+    {
+      cursor: 9,
+      expectedMarkdown: 'See [[AI Ops Guide]], today',
+      kind: 'wikilink before punctuation',
+      payload: { label: 'AI Ops Guide', target: 'AI Ops Guide' },
+      text: 'See [[AI, today',
     },
   ] as const)('replaces an active native $kind query with the selected wikilink', ({
     cursor,

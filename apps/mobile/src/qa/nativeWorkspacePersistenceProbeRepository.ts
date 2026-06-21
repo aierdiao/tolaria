@@ -46,6 +46,7 @@ type ExpoFileSystemModule = {
 declare const require: (moduleName: string) => ExpoFileSystemModule
 
 const createdNotePath = 'Writing/Drafts/mobile-created.md'
+const createdTitleLessType = 'Project'
 const createdFolderPath = 'Folders/Created Drafts'
 const favoriteAlphaPath = 'Favorites/Alpha.md'
 const favoriteBetaPath = 'Favorites/Beta.md'
@@ -160,7 +161,11 @@ async function logWorkspacePersistenceProof(
   const snapshot = baseRepository.readSnapshot(request)
   const movedNote = snapshot.allNotes?.find((note) => note.path === movedNotePath)
     ?? snapshot.notes.find((note) => note.path === movedNotePath)
+  const createdTitleLessNote = createdTitleLessTypedNote(snapshot)
   const movedContent = movedNote ? await baseRepository.readNoteContent(movedNote, request) : null
+  const createdTitleLessContent = createdTitleLessNote
+    ? await baseRepository.readNoteContent(createdTitleLessNote, request)
+    : null
   const favoriteAlphaContent = await readProbeNoteContent(baseRepository, snapshot, favoriteAlphaPath, request)
   const favoriteBetaContent = await readProbeNoteContent(baseRepository, snapshot, favoriteBetaPath, request)
   const propertyRelationshipContent = await readProbeNoteContent(baseRepository, snapshot, propertyRelationshipNotePath, request)
@@ -175,6 +180,7 @@ async function logWorkspacePersistenceProof(
   console.info(nativeWorkspacePersistenceLogLine(workspacePersistenceProof(snapshot, {
     favoriteAlphaContent,
     favoriteBetaContent,
+    createdTitleLessContent,
     metadataContent,
     movedContent,
     notePathContent,
@@ -244,6 +250,14 @@ function workspacePersistenceNoteAndRelationshipWrites(seedSnapshot: MobileWorks
         type: 'Essay',
       },
       title: 'Mobile Created',
+      type: 'createNote',
+    },
+    {
+      defaults: {
+        template: '## Objective\n\nCreated without a dedicated title field.',
+        type: createdTitleLessType,
+      },
+      title: '',
       type: 'createNote',
     },
     {
@@ -663,6 +677,7 @@ function workspacePersistenceProof(
   content: {
     favoriteAlphaContent: string | null
     favoriteBetaContent: string | null
+    createdTitleLessContent: string | null
     metadataContent: string | null
     movedContent: string | null
     notePathContent: NativeWorkspaceNotePathPersistenceContent
@@ -678,6 +693,7 @@ function workspacePersistenceProof(
     ...nativeWorkspaceNotePathProof(snapshot, content.notePathContent),
     changedNoteTypeHydrated: changedNoteTypeHydrated(snapshot, content.metadataContent),
     createdNoteHydrated: snapshotContainsNotePath(snapshot, createdNotePath),
+    createdTitleLessNoteHydrated: createdTitleLessNoteHydrated(snapshot, content.createdTitleLessContent),
     deletedTypeDefinitionRemoved: !typeDefinitionExists(snapshot, oldTypeName),
     deletedViewRemoved: !viewExists(snapshot, oldViewName),
     defaultNoteWidthHydrated: snapshot.vaultConfig?.defaultNoteWidth === 'wide',
@@ -718,6 +734,22 @@ function workspacePersistenceProof(
 
 function folderCreateApplied(snapshot: MobileWorkspaceSnapshot) {
   return snapshot.folderPaths?.includes(createdFolderPath) === true
+}
+
+function createdTitleLessTypedNote(snapshot: MobileWorkspaceSnapshot): MobileNote | undefined {
+  return (snapshot.allNotes ?? snapshot.notes).find((note) => (
+    (note.path ?? '').match(/^untitled-project-\d+\.md$/u)
+      && note.title.startsWith('Untitled Project ')
+      && note.type === createdTitleLessType
+  ))
+}
+
+function createdTitleLessNoteHydrated(snapshot: MobileWorkspaceSnapshot, content: string | null) {
+  const note = createdTitleLessTypedNote(snapshot)
+  return note !== undefined
+    && content?.includes(`type: ${createdTitleLessType}`) === true
+    && content.includes('## Objective') === true
+    && !content.includes('title:')
 }
 
 function folderRenameApplied(snapshot: MobileWorkspaceSnapshot) {

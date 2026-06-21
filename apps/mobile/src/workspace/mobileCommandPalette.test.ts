@@ -17,6 +17,7 @@ describe('mobile command palette', () => {
     expect(commandIds).toContain(appCommandManifest.commands.fileQuickOpen.id)
     expect(commandIds).toContain(appCommandManifest.commands.fileNewNote.id)
     expect(commandIds).toContain(appCommandManifest.commands.editPastePlainText.id)
+    expect(commandIds).toContain(appCommandManifest.commands.viewCommandPalette.id)
     expect(commandIds).toContain(appCommandManifest.commands.viewGoBack.id)
     expect(commandIds).toContain(appCommandManifest.commands.viewGoForward.id)
     expect(commandIds).toContain(appCommandManifest.commands.viewToggleProperties.id)
@@ -39,6 +40,22 @@ describe('mobile command palette', () => {
     reload.execute()
 
     expect(handlers.onReloadVault).toHaveBeenCalledOnce()
+  })
+
+  it('exposes the desktop command-palette command through the mobile command system', () => {
+    const handlers = commandHandlers()
+    const commandPalette = enabledCommand(handlers, appCommandManifest.commands.viewCommandPalette.id)
+
+    expect(commandPalette).toMatchObject({
+      desktopCommand: 'viewCommandPalette',
+      group: 'View',
+      label: 'Command Palette',
+      shortcut: '⌘K',
+    })
+
+    commandPalette.execute()
+
+    expect(handlers.onOpenCommandPalette).toHaveBeenCalledOnce()
   })
 
   it('uses desktop primary sidebar selections for navigation commands', () => {
@@ -129,6 +146,45 @@ describe('mobile command palette', () => {
     expect(handlers.onCreateNoteOfType).toHaveBeenCalledWith('Essay')
   })
 
+  it('canonicalizes Type command names when older sidebar items only carry display labels', () => {
+    const handlers = commandHandlers({
+      snapshot: {
+        ...workspaceScenarios.default,
+        sidebarSections: workspaceScenarios.default.sidebarSections.map((section) => (
+          section.id === 'types'
+            ? {
+              ...section,
+              items: [
+                { count: '3', icon: 'file', id: 'people', label: 'People' },
+                { count: '2', icon: 'tag', id: 'responsibilities', label: 'Responsibilities' },
+              ],
+            }
+            : section
+        )),
+      },
+    })
+    const commands = buildMobileCommandPaletteCommands(handlers)
+
+    const listPeople = commands.find((command) => command.id === 'list-person')
+    const newPerson = commands.find((command) => command.id === 'new-person')
+    const newResponsibility = commands.find((command) => command.id === 'new-responsibility')
+
+    expect(listPeople).toMatchObject({
+      enabled: true,
+      group: 'Navigation',
+      label: 'List People',
+    })
+    expect(commands.map((command) => command.id)).not.toContain('new-people')
+    expect(newPerson).toMatchObject({ label: 'New Person' })
+    expect(newResponsibility).toMatchObject({ label: 'New Responsibility' })
+
+    newPerson?.execute()
+    newResponsibility?.execute()
+
+    expect(handlers.onCreateNoteOfType).toHaveBeenCalledWith('Person')
+    expect(handlers.onCreateNoteOfType).toHaveBeenCalledWith('Responsibility')
+  })
+
   it('exposes the desktop current-folder note creation command when a folder is selected', () => {
     const handlers = commandHandlers({ activeFolderId: 'Writing/Essays' })
     const command = enabledCommand(handlers, 'create-note-current-folder')
@@ -203,6 +259,23 @@ describe('mobile command palette', () => {
       expect.objectContaining({
         id: 'all-notes',
         sectionId: 'primary',
+      }),
+    )
+
+    const typeHandlers = commandHandlers({ activeItemId: 'essays' })
+    const typeCommand = enabledCommand(typeHandlers, 'customize-note-list-columns')
+
+    expect(typeCommand).toMatchObject({
+      label: 'Customize columns',
+    })
+
+    typeCommand.execute()
+
+    expect(typeHandlers.onOpenTypeActions).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: 'essays',
+        sectionId: 'types',
+        typeName: 'Essay',
       }),
     )
 
@@ -313,9 +386,19 @@ describe('mobile command palette', () => {
 
     expect(textCommandIds).toContain('open-active-file-external')
     expect(textCommandIds).toContain('open-active-neighborhood')
+    expect(textCommandIds).toContain(appCommandManifest.commands.fileSave.id)
+    expect(textCommandIds).toContain(appCommandManifest.commands.editFindInNote.id)
+    expect(textCommandIds).toContain(appCommandManifest.commands.editReplaceInNote.id)
     expect(textCommandIds).not.toContain('change-note-type')
+    expect(textCommandIds).not.toContain(appCommandManifest.commands.editToggleRawEditor.id)
+    expect(textCommandIds).not.toContain(appCommandManifest.commands.viewToggleTableOfContents.id)
     expect(textCommandIds).not.toContain('set-note-width-wide')
     expect(binaryCommandIds).toContain('open-active-file-external')
+    expect(binaryCommandIds).not.toContain(appCommandManifest.commands.fileSave.id)
+    expect(binaryCommandIds).not.toContain(appCommandManifest.commands.editFindInNote.id)
+    expect(binaryCommandIds).not.toContain(appCommandManifest.commands.editReplaceInNote.id)
+    expect(binaryCommandIds).not.toContain(appCommandManifest.commands.editToggleRawEditor.id)
+    expect(binaryCommandIds).not.toContain(appCommandManifest.commands.viewToggleTableOfContents.id)
     expect(binaryCommandIds).not.toContain('open-active-neighborhood')
   })
 
@@ -337,6 +420,8 @@ describe('mobile command palette', () => {
 
     expect(commandIds).not.toContain(appCommandManifest.commands.noteDelete.id)
     expect(commandIds).not.toContain(appCommandManifest.commands.editUndo.id)
+    expect(commandIds).not.toContain(appCommandManifest.commands.editFindInNote.id)
+    expect(commandIds).not.toContain(appCommandManifest.commands.editReplaceInNote.id)
     expect(commandIds).toContain(appCommandManifest.commands.fileNewNote.id)
   })
 
@@ -364,6 +449,24 @@ describe('mobile command palette', () => {
 
     expect(handlers.onSaveActiveEditor).toHaveBeenCalledOnce()
     expect(handlers.onUpdateNoteContent).not.toHaveBeenCalled()
+  })
+
+  it('keeps save available when only the active editor save command exists', () => {
+    const handlers = commandHandlers({ onUpdateNoteContent: undefined })
+    const command = enabledCommand(handlers, appCommandManifest.commands.fileSave.id)
+
+    command.execute()
+
+    expect(handlers.onSaveActiveEditor).toHaveBeenCalledOnce()
+  })
+
+  it('dispatches the desktop raw-editor toggle through the active editor chrome command', () => {
+    const handlers = commandHandlers()
+    const command = enabledCommand(handlers, appCommandManifest.commands.editToggleRawEditor.id)
+
+    command.execute()
+
+    expect(handlers.onToggleRawEditor).toHaveBeenCalledOnce()
   })
 
   it('falls back to snapshot content when no editor save command is registered', () => {
@@ -416,6 +519,7 @@ function commandHandlers(
     onGoForward: vi.fn(),
     onOpenBacklinks: vi.fn(),
     onOpenChangeNoteType: vi.fn(),
+    onOpenCommandPalette: vi.fn(),
     onOpenCreateNote: vi.fn(),
     onOpenCreateType: vi.fn(),
     onOpenFindInNote: vi.fn(),
@@ -448,6 +552,7 @@ function commandHandlers(
     onSetOrganized: vi.fn(),
     onToggleFavorite: vi.fn(),
     onToggleNoteWidth: vi.fn(),
+    onToggleRawEditor: vi.fn(),
     onToggleProperties: vi.fn(),
     onUndoWorkspaceEdit: vi.fn(),
     onUpdateNoteContent: vi.fn(),

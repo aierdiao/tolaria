@@ -37,7 +37,9 @@ export function nativeTableOfContentsProbeContent(): string {
   const leadIn = Array.from({ length: 8 }, (_item, index) => (
     `Paragraph ${index + 1} keeps the mounted editor preview tall enough for native outline navigation proof. `
     + 'The target heading must stay within the rendered block budget while still sitting below the initial viewport. '
-    + 'This line intentionally wraps across several visual rows in the tablet editor.'
+    + 'This line intentionally wraps across several visual rows in the tablet editor. '
+    + 'Additional probe copy keeps the heading below a 13-inch iPad viewport without adding more rendered blocks. '
+    + 'The native scroll proof should only pass when the editor scroll container actually moves.'
   ))
 
   return [

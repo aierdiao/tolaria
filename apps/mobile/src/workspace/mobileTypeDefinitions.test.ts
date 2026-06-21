@@ -64,6 +64,23 @@ color: purple
     expect(content).not.toContain('\nView:')
   })
 
+  it('writes raw desktop Type colors separately from the derived mobile render tone', () => {
+    const content = mobileTypeDefinitionContent('Project', {
+      rawContent: `---
+type: Type
+color: cyan
+---
+# Project
+`,
+    }, {
+      color: 'cyan',
+      tone: 'gray',
+    })
+
+    expect(content).toContain('color: cyan')
+    expect(content).not.toContain('color: gray')
+  })
+
   it('removes all aliases when clearing Type system metadata', () => {
     const content = mobileTypeDefinitionContent('Project', {
       rawContent: `---

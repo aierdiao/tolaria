@@ -5,6 +5,8 @@ import { spawnSync } from 'node:child_process'
 
 const tabletScripts = [
   'mobile:qa:ios-workspace-persistence',
+  'mobile:qa:ios-action-adapters',
+  'mobile:qa:ios-command-palette',
   'mobile:qa:ios-source-selection',
   'mobile:qa:ios-wysiwyg-mutation',
   'mobile:qa:ios-wysiwyg-persistence',
@@ -14,11 +16,14 @@ const tabletScripts = [
   'mobile:qa:ios-wysiwyg-input-transforms',
   'mobile:qa:ios-wysiwyg-markdown-blocks',
   'mobile:qa:ios-wysiwyg-wikilink',
+  'mobile:qa:ios-wysiwyg-external-link',
   'mobile:qa:ios-table-of-contents',
 ]
 
 const phoneScripts = [
   'mobile:qa:ios-phone-workspace-persistence',
+  'mobile:qa:ios-phone-action-adapters',
+  'mobile:qa:ios-phone-command-palette',
   'mobile:qa:ios-phone-source-selection',
   'mobile:qa:ios-phone-wysiwyg-mutation',
   'mobile:qa:ios-phone-wysiwyg-persistence',
@@ -28,6 +33,7 @@ const phoneScripts = [
   'mobile:qa:ios-phone-wysiwyg-input-transforms',
   'mobile:qa:ios-phone-wysiwyg-markdown-blocks',
   'mobile:qa:ios-phone-wysiwyg-wikilink',
+  'mobile:qa:ios-phone-wysiwyg-external-link',
 ]
 
 function printHelp() {

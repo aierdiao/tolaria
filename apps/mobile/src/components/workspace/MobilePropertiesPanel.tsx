@@ -20,6 +20,7 @@ import {
 } from '../../workspace/mobileInspectorSchema'
 import { MobileTypeIcon } from './MobileWorkspaceIcons'
 import { chipTone, noteTypeColor, noteTypeSoftColor, statusTone, tagTone } from './mobileWorkspaceTone'
+import { mobileRelationshipValueMetricSegments } from './MobilePropertiesPanelModel'
 
 export function MobilePropertiesPanel({
   compact,
@@ -482,54 +483,60 @@ function RelationshipValues({
   onEnterNeighborhood?: (noteId: string) => void
   onSelectNote: (noteId: string) => void
 }) {
+  const rowSegments = mobileRelationshipValueMetricSegments(relationship.values)
+
   return (
     <View style={relationshipStyles.values}>
-      {relationship.values.map((value) => (
-        <View
-          key={`${value.type}-${value.title}`}
-          {...propertyProbe(layoutProbe, `properties.relationship.${testIdSegment(value.title)}`, 'row')}
-          style={[relationshipStyles.row, relationshipRowTone(value.typeTone)]}
-          testID={`relationship-row-${testIdSegment(value.title)}`}
-        >
-          <Pressable
-            accessibilityLabel={value.title}
-            accessibilityRole="button"
-            disabled={!value.id}
-            {...propertyProbe(layoutProbe, `properties.relationship.${testIdSegment(value.title)}`, 'target')}
-            style={relationshipStyles.openTarget}
-            testID={`relationship-row-${testIdSegment(value.title)}-open`}
-            onPress={() => {
-              if (!value.id) return
-              onSelectNote(value.id)
-            }}
-            onLongPress={() => {
-              if (value.id) onEnterNeighborhood?.(value.id)
-            }}
+      {relationship.values.map((value, valueIndex) => {
+        const rowSegment = rowSegments[valueIndex] ?? relationshipValueSegment(value, valueIndex)
+
+        return (
+          <View
+            key={rowSegment}
+            {...propertyProbe(layoutProbe, `properties.relationship.${rowSegment}`, 'row')}
+            style={[relationshipStyles.row, relationshipRowTone(value.typeTone)]}
+            testID={`relationship-row-${rowSegment}`}
           >
-            <MobileTypeIcon size={desktopRelationshipParity.iconSize} tone={value.typeTone} type={value.type} />
-            <Text
-              numberOfLines={1}
-              {...propertyProbe(layoutProbe, `properties.relationship.${testIdSegment(value.title)}`, 'text')}
-              style={[relationshipStyles.text, relationshipTextTone(value.typeTone)]}
-              testID={`relationship-row-${testIdSegment(value.title)}-text`}
+            <Pressable
+              accessibilityLabel={value.title}
+              accessibilityRole="button"
+              disabled={!value.id}
+              {...propertyProbe(layoutProbe, `properties.relationship.${rowSegment}`, 'target')}
+              style={relationshipStyles.openTarget}
+              testID={`relationship-row-${rowSegment}-open`}
+              onPress={() => {
+                if (!value.id) return
+                onSelectNote(value.id)
+              }}
+              onLongPress={() => {
+                if (value.id) onEnterNeighborhood?.(value.id)
+              }}
             >
-              {value.title}
-            </Text>
-          </Pressable>
-          <Pressable
-            accessibilityLabel={mobileText('common.remove')}
-            accessibilityRole="button"
-            hitSlop={8}
-            style={relationshipStyles.remove}
-            testID={`relationship-row-${testIdSegment(value.title)}-remove`}
-            onPress={() => {
-              if (relationship.key && value.ref) onRemoveRelationship(noteId, relationship.key, value.ref)
-            }}
-          >
-            <X color={noteTypeColor(value.typeTone)} size={desktopRelationshipParity.removeIconSize} weight="bold" />
-          </Pressable>
-        </View>
-      ))}
+              <MobileTypeIcon size={desktopRelationshipParity.iconSize} tone={value.typeTone} type={value.type} />
+              <Text
+                numberOfLines={1}
+                {...propertyProbe(layoutProbe, `properties.relationship.${rowSegment}`, 'text')}
+                style={[relationshipStyles.text, relationshipTextTone(value.typeTone)]}
+                testID={`relationship-row-${rowSegment}-text`}
+              >
+                {value.title}
+              </Text>
+            </Pressable>
+            <Pressable
+              accessibilityLabel={mobileText('common.remove')}
+              accessibilityRole="button"
+              hitSlop={8}
+              style={relationshipStyles.remove}
+              testID={`relationship-row-${rowSegment}-remove`}
+              onPress={() => {
+                if (relationship.key && value.ref) onRemoveRelationship(noteId, relationship.key, value.ref)
+              }}
+            >
+              <X color={noteTypeColor(value.typeTone)} size={desktopRelationshipParity.removeIconSize} weight="bold" />
+            </Pressable>
+          </View>
+        )
+      })}
     </View>
   )
 }
@@ -622,6 +629,13 @@ function relationshipRowTone(tone: MobileTone) {
 
 function relationshipTextTone(tone: MobileTone) {
   return { color: noteTypeColor(tone) }
+}
+
+function relationshipValueSegment(
+  value: MobileRelationship['values'][number],
+  index: number,
+) {
+  return mobileRelationshipValueMetricSegments([value])[0] ?? `relationship-${index + 1}`
 }
 
 function testIdSegment(value: string) {

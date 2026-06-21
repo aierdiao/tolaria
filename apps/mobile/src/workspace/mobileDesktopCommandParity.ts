@@ -39,7 +39,7 @@ const parityDefinitions = {
   viewToggleAiChat: outOfScope('AI is explicitly excluded from the mobile editing foundation'),
   viewToggleTableOfContents: implemented('mobile Table of Contents sheet'),
   viewToggleBacklinks: adapted('mobile properties reference groups expose backlinks and inverse refs'),
-  viewCommandPalette: implemented('mobile command palette surface uses shared desktop command IDs over existing mobile callbacks'),
+  viewCommandPalette: implemented('mobile command palette opener is registered as the shared desktop command ID over tablet and phone callbacks'),
   viewZoomIn: outOfScope('desktop window zoom is installation chrome, not vault editing logic'),
   viewZoomOut: outOfScope('desktop window zoom is installation chrome, not vault editing logic'),
   viewZoomReset: outOfScope('desktop window zoom is installation chrome, not vault editing logic'),

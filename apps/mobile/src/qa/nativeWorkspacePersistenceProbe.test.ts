@@ -43,6 +43,10 @@ describe('native workspace persistence probe', () => {
     expectProofFailures({ deletedNoteRemoved: false }, ['workspace.persistence.deleteNote'])
   })
 
+  it('reports incomplete title-less note creation persistence proofs', () => {
+    expectProofFailures({ createdTitleLessNoteHydrated: false }, ['workspace.persistence.createNote.titleLess'])
+  })
+
   it('keeps native proof log lines compact for simulator log capture', () => {
     const line = nativeWorkspacePersistenceLogLine(passingWorkspaceProof())
 
@@ -192,6 +196,7 @@ function passingWorkspaceProof(): NativeWorkspacePersistenceProof {
     bulkEditHydrated: true,
     changedNoteTypeHydrated: true,
     createdNoteHydrated: true,
+    createdTitleLessNoteHydrated: true,
     deletedNoteRemoved: true,
     deletedTypeDefinitionRemoved: true,
     deletedViewRemoved: true,

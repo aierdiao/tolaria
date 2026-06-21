@@ -70,6 +70,7 @@ export type MobileProperty = {
 }
 
 export type MobileTypeDefinition = {
+  color?: string | null
   icon?: string | null
   label?: string | null
   listPropertiesDisplay?: string[]

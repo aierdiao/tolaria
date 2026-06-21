@@ -70,7 +70,7 @@ export type TabletReadOnlyForm = {
   typeSort: ReadOnlyFormValue
   typeTemplate: ReadOnlyFormValue
   typeIcon: ReadOnlyFormValue
-  typeTone: MobileTone
+  typeTone: string
   typeVisible: boolean
   viewDisplayProperties: string[]
   viewFilters: MobileViewFilterGroup
@@ -78,7 +78,7 @@ export type TabletReadOnlyForm = {
   viewName: ReadOnlyFormValue
   viewPropertyQuery: ReadOnlyFormValue
   viewSort: ReadOnlyFormValue
-  viewTone: MobileTone | null
+  viewTone: string | null
 }
 
 export type TabletWorkspaceChromeProps = {
@@ -98,6 +98,7 @@ export type TabletWorkspaceChromeProps = {
   canUndoWorkspaceEdit: boolean
   canDeleteType: boolean
   compactTablet: boolean
+  commandPaletteProbe?: boolean
   defaultPropertiesVisible: boolean
   defaultNoteWidth: MobileNoteWidth | null
   editorBlocks: MobileEditorBlock[]
@@ -257,6 +258,7 @@ export type TabletWorkspaceChromeProps = {
   snapshot: MobileWorkspaceSnapshot
   vaultRootUri: string | null
   wysiwygAutocompleteProbe?: boolean
+  wysiwygExternalLinkProbe?: boolean
   wysiwygFormatCommandProbe?: boolean
   wysiwygInputTransformProbe?: boolean
   wysiwygMarkdownBlockProbe?: boolean

@@ -33,6 +33,48 @@ describe('mobile workspace relationship editing', () => {
     )
   })
 
+  it('uses exact selected refs when relationship target creation resolves an existing ambiguous title', () => {
+    const base = workspaceScenarioForId('default')
+    const notes = [
+      {
+        ...base.notes[0],
+        rawContent: '# Workflow Orchestration Essay\n\nSource body.\n',
+      },
+      duplicateReference('duplicate-reference-a', 'Writing/Duplicate Reference.md', 'Essay', 'green'),
+      duplicateReference('duplicate-reference-b', 'Projects/Duplicate Reference.md', 'Procedure', 'purple'),
+      ...base.notes.slice(1),
+    ]
+    const result = applyMobileWorkspaceEditWithWrites({
+      ...base,
+      allNotes: notes,
+      notes,
+      selectedNoteId: 'workflow-orchestration',
+    }, {
+      key: 'related_to',
+      sourceNoteId: 'workflow-orchestration',
+      targetRef: '[[Projects/Duplicate Reference]]',
+      targetTitle: 'Duplicate Reference',
+      type: 'createRelationshipTarget',
+    })
+    const source = result.snapshot.notes.find((candidate) => candidate.id === 'workflow-orchestration')
+
+    expect(result.snapshot.selectedNoteId).toBe('duplicate-reference-b')
+    expect(result.snapshot.notes).toHaveLength(notes.length)
+    expect(source?.relationships.find((relationship) => relationship.key === 'related_to')?.values).toContainEqual(
+      expect.objectContaining({
+        id: 'duplicate-reference-b',
+        ref: '[[Projects/Duplicate Reference]]',
+        title: 'Duplicate Reference',
+        type: 'Procedure',
+      }),
+    )
+    expect(result.writes).toEqual([{
+      content: source?.rawContent,
+      kind: 'saveNote',
+      path: 'Tolaria/Mobile UI/Workflow Orchestration Essay.md',
+    }])
+  })
+
   it('prefixes typed cross-workspace relationship targets with the target workspace alias', () => {
     const base = workspaceScenarioForId('default')
     const source = {

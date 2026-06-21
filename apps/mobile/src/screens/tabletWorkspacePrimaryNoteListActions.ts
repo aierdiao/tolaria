@@ -1,14 +1,10 @@
 import type { MobileWorkspaceAction } from '../components/workspace/MobileWorkspaceActionSheet'
 import type { MobileSidebarItemSelection } from '../components/workspace/MobileWorkspaceSidebar'
 import type {
-  MobileAllNotesFileVisibility,
   MobileNote,
   MobileWorkspaceSnapshot,
 } from '../workspace/mobileWorkspaceModel'
-import {
-  normalizedDisplayProperties,
-  type MobileWorkspaceEdit,
-} from '../workspace/mobileWorkspaceEditing'
+import type { MobileWorkspaceEdit } from '../workspace/mobileWorkspaceEditing'
 import { mobileAllNotesFileVisibilityFromVaultConfig } from '../workspace/mobileVaultConfig'
 import {
   mobileDefaultListPropertyDisplay,
@@ -19,6 +15,10 @@ import {
   notesForSidebarSelection,
   type TabletSidebarSelection,
 } from './tabletWorkspaceNavigation'
+import {
+  primaryNoteListPropertiesEditFromForm,
+  primaryNoteListTarget,
+} from './tabletWorkspacePrimaryNoteListSave'
 
 type ApplyWorkspaceEdit = (edit: MobileWorkspaceEdit) => void
 type ReadOnlyFormUpdater = <Key extends keyof TabletReadOnlyForm>(key: Key, value: TabletReadOnlyForm[Key]) => void
@@ -46,12 +46,10 @@ export function primaryNoteListWorkspaceActions({
     onPrimaryAllNotesShowUnsupportedChange: (value: boolean) => updateReadOnlyForm('allNotesShowUnsupported', value),
     onPrimaryDisplayPropertiesChange: (value: string[]) => updateReadOnlyForm('primaryDisplayProperties', value),
     onPrimaryPropertyQueryChange: (value: string) => updateReadOnlyForm('primaryPropertyQuery', value),
-    onSavePrimaryNoteListProperties: () => updatePrimaryNoteListProperties({
+    onSavePrimaryNoteListProperties: () => savePrimaryNoteListProperties({
       applyEdit,
       closeAction,
-      allNotesFileVisibility: allNotesFileVisibilityForSave(readOnlyForm),
-      displayProperties: readOnlyForm.primaryDisplayProperties,
-      itemId: readOnlyForm.primaryItemId,
+      readOnlyForm,
     }),
     primaryPropertyOptions: mobileListPropertySuggestions(
       primaryNoteListPropertyNotes(readOnlyForm.primaryItemId, workspaceSnapshot),
@@ -82,28 +80,19 @@ export function openPrimaryListProperties({
   })
 }
 
-function updatePrimaryNoteListProperties({
+function savePrimaryNoteListProperties({
   applyEdit,
-  allNotesFileVisibility,
   closeAction,
-  displayProperties,
-  itemId,
+  readOnlyForm,
 }: {
   applyEdit: ApplyWorkspaceEdit
-  allNotesFileVisibility?: MobileAllNotesFileVisibility
   closeAction: () => void
-  displayProperties: string[]
-  itemId: string
+  readOnlyForm: TabletReadOnlyForm
 }) {
-  const target = primaryNoteListTarget(itemId)
-  if (!target) return
+  const edit = primaryNoteListPropertiesEditFromForm(readOnlyForm)
+  if (!edit) return
 
-  applyEdit({
-    allNotesFileVisibility,
-    listPropertiesDisplay: normalizedDisplayProperties(displayProperties),
-    target,
-    type: 'updatePrimaryNoteListProperties',
-  })
+  applyEdit(edit)
   closeAction()
 }
 
@@ -137,16 +126,6 @@ function primaryListPropertyFields(
   ]
 }
 
-function allNotesFileVisibilityForSave(readOnlyForm: TabletReadOnlyForm): MobileAllNotesFileVisibility | undefined {
-  if (readOnlyForm.primaryItemId !== 'all-notes') return undefined
-
-  return {
-    images: readOnlyForm.allNotesShowImages,
-    pdfs: readOnlyForm.allNotesShowPdfs,
-    unsupported: readOnlyForm.allNotesShowUnsupported,
-  }
-}
-
 function primaryDisplayPropertiesForEdit(
   selection: MobileSidebarItemSelection,
   snapshot: MobileWorkspaceSnapshot,
@@ -177,12 +156,6 @@ function primaryItemSelection(itemId: string): TabletSidebarSelection | null {
     label: itemId === 'all-notes' ? 'All Notes' : 'Inbox',
     sectionId: 'primary',
   }
-}
-
-function primaryNoteListTarget(itemId: string): 'allNotes' | 'inbox' | null {
-  if (itemId === 'all-notes') return 'allNotes'
-  if (itemId === 'inbox') return 'inbox'
-  return null
 }
 
 function isCustomizablePrimaryItem(selection: MobileSidebarItemSelection) {

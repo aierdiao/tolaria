@@ -1,75 +1,42 @@
 import { useCallback } from 'react'
-import * as DocumentPicker from 'expo-document-picker'
-import type { Directory, File } from 'expo-file-system'
+import type { MobileAttachmentImport } from './mobileAttachments'
 import {
-  mobileAttachmentRelativePath,
-  uniqueMobileAttachmentFileName,
-  type MobileAttachmentImport,
-} from './mobileAttachments'
+  importMobileAttachment,
+  readMobileAttachmentImportFromGlobal,
+  type MobileAttachmentFileSystem,
+  type MobileDocumentPicker,
+} from './mobileAttachmentImporterCore'
 
-type ExpoFileSystemModule = {
-  Directory: typeof Directory
-  File: typeof File
+type ExpoDocumentPickerModule = {
+  getDocumentAsync: MobileDocumentPicker
 }
 
-type DocumentPickerAsset = {
-  mimeType?: string
-  name: string
-  uri: string
-}
+declare const require: (moduleName: string) => unknown
 
-declare const require: (moduleName: string) => ExpoFileSystemModule
-
-let expoFileSystemModule: ExpoFileSystemModule | null = null
+let expoDocumentPickerModule: ExpoDocumentPickerModule | null = null
+let expoLegacyFileSystemModule: MobileAttachmentFileSystem | null = null
 
 export type MobileAttachmentImporter = () => Promise<MobileAttachmentImport | null>
 
 export function useMobileAttachmentImporter(vaultRootUri?: string | null): MobileAttachmentImporter {
   return useCallback(async () => {
-    if (!vaultRootUri) return null
+    const deterministicImport = readMobileAttachmentImportFromGlobal()
+    if (deterministicImport) return deterministicImport
 
-    const result = await DocumentPicker.getDocumentAsync({
-      copyToCacheDirectory: true,
-      multiple: false,
-      type: '*/*',
+    return importMobileAttachment({
+      fileSystem: expoLegacyFileSystem(),
+      pickDocument: expoDocumentPicker().getDocumentAsync,
+      vaultRootUri,
     })
-    if (result.canceled) return null
-
-    const asset = result.assets[0]
-    return asset ? copyAssetToVaultAttachment(vaultRootUri, asset) : null
   }, [vaultRootUri])
 }
 
-async function copyAssetToVaultAttachment(
-  vaultRootUri: string,
-  asset: DocumentPickerAsset,
-): Promise<MobileAttachmentImport> {
-  const module = expoFileSystem()
-  const attachments = new module.Directory(vaultRootUri, 'attachments')
-  attachments.create({ idempotent: true, intermediates: true })
-
-  const fileName = uniqueMobileAttachmentFileName({
-    existingNames: attachmentEntryNames(attachments),
-    name: asset.name,
-    nowMs: Date.now(),
-  })
-  const destination = new module.File(attachments, fileName)
-  await new module.File(asset.uri).copy(destination)
-
-  return {
-    mimeType: asset.mimeType ?? null,
-    name: asset.name,
-    path: mobileAttachmentRelativePath(fileName),
-  }
+function expoDocumentPicker(): ExpoDocumentPickerModule {
+  expoDocumentPickerModule ??= require('expo-document-picker') as ExpoDocumentPickerModule
+  return expoDocumentPickerModule
 }
 
-function attachmentEntryNames(directory: Directory): string[] {
-  if (!directory.exists) return []
-
-  return directory.list().map((entry) => entry.name)
-}
-
-function expoFileSystem(): ExpoFileSystemModule {
-  expoFileSystemModule ??= require('expo-file-system')
-  return expoFileSystemModule
+function expoLegacyFileSystem(): MobileAttachmentFileSystem {
+  expoLegacyFileSystemModule ??= require('expo-file-system/legacy') as MobileAttachmentFileSystem
+  return expoLegacyFileSystemModule
 }

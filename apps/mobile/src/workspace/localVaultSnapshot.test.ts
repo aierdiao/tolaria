@@ -383,6 +383,7 @@ _organized: false
     })
 
     expect(snapshot.typeDefinitions?.Project).toMatchObject({
+      color: 'red',
       label: 'Client Work',
       listPropertiesDisplay: ['Priority', 'belongs_to'],
       order: 2,
@@ -441,6 +442,27 @@ Visible: false
       view: 'editor-list',
       visible: false,
     })
+  })
+
+  it('prefers canonical desktop Type icon metadata over legacy aliases', () => {
+    const snapshot = buildLocalVaultWorkspaceSnapshot({
+      files: [
+        vaultFile('types/project.md', `---
+type: Type
+icon: folder
+_icon: tag
+---
+# Project
+`),
+      ],
+      vaultLabel: 'Laputa',
+      vaultPath: '/Users/luca/Laputa',
+    })
+
+    expect(snapshot.typeDefinitions?.Project?.icon).toBe('tag')
+    expect(snapshot.sidebarSections.find((section) => section.id === 'types')?.items).toEqual(expect.arrayContaining([
+      expect.objectContaining({ icon: 'tag', typeName: 'Project' }),
+    ]))
   })
 
   it('honors desktop numeric boolean flags when deriving local vault notes', () => {

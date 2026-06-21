@@ -17,22 +17,19 @@ import type {
 } from '../workspace/mobileWorkspaceModel'
 import {
   applyMobileWorkspaceEditWithWrites,
-  normalizedDisplayProperties,
   type MobileWorkspaceEdit,
 } from '../workspace/mobileWorkspaceEditing'
 import type {
   ReadOnlyWorkspaceRepository,
   ReadOnlyWorkspaceRequest,
 } from '../workspace/readOnlyWorkspaceRepository'
-import { isMobileMarkdownNote } from '../workspace/mobileNoteFilters'
+import { mobileNoteActionMode } from '../workspace/mobileNoteActionMode'
 import { mobileNoteWithResolvedWidth } from '../workspace/mobileNoteWidth'
 import { canMoveMobileSavedView, evaluateMobileSavedView } from '../workspace/mobileSavedViews'
 import { mobileDefaultNoteWidthFromVaultConfig } from '../workspace/mobileVaultConfig'
 import {
   removeTypeSchemaPropertyAt,
   removeTypeSchemaRelationshipAt,
-  typeSchemaPropertiesForForm,
-  typeSchemaRelationshipsForForm,
 } from '../workspace/mobileTypeDefinitionSchema'
 import {
   mobileDefaultListPropertyDisplay,
@@ -44,19 +41,13 @@ import {
   mobilePropertyValueTextForKindChange,
   type MobilePropertyValueKind,
 } from '../workspace/mobilePropertyValues'
-import { mobileFilenameStemForTitle } from '../workspace/mobileNotePaths'
-import {
-  mobileSidebarIconFromValue,
-  mobileToneFromValue,
-} from '../workspace/mobileWorkspaceMetadata'
+import { mobileTypeNameFromSidebarLabel } from '../workspace/mobileTypeNames'
 import { useTabletWorkspaceNavigation } from './tabletWorkspaceNavigation'
 import type { TabletReadOnlyForm } from './tabletWorkspaceTypes'
 import {
   createTypedWorkspaceNote,
   createWorkspaceNote,
   createWorkspaceView,
-  normalizedOptionalIcon,
-  normalizedOptionalSort,
 } from './tabletWorkspaceCreateActions'
 import { editorWorkspaceActions } from './tabletWorkspaceEditorActions'
 import { selectAfterWorkspaceEdit } from './tabletWorkspaceEditSelection'
@@ -79,8 +70,43 @@ import {
   typeSchemaSourceNote,
 } from './tabletWorkspaceTypeSchemaActions'
 import { typeSectionSuggestionOptions } from './tabletWorkspaceTypeSectionSuggestions'
-import { typeDefinitionSaveEdit } from './tabletWorkspaceTypeDefinitionSave'
-import { addPropertyFields, editPropertyFields, propertyEditFromForm } from './tabletWorkspacePropertyActions'
+import {
+  createTypeDefinitionEdit,
+  toggleTypeVisibilityEdit,
+  typeDefinitionSaveEdit,
+} from './tabletWorkspaceTypeDefinitionSave'
+import {
+  typeDefinitionFields,
+  type ReadOnlyFormField,
+} from './tabletWorkspaceTypeDefinitionFields'
+import { viewDefinitionSaveEdit } from './tabletWorkspaceViewDefinitionSave'
+import {
+  addPropertyFields,
+  deletePropertyEdit,
+  editPropertyFields,
+  propertyEditFromForm,
+} from './tabletWorkspacePropertyActions'
+import {
+  addRelationshipEditFromForm,
+  createRelationshipTargetEditFromForm,
+  removeRelationshipEdit,
+} from './tabletWorkspaceRelationshipActions'
+import {
+  changeNoteTypeEditFromForm,
+  moveNoteToFolderEditFromForm,
+  renameNoteFileEditFromForm,
+  renameNoteFileToTitleEdit,
+} from './tabletWorkspaceNoteRetargetActions'
+import {
+  removeNoteIconEdit,
+  setNoteIconEditFromForm,
+} from './tabletWorkspaceNoteIconActions'
+import {
+  deleteTypeDefinitionEdit,
+  deleteViewEdit,
+  moveTypeSectionEdit,
+  moveViewEdit,
+} from './tabletWorkspaceSidebarEditActions'
 import { createViewInitialFilters } from './tabletWorkspaceViewHelpers'
 
 const emptyReadOnlyForm: TabletReadOnlyForm = {
@@ -134,10 +160,7 @@ const emptyReadOnlyForm: TabletReadOnlyForm = {
 
 type ApplyWorkspaceEdit = (edit: MobileWorkspaceEdit) => void
 type ReadOnlyFormUpdater = <Key extends keyof TabletReadOnlyForm>(key: Key, value: TabletReadOnlyForm[Key]) => void
-type ReadOnlyFormField = {
-  [Key in keyof TabletReadOnlyForm]: { key: Key; value: TabletReadOnlyForm[Key] }
-}[keyof TabletReadOnlyForm]
-type SaveSelectedEdit = (toEdit: (noteId: string) => MobileWorkspaceEdit) => void
+type SaveSelectedEdit = (toEdit: (noteId: string) => MobileWorkspaceEdit | null) => void
 type SetOpenAction = (action: MobileWorkspaceAction | null) => void
 type TabletWorkspaceNavigation = ReturnType<typeof useTabletWorkspaceNavigation>
 type WorkspaceActionsContext = {
@@ -314,9 +337,11 @@ function useSaveSelectedEdit({
   closeAction: () => void
   selectedNote: MobileNote | null
 }) {
-  return useCallback((toEdit: (noteId: string) => MobileWorkspaceEdit) => {
+  return useCallback((toEdit: (noteId: string) => MobileWorkspaceEdit | null) => {
     if (!selectedNote) return
-    applyEdit(toEdit(selectedNote.id))
+    const edit = toEdit(selectedNote.id)
+    if (!edit) return
+    applyEdit(edit)
     closeAction()
   }, [applyEdit, closeAction, selectedNote])
 }
@@ -363,8 +388,9 @@ function useHydrateSelectedNote({
 }
 
 function mobileHydrationType(note: MobileNote): 'hydrateNoteContent' | 'hydrateTextFileContent' | null {
-  if (isMobileMarkdownNote(note)) return 'hydrateNoteContent'
-  return note.fileKind === 'text' ? 'hydrateTextFileContent' : null
+  const actionMode = mobileNoteActionMode(note)
+  if (actionMode === 'markdown-note') return 'hydrateNoteContent'
+  return actionMode === 'text-file' ? 'hydrateTextFileContent' : null
 }
 
 function actionSheetWorkspaceActions({
@@ -528,7 +554,7 @@ function createWorkspaceActions({
     onCreateType: () => applyNonEmptyStringEdit({
       applyEdit,
       closeAction,
-      toEdit: (typeName) => ({ type: 'createTypeDefinition', typeName }),
+      toEdit: createTypeDefinitionEdit,
       value: readOnlyForm.typeName,
     }),
     onTypeNameChange: (value: string) => updateReadOnlyForm('typeName', value),
@@ -577,15 +603,10 @@ function savedViewWorkspaceActions({
     onDeleteView: () => deleteView({ applyEdit, closeAction, viewId: readOnlyForm.editingViewId }),
     onMoveViewDown: () => moveWorkspaceSidebarItem({ applyEdit, direction: 'down', itemId: readOnlyForm.editingViewId, kind: 'view' }),
     onMoveViewUp: () => moveWorkspaceSidebarItem({ applyEdit, direction: 'up', itemId: readOnlyForm.editingViewId, kind: 'view' }),
-    onSaveView: () => updateView({
+    onSaveView: () => saveViewDefinition({
       applyEdit,
       closeAction,
-      displayProperties: readOnlyForm.viewDisplayProperties,
-      filters: readOnlyForm.viewFilters,
-      icon: readOnlyForm.viewIcon,
-      name: readOnlyForm.viewName,
-      sort: readOnlyForm.viewSort,
-      tone: readOnlyForm.viewTone,
+      form: readOnlyForm,
       viewId: readOnlyForm.editingViewId,
       views: workspaceSnapshot.views ?? [],
     }),
@@ -644,7 +665,7 @@ function typeSectionWorkspaceActions({
     onDeleteType: () => applyNonEmptyStringEdit({
       applyEdit,
       closeAction,
-      toEdit: (typeName) => ({ type: 'deleteTypeDefinition', typeName }),
+      toEdit: deleteTypeDefinitionEdit,
       value: readOnlyForm.typeName,
     }),
     onMoveTypeDown: () => moveWorkspaceSidebarItem({ applyEdit, direction: 'down', itemId: readOnlyForm.typeName, kind: 'typeSection' }),
@@ -737,7 +758,10 @@ function propertyWorkspaceActions({
   const openAction = workspaceActionOpener({ setOpenAction, updateReadOnlyForm })
 
   return {
-    onDeleteProperty: (noteId: string, key: string) => applyEdit({ key, noteId, type: 'deleteProperty' }),
+    onDeleteProperty: (noteId: string, key: string) => {
+      const edit = deletePropertyEdit(noteId, key)
+      if (edit) applyEdit(edit)
+    },
     onEditProperty: (_noteId: string, key: string, value: MobilePropertyValue) => {
       openAction('editProperty', editPropertyFields(key, value, workspaceSnapshot.vaultConfig?.propertyDisplayModes))
     },
@@ -785,7 +809,10 @@ function relationshipWorkspaceActions({
       updateReadOnlyForm('relationshipNoteTitle', value)
       updateReadOnlyForm('relationshipNoteRef', '')
     },
-    onRemoveRelationship: (noteId: string, key: string, ref: string) => applyEdit({ key, noteId, ref, type: 'removeRelationship' }),
+    onRemoveRelationship: (noteId: string, key: string, ref: string) => {
+      const edit = removeRelationshipEdit(noteId, key, ref)
+      if (edit) applyEdit(edit)
+    },
     onSaveRelationship: () => saveSelectedEdit((noteId) => relationshipEdit(readOnlyForm, noteId)),
   }
 }
@@ -802,31 +829,16 @@ function retargetWorkspaceActions({
   updateReadOnlyForm: ReadOnlyFormUpdater
 }) {
   return {
-    onChangeNoteType: () => saveSelectedEdit((noteId) => ({
-      noteId,
-      type: 'changeNoteType',
-      value: readOnlyForm.noteType,
-    })),
+    onChangeNoteType: () => saveSelectedEdit((noteId) => changeNoteTypeEditFromForm(readOnlyForm, noteId)),
     onChangeNoteTypeInputChange: (value: string) => updateReadOnlyForm('noteType', value),
     onFilenameStemChange: (value: string) => updateReadOnlyForm('filenameStem', value),
     onFolderPathChange: (value: string) => updateReadOnlyForm('folderPath', value),
-    onMoveNoteToFolder: () => saveSelectedEdit((noteId) => ({
-      folderPath: readOnlyForm.folderPath,
-      noteId,
-      type: 'moveNoteToFolder',
-    })),
-    onRenameNoteFile: () => saveSelectedEdit((noteId) => ({
-      filenameStem: readOnlyForm.filenameStem,
-      noteId,
-      type: 'renameNoteFile',
-    })),
+    onMoveNoteToFolder: () => saveSelectedEdit((noteId) => moveNoteToFolderEditFromForm(readOnlyForm, noteId)),
+    onRenameNoteFile: () => saveSelectedEdit((noteId) => renameNoteFileEditFromForm(readOnlyForm, noteId)),
     onRenameNoteFileToTitle: () => {
-      if (!selectedNote) return
-      saveSelectedEdit((noteId) => ({
-        filenameStem: mobileFilenameStemForTitle(selectedNote.title),
-        noteId,
-        type: 'renameNoteFile',
-      }))
+      const edit = renameNoteFileToTitleEdit(selectedNote)
+      if (!edit) return
+      saveSelectedEdit(() => edit)
     },
   }
 }
@@ -842,17 +854,8 @@ function noteIconWorkspaceActions({
 }) {
   return {
     onNoteIconChange: (value: string) => updateReadOnlyForm('noteIcon', value),
-    onRemoveNoteIcon: () => saveSelectedEdit((noteId) => ({
-      key: '_icon',
-      noteId,
-      type: 'deleteProperty',
-    })),
-    onSetNoteIcon: () => saveSelectedEdit((noteId) => ({
-      key: '_icon',
-      noteId,
-      type: 'updateProperty',
-      value: readOnlyForm.noteIcon.trim(),
-    })),
+    onRemoveNoteIcon: () => saveSelectedEdit(removeNoteIconEdit),
+    onSetNoteIcon: () => saveSelectedEdit((noteId) => setNoteIconEditFromForm(readOnlyForm, noteId)),
   }
 }
 
@@ -939,7 +942,7 @@ function openViewActions({
   updateReadOnlyForm('viewName', selection.label)
   updateReadOnlyForm('viewPropertyQuery', '')
   updateReadOnlyForm('viewSort', view.definition.sort ?? '')
-  updateReadOnlyForm('viewTone', view.definition.color ? mobileToneFromValue(view.definition.color, 'gray') : null)
+  updateReadOnlyForm('viewTone', view.definition.color ?? null)
   setOpenAction('editView')
 }
 
@@ -955,7 +958,7 @@ function openTypeActions({
   updateReadOnlyForm: ReadOnlyFormUpdater
 }) {
   if (selection.sectionId !== 'types') return
-  const typeName = selection.typeName ?? typeNameForSidebarSelection(snapshot, selection.id)
+  const typeName = typeNameForSidebarSelection(snapshot, selection)
   if (!typeName) return
 
   openWorkspaceAction({
@@ -970,36 +973,6 @@ function openTypeActions({
   })
 }
 
-function typeDefinitionFields({
-  definition,
-  label,
-  typeName,
-}: {
-  definition: MobileTypeDefinitions[string] | undefined
-  label: string
-  typeName: string
-}): ReadOnlyFormField[] {
-  return [
-    { key: 'typeDisplayProperties', value: definition?.listPropertiesDisplay ?? [] },
-    { key: 'typeName', value: typeName },
-    { key: 'typePropertyQuery', value: '' },
-    { key: 'typeSchemaProperties', value: typeSchemaPropertiesForForm(definition) },
-    { key: 'typeSchemaPropertyName', value: '' },
-    { key: 'typeSchemaPropertyValue', value: '' },
-    { key: 'typeSchemaRelationships', value: typeSchemaRelationshipsForForm(definition) },
-    { key: 'typeSchemaRelationshipName', value: '' },
-    { key: 'typeSchemaRelationshipTargetRef', value: '' },
-    { key: 'typeSchemaRelationshipTarget', value: '' },
-    { key: 'typeSectionLabel', value: definition?.label ?? label },
-    { key: 'typeRenameName', value: typeName },
-    { key: 'typeSort', value: definition?.sort ?? '' },
-    { key: 'typeTemplate', value: definition?.template ?? '' },
-    { key: 'typeIcon', value: mobileSidebarIconFromValue(definition?.icon, 'file') },
-    { key: 'typeTone', value: definition?.tone ?? 'gray' },
-    { key: 'typeVisible', value: definition?.visible !== false },
-  ]
-}
-
 function createRelationshipTarget({
   applyEdit,
   closeAction,
@@ -1011,59 +984,30 @@ function createRelationshipTarget({
   form: TabletReadOnlyForm
   selectedNote: MobileNote | null
 }) {
-  const key = form.relationshipName.trim()
-  const title = form.relationshipNoteTitle.trim()
-  if (!selectedNote || !key || !title) return
+  const edit = createRelationshipTargetEditFromForm(form, selectedNote)
+  if (!edit) return
 
-  applyEdit({
-    key,
-    sourceNoteId: selectedNote.id,
-    targetTitle: title,
-    type: 'createRelationshipTarget',
-  })
+  applyEdit(edit)
   closeAction()
 }
 
-function updateView({
+function saveViewDefinition({
   applyEdit,
   closeAction,
-  displayProperties,
-  filters,
-  icon,
-  name,
-  sort,
-  tone,
+  form,
   viewId,
   views,
 }: {
   applyEdit: (edit: MobileWorkspaceEdit) => void
   closeAction: () => void
-  displayProperties: string[]
-  filters: MobileViewFilterGroup
-  icon: string
-  name: string
-  sort: string
-  tone: MobileTone | null
+  form: TabletReadOnlyForm
   viewId: string
   views: NonNullable<MobileWorkspaceSnapshot['views']>
 }) {
-  const view = views.find((candidate) => candidate.id === viewId)
-  const trimmedName = name.trim()
-  if (!view || !trimmedName) return
+  const edit = viewDefinitionSaveEdit(form, viewId, views)
+  if (!edit) return
 
-  applyEdit({
-    definition: {
-      ...view.definition,
-      filters,
-      icon: normalizedOptionalIcon(icon),
-      listPropertiesDisplay: normalizedDisplayProperties(displayProperties),
-      name: trimmedName,
-      sort: normalizedOptionalSort(sort),
-      color: tone,
-    },
-    type: 'updateView',
-    viewId,
-  })
+  applyEdit(edit)
   closeAction()
 }
 
@@ -1094,14 +1038,8 @@ function toggleTypeVisibility({
   typeDefinitions: MobileTypeDefinitions | undefined
   typeName: string
 }) {
-  const definition = typeDefinitions?.[typeName]
-  if (!definition) return
-
-  applyEdit({
-    patch: { visible: definition.visible === false ? null : false },
-    type: 'updateTypeDefinition',
-    typeName,
-  })
+  const edit = toggleTypeVisibilityEdit(typeName, typeDefinitions)
+  if (edit) applyEdit(edit)
 }
 
 function editableViewPropertyNotes(
@@ -1136,13 +1074,15 @@ function workspaceNotes(snapshot: MobileWorkspaceSnapshot) {
 
 function typeNameForSidebarSelection(
   snapshot: MobileWorkspaceSnapshot,
-  selectionId: string,
+  selection: MobileSidebarItemSelection,
 ): string | null {
-  return snapshot.sidebarSections
+  const sidebarTypeName = snapshot.sidebarSections
     .find((section) => section.id === 'types')
     ?.items
-    ?.find((item) => item.id === selectionId)
-    ?.typeName ?? null
+    ?.find((item) => item.id === selection.id)
+    ?.typeName
+
+  return mobileTypeNameFromSidebarLabel(selection.label, selection.typeName ?? sidebarTypeName)
 }
 
 function moveWorkspaceSidebarItem({
@@ -1168,8 +1108,11 @@ function moveSidebarItemEdit(
   itemId: string,
   direction: 'down' | 'up',
 ): MobileWorkspaceEdit {
-  if (kind === 'view') return { direction, type: 'moveView', viewId: itemId }
-  return { direction, type: 'moveTypeSection', typeName: itemId }
+  const edit = kind === 'view'
+    ? moveViewEdit(itemId, direction)
+    : moveTypeSectionEdit(itemId, direction)
+  if (!edit) throw new Error(`Invalid sidebar item id for ${kind}`)
+  return edit
 }
 
 function canMoveTypeSection(
@@ -1196,7 +1139,7 @@ function deleteView({
   applyNonEmptyStringEdit({
     applyEdit,
     closeAction,
-    toEdit: (trimmedViewId) => ({ type: 'deleteView', viewId: trimmedViewId }),
+    toEdit: deleteViewEdit,
     value: viewId,
   })
 }
@@ -1209,13 +1152,16 @@ function applyNonEmptyStringEdit({
 }: {
   applyEdit: (edit: MobileWorkspaceEdit) => void
   closeAction?: () => void
-  toEdit: (value: string) => MobileWorkspaceEdit
+  toEdit: (value: string) => MobileWorkspaceEdit | null
   value: string
 }) {
   const trimmedValue = value.trim()
   if (!trimmedValue) return
 
-  applyEdit(toEdit(trimmedValue))
+  const edit = toEdit(trimmedValue)
+  if (!edit) return
+
+  applyEdit(edit)
   closeAction?.()
 }
 
@@ -1232,16 +1178,10 @@ function cloneFilterNode(node: MobileViewFilterNode): MobileViewFilterNode {
   }
 }
 
-function propertyEdit(form: TabletReadOnlyForm, noteId: string): MobileWorkspaceEdit {
+function propertyEdit(form: TabletReadOnlyForm, noteId: string): MobileWorkspaceEdit | null {
   return propertyEditFromForm(form, noteId)
 }
 
-function relationshipEdit(form: TabletReadOnlyForm, noteId: string): MobileWorkspaceEdit {
-  return {
-    key: form.relationshipName,
-    noteId,
-    targetRef: form.relationshipNoteRef,
-    targetTitle: form.relationshipNoteTitle,
-    type: 'addRelationship',
-  }
+function relationshipEdit(form: TabletReadOnlyForm, noteId: string): MobileWorkspaceEdit | null {
+  return addRelationshipEditFromForm(form, noteId)
 }

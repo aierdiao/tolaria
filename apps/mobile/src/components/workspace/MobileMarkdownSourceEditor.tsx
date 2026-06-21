@@ -204,14 +204,39 @@ function MobilePlainTextSourceEditor({
   idleSave,
   sourceSelectionProbe,
 }: Pick<MobileMarkdownSourceEditorProps, 'compact' | 'idleSave' | 'note' | 'onRegisterEditorCommands' | 'onUpdateContent' | 'sourceSelectionProbe'>) {
-  const editorDraft = useMobileSourceEditorDraft({
+  const { content, save, updateContent } = useMobileSourceEditorDraft({
     noteId: note.id,
     idleSave,
     onCommit: onUpdateContent,
     sourceContent: note.rawContent ?? '',
   })
+  const [selection, setSelection] = useState<MobileMarkdownTextSelection>(textStartSelection())
+  const [controlledSelection, setControlledSelection] = useState<MobileMarkdownTextSelection | undefined>(textStartSelection())
+  const handleSelectionChange = useCallback((event: NativeSyntheticEvent<TextInputSelectionChangeEventData>) => {
+    setSelection(event.nativeEvent.selection)
+    setControlledSelection(undefined)
+  }, [])
+  const handleTextChange = useCallback((nextContent: string) => {
+    updateContent(note.id, nextContent)
+    setSelection(mobileMarkdownSelectionAfterTextChange(content, nextContent, selection))
+    setControlledSelection(undefined)
+  }, [content, note.id, selection, updateContent])
+  const pastePlainText = useCallback(async () => {
+    const text = await readMobileClipboardText()
+    if (!text) return
+
+    const result = insertMobileMarkdownPlainText({
+      selection,
+      text: content,
+      value: text,
+    })
+    updateContent(note.id, result.text)
+    setSelection(result.selection)
+    setControlledSelection(result.selection)
+  }, [content, note.id, selection, updateContent])
   useRegisteredMobileEditorCommands(onRegisterEditorCommands, {
-    save: editorDraft.save,
+    pastePlainText,
+    save,
   })
   useNativeSourceSelectionProbe(sourceSelectionProbe === true)
 
@@ -224,8 +249,10 @@ function MobilePlainTextSourceEditor({
         style={[editorStyles.input, compact ? editorStyles.inputCompact : null]}
         testID="editor-text-file-input"
         textAlignVertical="top"
-        value={editorDraft.content}
-        onChangeText={(nextContent) => editorDraft.updateContent(note.id, nextContent)}
+        value={content}
+        selection={controlledSelection}
+        onChangeText={handleTextChange}
+        onSelectionChange={handleSelectionChange}
       />
     </View>
   )

@@ -3,6 +3,7 @@ import type {
   MobileTypeDefinitions,
 } from '../workspace/mobileWorkspaceModel'
 import { mobileCreateNoteDefaultsForType } from '../workspace/mobileCreateNoteDefaults'
+import { mobileTypeNameFromSidebarLabel } from '../workspace/mobileTypeNames'
 import type { TabletSidebarSelection } from './tabletWorkspaceNavigation'
 
 export function createNoteDefaultsForSelection(
@@ -19,10 +20,7 @@ function defaultsForTypeSection(
   selection: Extract<TabletSidebarSelection, { kind: 'item' }>,
   typeDefinitions: MobileTypeDefinitions | undefined,
 ): MobileCreateNoteDefaults {
-  const type = selection.typeName ?? singularLabel(selection.label)
+  const type = mobileTypeNameFromSidebarLabel(selection.label, selection.typeName)
+  if (!type) return {}
   return mobileCreateNoteDefaultsForType(type, typeDefinitions)
-}
-
-function singularLabel(label: string) {
-  return label.replace(/s$/u, '')
 }

@@ -88,7 +88,6 @@ const nativeWysiwygFormatCommands = [
   { action: 'highlight', run: (editor) => editor.toggleHighlight?.(mobileColors.yellowSoft) },
   { action: 'indent', run: (editor) => applyNativeWysiwygIndent(editor) },
   { action: 'italic', run: (editor) => editor.toggleItalic?.() },
-  { action: 'link', run: (editor) => editor.setLink?.('https://') },
   { action: 'orderedList', run: (editor) => editor.toggleOrderedList?.() },
   { action: 'outdent', run: (editor) => applyNativeWysiwygOutdent(editor) },
   { action: 'quote', run: (editor) => editor.toggleBlockquote?.() },

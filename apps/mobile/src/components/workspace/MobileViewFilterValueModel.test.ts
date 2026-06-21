@@ -1,10 +1,14 @@
 import { describe, expect, it } from 'vitest'
 import type { MobileViewFilterCondition } from '../../workspace/mobileWorkspaceModel'
 import {
+  mobileViewFilterConditionWithOperator,
   mobileViewFilterDatePreviewLabel,
   mobileViewFilterRegexIsInvalid,
   mobileViewFilterRegexSupported,
+  mobileViewFilterValueFromText,
   mobileViewFilterValueInputKind,
+  mobileViewFilterValueText,
+  mobileViewFilterValueWithSuggestion,
 } from './MobileViewFilterValueModel'
 
 describe('MobileViewFilterValueModel', () => {
@@ -29,6 +33,61 @@ describe('MobileViewFilterValueModel', () => {
     expect(mobileViewFilterRegexIsInvalid(filterCondition({ regex: false, value: '(' }))).toBe(false)
     expect(mobileViewFilterRegexIsInvalid(filterCondition({ op: 'before', value: '(' }))).toBe(false)
     expect(mobileViewFilterRegexIsInvalid(filterCondition({ value: 'workflow|essay' }))).toBe(false)
+  })
+
+  it('round-trips desktop list-valued filter operators as comma-list arrays', () => {
+    expect(mobileViewFilterValueText(filterCondition({
+      op: 'any_of',
+      value: ['Design', 'AI, UX'],
+    }))).toBe('Design, "AI, UX"')
+    expect(mobileViewFilterValueFromText('any_of', 'Design, "AI, UX"')).toEqual(['Design', 'AI, UX'])
+    expect(mobileViewFilterValueFromText('none_of', '')).toEqual([])
+    expect(mobileViewFilterValueFromText('equals', 'Design, AI')).toBe('Design, AI')
+  })
+
+  it('completes active list-valued filter suggestions without dropping existing values', () => {
+    expect(mobileViewFilterValueWithSuggestion(filterCondition({
+      op: 'any_of',
+      value: ['Design', 'A'],
+    }), 'AI')).toEqual(['Design', 'AI'])
+    expect(mobileViewFilterValueWithSuggestion(filterCondition({
+      op: 'any_of',
+      value: ['Design', 'des'],
+    }), 'Design')).toEqual(['Design'])
+    expect(mobileViewFilterValueWithSuggestion(filterCondition({
+      op: 'equals',
+      value: 'A',
+    }), 'AI')).toBe('AI')
+  })
+
+  it('normalizes values when switching operators so saved view YAML stays desktop-compatible', () => {
+    expect(mobileViewFilterConditionWithOperator(filterCondition({
+      op: 'contains',
+      regex: true,
+      value: 'Design',
+    }), 'is_empty')).toEqual({
+      field: 'title',
+      op: 'is_empty',
+    })
+    expect(mobileViewFilterConditionWithOperator(filterCondition({
+      op: 'contains',
+      regex: true,
+      value: 'Design, AI',
+    }), 'any_of')).toEqual({
+      field: 'title',
+      op: 'any_of',
+      value: ['Design', 'AI'],
+    })
+    expect(mobileViewFilterConditionWithOperator(filterCondition({
+      op: 'any_of',
+      regex: true,
+      value: ['Design', 'AI, UX'],
+    }), 'equals')).toEqual({
+      field: 'title',
+      op: 'equals',
+      regex: true,
+      value: 'Design, "AI, UX"',
+    })
   })
 })
 

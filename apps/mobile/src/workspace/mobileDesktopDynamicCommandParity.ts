@@ -18,6 +18,7 @@ type MobileDesktopDynamicCommandSource =
   | 'desktop-note-commands'
   | 'desktop-type-commands'
   | 'desktop-view-commands'
+  | 'mobile-adapted-note-commands'
 
 type MobileDesktopDynamicCommandDefinition = Omit<MobileDesktopDynamicCommandEntry, 'source'>
 
@@ -79,6 +80,11 @@ const dynamicCommandDefinitions = {
     outOfScope('zoom-in', 'desktop window zoom is installation chrome, not vault editing logic'),
     outOfScope('zoom-out', 'desktop window zoom is installation chrome, not vault editing logic'),
     outOfScope('zoom-reset', 'desktop window zoom is installation chrome, not vault editing logic'),
+  ],
+  'mobile-adapted-note-commands': [
+    adapted('open-active-neighborhood', 'open-active-neighborhood', 'mobile relationship navigation opens the active note neighborhood instead of desktop backlinks chrome'),
+    adapted('rename-active-file', 'rename-active-file', 'mobile note actions expose explicit file rename while preserving desktop vault path semantics'),
+    adapted('rename-active-file-to-title', 'rename-active-file-to-title', 'mobile note actions expose title-derived file rename while preserving desktop vault path semantics'),
   ],
 } satisfies Record<MobileDesktopDynamicCommandSource, MobileDesktopDynamicCommandDefinition[]>
 

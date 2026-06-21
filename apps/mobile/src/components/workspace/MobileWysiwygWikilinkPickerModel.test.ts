@@ -46,6 +46,16 @@ describe('native WYSIWYG wikilink picker model', () => {
 
   it('offers desktop-style native slash-command suggestions for durable block insertions', () => {
     expect(mobileWysiwygSlashCommandPickerSuggestions('').map((suggestion) => suggestion.action)).toEqual([
+      'heading1',
+      'heading2',
+      'heading3',
+      'heading4',
+      'heading5',
+      'heading6',
+      'bulletList',
+      'orderedList',
+      'taskList',
+      'quote',
       'divider',
       'codeBlock',
       'mathBlock',
@@ -53,8 +63,11 @@ describe('native WYSIWYG wikilink picker model', () => {
       'table',
       'whiteboard',
     ])
+    expect(mobileWysiwygSlashCommandPickerSuggestions('h2').map((suggestion) => suggestion.action)).toEqual(['heading2'])
+    expect(mobileWysiwygSlashCommandPickerSuggestions('todo').map((suggestion) => suggestion.action)).toEqual(['taskList'])
     expect(mobileWysiwygSlashCommandPickerSuggestions('flow').map((suggestion) => suggestion.action)).toEqual(['mermaid'])
     expect(mobileWysiwygSlashCommandPayloadForAction('table')).toEqual({ action: 'table' })
+    expect(mobileWysiwygSlashCommandPayloadForAction('heading2')).toEqual({ action: 'heading2' })
   })
 
   it('builds the native insertion payload with the note title as label and canonical path target', () => {

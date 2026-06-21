@@ -20,10 +20,14 @@ import {
 } from '../../workspace/mobileWorkspaceSuggestions'
 import { MobileWorkspaceSuggestionList } from './MobileWorkspaceSuggestionList'
 import {
+  mobileViewFilterConditionWithOperator,
   mobileViewFilterDatePreviewLabel,
   mobileViewFilterRegexIsInvalid,
   mobileViewFilterRegexSupported,
+  mobileViewFilterValueFromText,
   mobileViewFilterValueInputKind,
+  mobileViewFilterValueText,
+  mobileViewFilterValueWithSuggestion,
 } from './MobileViewFilterValueModel'
 
 type FilterPath = string
@@ -39,6 +43,8 @@ const operators: MobileViewFilterOp[] = [
   'not_equals',
   'contains',
   'not_contains',
+  'any_of',
+  'none_of',
   'is_empty',
   'is_not_empty',
   'before',
@@ -184,7 +190,7 @@ function FilterConditionEditor({
 }) {
   const pathId = testPath(path)
   const fieldSuggestions = mobileViewFieldSuggestions(notes, condition.field, typeDefinitions)
-  const valueText = String(condition.value ?? '')
+  const valueText = mobileViewFilterValueText(condition)
   const valueSuggestions = mobileViewValueSuggestionItems(notes, condition.field, valueText, typeDefinitions)
   const valueInputKind = mobileViewFilterValueInputKind(condition.op)
   const invalidRegex = mobileViewFilterRegexIsInvalid(condition)
@@ -220,14 +226,14 @@ function FilterConditionEditor({
             style={invalidRegex ? styles.invalidInput : null}
             testID={`workspace-view-filter-value-input-${pathId}`}
             value={valueText}
-            onChangeText={(value) => onChange({ ...condition, value })}
+            onChangeText={(value) => onChange({ ...condition, value: mobileViewFilterValueFromText(condition.op, value) })}
           />
           <FilterValueFeedback invalidRegex={invalidRegex} datePreviewLabel={datePreviewLabel} pathId={pathId} />
           <MobileWorkspaceSuggestionList
             items={valueSuggestions}
             testID={`workspace-view-filter-value-suggestions-${pathId}`}
             testIDPrefix={`workspace-view-filter-value-suggestion-${pathId}`}
-            onSelect={(value) => onChange({ ...condition, value })}
+            onSelect={(value) => onChange({ ...condition, value: mobileViewFilterValueWithSuggestion(condition, value) })}
           />
         </>
       )}
@@ -255,7 +261,7 @@ function OperatorPicker({
           key={operator}
           label={operatorLabel(operator)}
           testID={`workspace-view-filter-operator-${pathId}-${operator}`}
-          onPress={() => onChange({ ...condition, op: operator, regex: nextRegex(operator, regexEnabled) })}
+          onPress={() => onChange(mobileViewFilterConditionWithOperator(condition, operator, regexEnabled))}
         />
       ))}
       {regexSupported ? (
@@ -393,10 +399,6 @@ function removeNode(group: MobileViewFilterGroup, index: number): MobileViewFilt
 
 function nextMode(mode: FilterMode): FilterMode {
   return mode === 'all' ? 'any' : 'all'
-}
-
-function nextRegex(operator: MobileViewFilterOp, enabled: boolean): true | undefined {
-  return mobileViewFilterRegexSupported(operator) && enabled ? true : undefined
 }
 
 function isFilterGroup(node: MobileViewFilterNode): node is MobileViewFilterGroup {

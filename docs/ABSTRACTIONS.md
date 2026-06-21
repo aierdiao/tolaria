@@ -87,9 +87,11 @@ Workspace surfaces now sit one level above those primitives:
 | `mobileWikilinkAutocomplete.ts` | Cursor-aware mobile wikilink query detection, canonical target insertion, and desktop-style suggestion matching across title, aliases, filename, type, tags, and path |
 | `mobileEditorCommands.ts` | Active editor command registry that lets tablet/phone command palettes dispatch selection-sensitive editor actions without importing editor internals |
 | `mobileInlineMath.ts` | Shared desktop-compatible inline math parser for mobile hydration, input transforms, and save serialization |
+| `src/utils/externalUrl.ts` | Shared dependency-free external URL normalizer used by desktop link opening and mobile WYSIWYG link editing |
 | `MobileWysiwygMathHtml.ts` | Mobile KaTeX MathML rendering helper for native TenTap inline math nodes |
 | `MobileWysiwygTentapWebEditor.tsx` | Tolaria TenTap WebView entrypoint that bundles custom mobile Tiptap extensions |
 | `MobileWysiwygTentapEditorHtml.ts` | Generated custom TenTap WebView HTML used by the native WYSIWYG editor |
+| `nativeWysiwyg*Probe.ts` | Native Expo simulator proof models for mobile editor behavior that must be verified outside React Native Web |
 | `TabletWorkspace` | Tablet shell that owns selected-note state, panel layout, action-sheet forms, and editable snapshot state |
 | `PhoneWorkspace` | Phone shell that reuses the tablet controller/repository boundary while adapting navigation to list, sidebar, editor, and properties screens |
 | `MobileWorkspaceSidebar` | Sidebar groups, counts, and folder tree |

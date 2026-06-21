@@ -27,6 +27,7 @@ import {
 } from '../workspace/readOnlyWorkspaceRepository'
 import { MobileCommandPalette } from '../components/workspace/MobileCommandPalette'
 import { buildMobileCommandPaletteCommands } from '../workspace/mobileCommandPalette'
+import { logNativeMobileCommandPaletteProof } from '../qa/nativeMobileCommandPaletteProbe'
 import { TabletEditorPanel } from './TabletEditorPanel'
 import type { EditorEditingMode } from './TabletEditorPanel'
 import { WorkspaceActionSheetHost } from './TabletWorkspace'
@@ -45,6 +46,7 @@ export type { PhoneWorkspaceState } from './phoneWorkspaceTransitions'
 export function PhoneWorkspace({
   initialEditorEditing = false,
   initialEditorEditingMode = 'wysiwyg',
+  commandPaletteProbe = false,
   initialState = 'list',
   layoutProbe = false,
   onOpenNativeVault,
@@ -54,6 +56,7 @@ export function PhoneWorkspace({
   sourceSelectionProbe = false,
   snapshot,
   wysiwygAutocompleteProbe = false,
+  wysiwygExternalLinkProbe = false,
   wysiwygFormatCommandProbe = false,
   wysiwygInputTransformProbe = false,
   wysiwygMarkdownBlockProbe = false,
@@ -63,6 +66,7 @@ export function PhoneWorkspace({
 }: {
   initialEditorEditing?: boolean
   initialEditorEditingMode?: EditorEditingMode
+  commandPaletteProbe?: boolean
   initialState?: PhoneWorkspaceState
   layoutProbe?: boolean
   onOpenNativeVault?: () => void
@@ -72,6 +76,7 @@ export function PhoneWorkspace({
   sourceSelectionProbe?: boolean
   snapshot: MobileWorkspaceSnapshot
   wysiwygAutocompleteProbe?: boolean
+  wysiwygExternalLinkProbe?: boolean
   wysiwygFormatCommandProbe?: boolean
   wysiwygInputTransformProbe?: boolean
   wysiwygMarkdownBlockProbe?: boolean
@@ -102,6 +107,7 @@ export function PhoneWorkspace({
     onOpenNativeVault,
     onPastePlainText: editorCommandRegistry.commands.pastePlainText,
     onSaveActiveEditor: editorCommandRegistry.commands.save,
+    onToggleRawEditor: editorCommandRegistry.commands.toggleRawEditor,
     openEditor,
     openList,
     openNeighborhoodList,
@@ -109,6 +115,9 @@ export function PhoneWorkspace({
     openSidebar,
     phoneState,
   })
+  useEffect(() => {
+    if (commandPaletteProbe) logNativeMobileCommandPaletteProof(commandPalette.commands)
+  }, [commandPalette.commands, commandPaletteProbe])
   const createRelationshipTargetAndOpenEditor = useCallback(() => {
     controller.onCreateRelationshipTarget()
     setPhoneState('editor')
@@ -168,6 +177,7 @@ export function PhoneWorkspace({
           suggestionNotes={suggestionNotes}
           tableOfContentsTarget={tableOfContentsTarget}
           wysiwygAutocompleteProbe={wysiwygAutocompleteProbe}
+          wysiwygExternalLinkProbe={wysiwygExternalLinkProbe}
           wysiwygFormatCommandProbe={wysiwygFormatCommandProbe}
           wysiwygInputTransformProbe={wysiwygInputTransformProbe}
           wysiwygMarkdownBlockProbe={wysiwygMarkdownBlockProbe}
@@ -200,6 +210,7 @@ function usePhoneCommandPalette({
   onOpenNativeVault,
   onPastePlainText,
   onSaveActiveEditor,
+  onToggleRawEditor,
   openEditor,
   openList,
   openNeighborhoodList,
@@ -211,6 +222,7 @@ function usePhoneCommandPalette({
   onOpenNativeVault?: () => void
   onPastePlainText?: () => void
   onSaveActiveEditor?: () => void
+  onToggleRawEditor?: () => void
   openEditor: (noteId?: string) => void
   openList: () => void
   openNeighborhoodList: (noteId: string) => void
@@ -227,11 +239,13 @@ function usePhoneCommandPalette({
   }, [openEditor, openProperties, phoneState])
   const commands = useMemo(() => buildMobileCommandPaletteCommands({
     ...controller,
+    onOpenCommandPalette: open,
     onOpenBacklinks: openProperties,
     onOpenNativeVault,
     onEnterNeighborhood: openNeighborhoodList,
     onPastePlainText,
     onSaveActiveEditor,
+    onToggleRawEditor,
     onToggleProperties: toggleProperties,
     onViewAll: openSidebar,
     onViewEditorList: openList,
@@ -239,8 +253,10 @@ function usePhoneCommandPalette({
   }), [
     controller,
     onOpenNativeVault,
+    open,
     onPastePlainText,
     onSaveActiveEditor,
+    onToggleRawEditor,
     openEditor,
     openList,
     openNeighborhoodList,
@@ -250,6 +266,7 @@ function usePhoneCommandPalette({
   ])
 
   return {
+    commands,
     element: visible ? <MobileCommandPalette commands={commands} onClose={close} /> : null,
     open,
   }
@@ -403,6 +420,7 @@ function phoneWorkspaceDragPreview({
       suggestionNotes={suggestionNotes}
       tableOfContentsTarget={null}
       wysiwygAutocompleteProbe={false}
+      wysiwygExternalLinkProbe={false}
       wysiwygFormatCommandProbe={false}
       wysiwygInputTransformProbe={false}
       wysiwygMarkdownBlockProbe={false}
@@ -432,6 +450,7 @@ type PhoneWorkspaceStateViewProps = {
   suggestionNotes: MobileNote[]
   tableOfContentsTarget: PhoneTableOfContentsTargetRequest | null
   wysiwygAutocompleteProbe: boolean
+  wysiwygExternalLinkProbe: boolean
   wysiwygFormatCommandProbe: boolean
   wysiwygInputTransformProbe: boolean
   wysiwygMarkdownBlockProbe: boolean
@@ -600,6 +619,7 @@ function PhoneEditorScreen({
   suggestionNotes,
   tableOfContentsTarget,
   wysiwygAutocompleteProbe,
+  wysiwygExternalLinkProbe,
   wysiwygFormatCommandProbe,
   wysiwygInputTransformProbe,
   wysiwygMarkdownBlockProbe,
@@ -634,6 +654,7 @@ function PhoneEditorScreen({
         sourceSelectionProbe={sourceSelectionProbe}
         tableOfContentsTarget={tableOfContentsTarget}
         wysiwygAutocompleteProbe={wysiwygAutocompleteProbe}
+        wysiwygExternalLinkProbe={wysiwygExternalLinkProbe}
         wysiwygFormatCommandProbe={wysiwygFormatCommandProbe}
         wysiwygInputTransformProbe={wysiwygInputTransformProbe}
         wysiwygMarkdownBlockProbe={wysiwygMarkdownBlockProbe}
@@ -682,6 +703,7 @@ function PhoneEditorBody({
   sourceSelectionProbe,
   tableOfContentsTarget,
   wysiwygAutocompleteProbe,
+  wysiwygExternalLinkProbe,
   wysiwygFormatCommandProbe,
   wysiwygInputTransformProbe,
   wysiwygMarkdownBlockProbe,
@@ -700,6 +722,7 @@ function PhoneEditorBody({
   sourceSelectionProbe: boolean
   tableOfContentsTarget: PhoneTableOfContentsTargetRequest | null
   wysiwygAutocompleteProbe: boolean
+  wysiwygExternalLinkProbe: boolean
   wysiwygFormatCommandProbe: boolean
   wysiwygInputTransformProbe: boolean
   wysiwygMarkdownBlockProbe: boolean
@@ -727,6 +750,7 @@ function PhoneEditorBody({
       tableOfContentsTarget={tableOfContentsTarget}
       vaultRootUri={controller.vaultRootUri}
       wysiwygAutocompleteProbe={wysiwygAutocompleteProbe}
+      wysiwygExternalLinkProbe={wysiwygExternalLinkProbe}
       wysiwygFormatCommandProbe={wysiwygFormatCommandProbe}
       wysiwygInputTransformProbe={wysiwygInputTransformProbe}
       wysiwygMarkdownBlockProbe={wysiwygMarkdownBlockProbe}

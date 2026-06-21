@@ -8,16 +8,16 @@ import { mobileColors, mobileRadius, mobileSpace } from '../../ui/tokens'
 import type {
   MobileEditorBlock,
   MobileEditorInline,
-  MobileEditorHeadingLevel,
   MobileEditorListItem,
   MobileEditorOrderedListItem,
   MobileEditorTaskItem,
 } from '../../workspace/mobileWorkspaceModel'
-import { mobileTableOfContentsHeadingTargetId } from '../../workspace/mobileTableOfContents'
+import { mobileTableOfContentsTargetIdsForBlocks } from '../../workspace/mobileTableOfContents'
 
 type MobileEditorBlocksProps = {
   blocks: MobileEditorBlock[]
   fallbackBullets: string[]
+  tableOfContentsTitle?: string
   onTableOfContentsTargetLayout?: (targetId: string, event: LayoutChangeEvent) => void
   onOpenLink?: (href: string) => void
   onNavigateWikilink: (target: string) => void
@@ -48,6 +48,7 @@ const bulletSymbols = ['•', '◦', '▪'] as const
 export function MobileEditorBlocks({
   blocks,
   fallbackBullets,
+  tableOfContentsTitle = '',
   onTableOfContentsTargetLayout,
   onOpenLink,
   onNavigateWikilink,
@@ -56,7 +57,10 @@ export function MobileEditorBlocks({
     return <FallbackBullets bullets={fallbackBullets} />
   }
 
-  const tableOfContentsTargetIds = tableOfContentsTargetIdsForBlocks(blocks)
+  const tableOfContentsTargetIds = mobileTableOfContentsTargetIdsForBlocks({
+    blocks,
+    title: tableOfContentsTitle,
+  })
 
   return (
     <>
@@ -74,32 +78,6 @@ export function MobileEditorBlocks({
       })}
     </>
   )
-}
-
-function tableOfContentsTargetIdsForBlocks(blocks: MobileEditorBlock[]): Array<string | undefined> {
-  const targetIds: Array<string | undefined> = []
-  let headingIndex = 0
-
-  for (const block of blocks) {
-    const targetId = tableOfContentsTargetIdForBlock(block, headingIndex)
-    targetIds.push(targetId)
-    if (targetId) headingIndex += 1
-  }
-
-  return targetIds
-}
-
-function tableOfContentsTargetIdForBlock(
-  block: MobileEditorBlock,
-  headingIndex: number,
-): string | undefined {
-  if (block.kind !== 'heading' || !tableOfContentsLevelVisible(block.level)) return undefined
-
-  return mobileTableOfContentsHeadingTargetId(headingIndex)
-}
-
-function tableOfContentsLevelVisible(level: MobileEditorHeadingLevel): boolean {
-  return level >= 1 && level <= 3
 }
 
 function FallbackBullets({ bullets }: { bullets: string[] }) {

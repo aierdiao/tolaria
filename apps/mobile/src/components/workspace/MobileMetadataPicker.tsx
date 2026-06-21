@@ -9,7 +9,7 @@ import { noteTypeColor, noteTypeSoftColor } from './mobileWorkspaceTone'
 
 type MobileMetadataPickerProps = {
   selectedIcon: string
-  selectedTone: MobileTone | null
+  selectedTone: string | null
   testIDPrefix: string
   onIconSelect: (icon: MobileSidebarIcon) => void
   onToneSelect: (tone: MobileTone) => void

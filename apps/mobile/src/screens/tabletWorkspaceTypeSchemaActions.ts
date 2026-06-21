@@ -17,11 +17,14 @@ export function addTypeSchemaPropertyFormValue({
   form: TabletReadOnlyForm
   updateReadOnlyForm: TypeSchemaFormUpdater
 }) {
-  updateReadOnlyForm('typeSchemaProperties', addTypeSchemaProperty(
+  const nextProperties = addTypeSchemaProperty(
     form.typeSchemaProperties,
     form.typeSchemaPropertyName,
     form.typeSchemaPropertyValue,
-  ))
+  )
+  if (nextProperties === form.typeSchemaProperties) return
+
+  updateReadOnlyForm('typeSchemaProperties', nextProperties)
   updateReadOnlyForm('typeSchemaPropertyName', '')
   updateReadOnlyForm('typeSchemaPropertyValue', '')
 }
@@ -37,14 +40,17 @@ export function addTypeSchemaRelationshipFormValue({
   sourceNote?: MobileNote | null
   updateReadOnlyForm: TypeSchemaFormUpdater
 }) {
-  updateReadOnlyForm('typeSchemaRelationships', addTypeSchemaRelationshipRef({
+  const nextRelationships = addTypeSchemaRelationshipRef({
     key: form.typeSchemaRelationshipName,
     notes,
     relationships: form.typeSchemaRelationships,
     sourceNote,
     targetRef: form.typeSchemaRelationshipTargetRef,
     targetTitle: form.typeSchemaRelationshipTarget,
-  }))
+  })
+  if (nextRelationships === form.typeSchemaRelationships) return
+
+  updateReadOnlyForm('typeSchemaRelationships', nextRelationships)
   updateReadOnlyForm('typeSchemaRelationshipName', '')
   updateReadOnlyForm('typeSchemaRelationshipTargetRef', '')
   updateReadOnlyForm('typeSchemaRelationshipTarget', '')

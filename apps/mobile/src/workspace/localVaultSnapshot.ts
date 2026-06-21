@@ -348,7 +348,8 @@ function parseNonMarkdownVaultEntry(file: LocalVaultFile, fileKind: MobileFileKi
 
 function typeDefinitionFromFrontmatter(frontmatter: LocalVaultFrontmatter): MobileTypeDefinition {
   return {
-    icon: frontmatterText(frontmatter, ['icon', '_icon']),
+    color: frontmatterText(frontmatter, ['color', '_color']),
+    icon: frontmatterText(frontmatter, ['_icon', 'icon']),
     label: frontmatterText(frontmatter, ['_sidebar_label', 'sidebar_label', 'sidebar label']),
     listPropertiesDisplay: frontmatterList(frontmatter, [
       '_list_properties_display',

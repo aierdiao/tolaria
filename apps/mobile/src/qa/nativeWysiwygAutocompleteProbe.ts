@@ -63,6 +63,15 @@ const expectedNativeWysiwygAutocompleteProofs: NativeWysiwygAutocompleteExpected
     scenario: 'slashCommand',
   },
   {
+    id: 'editor.wysiwyg.autocomplete.slashCommandTextBlock',
+    kind: 'slashCommand',
+    message: 'Native WYSIWYG detects desktop text-block slash commands with the exact replacement range',
+    query: 'heading2',
+    rangeFrom: 8,
+    rangeTo: 17,
+    scenario: 'slashCommandTextBlock',
+  },
+  {
     id: 'editor.wysiwyg.autocomplete.inlineCodeSuppression',
     kind: '',
     message: 'Native WYSIWYG suppresses autocomplete inside inline code marks',
@@ -111,6 +120,11 @@ export function nativeWysiwygAutocompleteProbeSteps(): NativeWysiwygAutocomplete
       content: textProbeContent('Insert /table'),
       scenario: 'slashCommand',
       selection: { from: 14, to: 14 },
+    },
+    {
+      content: textProbeContent('Insert /heading2'),
+      scenario: 'slashCommandTextBlock',
+      selection: { from: 17, to: 17 },
     },
     {
       content: inlineCodeProbeContent('code [[AI'),

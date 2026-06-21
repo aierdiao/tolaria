@@ -7,6 +7,11 @@ import { buildMobileFilePathForRelativePath } from '../workspace/mobileNoteFileP
 import { revealMobileFolderPath } from '../workspace/mobileNoteFileReveal'
 import type { TabletReadOnlyForm } from './tabletWorkspaceTypes'
 import type { TabletSidebarSelection } from './tabletWorkspaceNavigation'
+import {
+  createFolderEditFromForm,
+  deleteFolderEdit,
+  renameFolderEditFromForm,
+} from './tabletWorkspaceFolderEditActions'
 
 type ApplyWorkspaceEdit = (edit: MobileWorkspaceEdit) => void
 type CloseWorkspaceAction = () => void
@@ -48,11 +53,7 @@ export function folderWorkspaceActions({
     onCreateFolder: () => commitFolderEdit({
       applyEdit,
       closeAction,
-      edit: {
-        name: readOnlyForm.folderName,
-        parentPath: readOnlyForm.folderParentPath,
-        type: 'createFolder',
-      },
+      edit: createFolderEditFromForm(readOnlyForm),
     }),
     onDeleteFolder: () => deleteFolder({
       applyEdit,
@@ -75,11 +76,7 @@ export function folderWorkspaceActions({
     onRenameFolder: () => commitFolderEdit({
       applyEdit,
       closeAction,
-      edit: {
-        folderPath: readOnlyForm.editingFolderPath,
-        name: readOnlyForm.folderName,
-        type: 'renameFolder',
-      },
+      edit: renameFolderEditFromForm(readOnlyForm),
     }),
   }
 }
@@ -194,6 +191,8 @@ function deleteFolder({
   closeAction: CloseWorkspaceAction
   folderPath: string
 }) {
-  if (!folderPath) return
-  commitFolderEdit({ applyEdit, closeAction, edit: { folderPath, type: 'deleteFolder' } })
+  const edit = deleteFolderEdit(folderPath)
+  if (!edit) return
+
+  commitFolderEdit({ applyEdit, closeAction, edit })
 }

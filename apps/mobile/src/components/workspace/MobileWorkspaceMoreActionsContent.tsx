@@ -13,6 +13,7 @@ import { MobileTableMoreActions } from './MobileTableMoreActions'
 import { MobileWhiteboardMoreActions } from './MobileWhiteboardMoreActions'
 import { MobileTypeIcon } from './MobileWorkspaceIcons'
 import { NoteMoreActionRows } from './MobileNoteMoreActions'
+import { isMobileMarkdownActionNote } from './MobileNoteMoreActionsModel'
 import { chipTone } from './mobileWorkspaceTone'
 
 export function MoreActionsContent(props: MobileWorkspaceActionSheetProps) {
@@ -23,7 +24,7 @@ export function MoreActionsContent(props: MobileWorkspaceActionSheetProps) {
     <MoreActionsScroll>
       <SelectedNoteSummary note={selectedNote} />
       <SelectedNoteActionRows note={selectedNote} props={props} />
-      {isMarkdownSelectedNote(selectedNote) ? <MarkdownNoteMoreActionRows note={selectedNote} props={props} /> : null}
+      {isMobileMarkdownActionNote(selectedNote) ? <MarkdownNoteMoreActionRows note={selectedNote} props={props} /> : null}
       <DeepLinkActionRow onClose={props.onClose} onCopyDeepLink={props.onCopyDeepLink} />
     </MoreActionsScroll>
   )
@@ -140,10 +141,6 @@ function DeepLinkActionRow({
       }}
     />
   )
-}
-
-function isMarkdownSelectedNote(note: MobileNote): boolean {
-  return (note.fileKind ?? 'markdown') === 'markdown'
 }
 
 function SelectedNoteSummary({ note }: { note: MobileNote }) {

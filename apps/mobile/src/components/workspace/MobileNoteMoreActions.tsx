@@ -25,6 +25,10 @@ import { mobileText } from '../../i18n/mobileText'
 import { desktopToolbarActionParity } from '../../ui/desktopParity'
 import { mobileColors, mobileSpace, mobileType } from '../../ui/tokens'
 import type { MobileNote } from '../../workspace/mobileWorkspaceModel'
+import {
+  isMobileMarkdownActionNote,
+  isMobileTextLikeActionNote,
+} from './MobileNoteMoreActionsModel'
 
 type NoteMoreActionRowsProps = {
   canRedoWorkspaceEdit: boolean
@@ -54,7 +58,7 @@ type NoteMoreActionRowsProps = {
 
 export function NoteMoreActionRows(props: NoteMoreActionRowsProps) {
   const { note } = props
-  if (!isMarkdownNote(note)) return <NonMarkdownFileActionRows {...props} />
+  if (!isMobileMarkdownActionNote(note)) return <NonMarkdownFileActionRows {...props} />
 
   const wideNote = note.noteWidth === 'wide'
 
@@ -79,16 +83,24 @@ function NonMarkdownFileActionRows({
   onDeleteNote,
   onEnterNeighborhood,
   onOpenFileInDefaultApp,
+  onOpenFindInNote,
+  onOpenReplaceInNote,
   onRevealFile,
-}: Pick<NoteMoreActionRowsProps, 'note' | 'onClose' | 'onCopyFilePath' | 'onDeleteNote' | 'onEnterNeighborhood' | 'onOpenFileInDefaultApp' | 'onRevealFile'>) {
+}: Pick<NoteMoreActionRowsProps, 'note' | 'onClose' | 'onCopyFilePath' | 'onDeleteNote' | 'onEnterNeighborhood' | 'onOpenFileInDefaultApp' | 'onOpenFindInNote' | 'onOpenReplaceInNote' | 'onRevealFile'>) {
   return (
     <>
-      {note.fileKind === 'text' ? (
-        <NoteNavigationActionRows
-          note={note}
-          onClose={onClose}
-          onEnterNeighborhood={onEnterNeighborhood}
-        />
+      {isMobileTextLikeActionNote(note) ? (
+        <>
+          <NoteEditorActionRows
+            onOpenFindInNote={onOpenFindInNote}
+            onOpenReplaceInNote={onOpenReplaceInNote}
+          />
+          <NoteNavigationActionRows
+            note={note}
+            onClose={onClose}
+            onEnterNeighborhood={onEnterNeighborhood}
+          />
+        </>
       ) : null}
       <NotePathActionRows
         onClose={onClose}
@@ -453,10 +465,6 @@ function ActionRow({
       </View>
     </Pressable>
   )
-}
-
-function isMarkdownNote(note: MobileNote): boolean {
-  return (note.fileKind ?? 'markdown') === 'markdown'
 }
 
 const styles = StyleSheet.create({

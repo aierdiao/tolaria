@@ -28,6 +28,9 @@ import {
   nativeWysiwygFormattingActions,
   type NativeWysiwygCommandBridge,
 } from './MobileWysiwygFormatCommands'
+import { MobileWysiwygExternalLinkSheet } from './MobileWysiwygExternalLinkSheet'
+import { nativeWysiwygDocumentWithoutExternalLink } from './MobileWysiwygExternalLinkBridgeModel'
+import { nativeWysiwygInitialExternalLinkValue } from './MobileWysiwygExternalLinkSheetModel'
 import {
   nativeWysiwygDocumentContentFromJson,
   nativeWysiwygShouldPublishMutationProof,
@@ -46,6 +49,7 @@ import {
   type NativeWysiwygMarkdownBlockPayload,
   type NativeWysiwygPlainTextPayload,
   type NativeWysiwygSelection,
+  type NativeWysiwygSlashCommandPayload,
   type NativeWysiwygWikilinkPayload,
 } from './MobileWysiwygWikilinkBridgeModel'
 import {
@@ -53,6 +57,10 @@ import {
   nativeWysiwygAutocompleteProbeSteps,
   nativeWysiwygAutocompleteProof,
 } from '../../qa/nativeWysiwygAutocompleteProbe'
+import {
+  nativeWysiwygExternalLinkLogLine,
+  nativeWysiwygExternalLinkProof,
+} from '../../qa/nativeWysiwygExternalLinkProbe'
 import {
   nativeWysiwygInputTransformLogLine,
   nativeWysiwygInputTransformProbeSteps,
@@ -66,12 +74,14 @@ import {
 import {
   nativeWysiwygMarkdownBlockProbePayloads,
   nativeWysiwygMarkdownBlockProbePlainTextPayload,
+  nativeWysiwygMarkdownBlockProbeSlashCommandJson,
   nativeWysiwygMarkdownBlockProbeTableGrowthJson,
   nativeWysiwygMarkdownBlockStructuredCodeBlock,
   nativeWysiwygMarkdownBlockStructuredTable,
   publishNativeWysiwygMarkdownBlockProof,
 } from '../../qa/nativeWysiwygMarkdownBlockProbe'
 import { useNativeWysiwygFormatCommandProbe } from './MobileWysiwygFormatCommandProbe.native'
+import { useNativeWysiwygExternalLinkProbe } from './MobileWysiwygExternalLinkProbe.native'
 import { insertNativeWysiwygWikilinkProbe } from './MobileWysiwygWikilinkInsertProbe.native'
 import {
   publishNativeWysiwygMutationProof,
@@ -94,6 +104,7 @@ type MobileWysiwygMarkdownEditorProps = {
   onUpdateContent: (noteId: string, content: string) => void
   vaultRootUri?: string | null
   wysiwygAutocompleteProbe?: boolean
+  wysiwygExternalLinkProbe?: boolean
   wysiwygFormatCommandProbe?: boolean
   wysiwygInputTransformProbe?: boolean
   wysiwygMarkdownBlockProbe?: boolean
@@ -108,12 +119,16 @@ type JsonReadableEditorBridge = EditorBridge & {
 
 type EditorStateReadableBridge = EditorBridge & {
   getEditorState: () => {
+    activeLink?: unknown
+    canSetLink?: unknown
+    isLinkActive?: unknown
     selection?: {
       from?: unknown
       to?: unknown
     }
   }
 }
+type NativeWysiwygEditorState = ReturnType<EditorStateReadableBridge['getEditorState']>
 type MathInlineRenderableEditorBridge = EditorBridge & {
   getMathInlineRenderProof: () => Promise<boolean>
 }
@@ -141,21 +156,37 @@ type NativeTentapEditorBridgeOptions = Omit<MobileWysiwygMarkdownEditorProps, 'n
 }
 type NativeTentapEditorSurfaceProps = {
   editor: EditorBridge
+  externalLinkState: NativeWysiwygExternalLinkSheetState | null
   flushEditorDocument: () => void
   injectEditorCss: () => void
   insertWikilink: (payload: NativeWysiwygWikilinkPayload, selection?: NativeWysiwygSelection) => void
   insertAttachment: (payload: NativeWysiwygAttachmentPayload, selection?: NativeWysiwygSelection) => void
   insertMarkdownBlock: (payload: NativeWysiwygMarkdownBlockPayload, selection?: NativeWysiwygSelection) => void
   insertPlainText: (payload: NativeWysiwygPlainTextPayload, selection?: NativeWysiwygSelection) => void
-  insertSlashCommandBlock: (payload: NativeWysiwygMarkdownBlockPayload, selection?: NativeWysiwygSelection) => void
+  insertSlashCommandBlock: (payload: NativeWysiwygSlashCommandPayload, selection?: NativeWysiwygSelection) => void
   layoutProbe?: MobileLayoutProbe
   notes: MobileNote[]
+  onCloseExternalLinkSheet: () => void
   onCloseWikilinkPicker: () => void
   onImportAttachment?: () => Promise<NativeWysiwygAttachmentPayload | null>
+  onOpenExternalLinkSheet: () => void
   onOpenToolbarWikilinkPicker: () => void
   onRegisterEditorCommands?: RegisterMobileEditorCommands
   pickerState: NativeWysiwygPickerState | null
   sourceNote: MobileNote
+}
+type NativeWysiwygExternalLinkSheetState = {
+  initialUrl: string
+  selection?: NativeWysiwygSelection
+}
+type NativeTentapEditorSurfaceActions = {
+  handleApplyExternalLink: (url: string) => void
+  handleFormat: (action: Parameters<typeof applyNativeWysiwygFormat>[1]) => Promise<void>
+  handleInsertEmoji: (payload: NativeWysiwygPlainTextPayload) => void
+  handleInsertSlashCommand: (payload: NativeWysiwygSlashCommandPayload) => void
+  handleInsertWikilink: (payload: NativeWysiwygWikilinkPayload) => void
+  handlePastePlainText: () => void
+  handleRemoveExternalLink: () => void
 }
 type NativeTentapEditorRefs = {
   acceptsEditorChangesRef: MutableRefObject<boolean>
@@ -214,6 +245,7 @@ export function MobileWysiwygMarkdownEditor({
   onUpdateContent,
   vaultRootUri = null,
   wysiwygAutocompleteProbe = false,
+  wysiwygExternalLinkProbe = false,
   wysiwygFormatCommandProbe = false,
   wysiwygInputTransformProbe = false,
   wysiwygMarkdownBlockProbe = false,
@@ -222,6 +254,7 @@ export function MobileWysiwygMarkdownEditor({
   wysiwygMutationProbe = false,
 }: MobileWysiwygMarkdownEditorProps) {
   const [pickerState, setPickerState] = useState<NativeWysiwygPickerState | null>(null)
+  const [externalLinkState, setExternalLinkState] = useState<NativeWysiwygExternalLinkSheetState | null>(null)
   const handleInlineAutocomplete = useCallback((match: NativeWysiwygInlineAutocomplete | null) => {
     setPickerState((current) => inlineAutocompletePickerState(current, match))
   }, [])
@@ -245,6 +278,7 @@ export function MobileWysiwygMarkdownEditor({
     onUpdateContent,
     vaultRootUri,
     wysiwygAutocompleteProbe,
+    wysiwygExternalLinkProbe,
     wysiwygFormatCommandProbe,
     wysiwygInputTransformProbe,
     wysiwygMarkdownBlockProbe,
@@ -252,6 +286,15 @@ export function MobileWysiwygMarkdownEditor({
     wysiwygWikilinkInsertProbe,
     wysiwygMutationProbe,
   })
+  const handleOpenExternalLinkSheet = useCallback(() => {
+    setExternalLinkState({
+      initialUrl: nativeWysiwygInitialExternalLinkValue(nativeWysiwygEditorState(bridge.editor)),
+      selection: nativeWysiwygEditorSelection(bridge.editor),
+    })
+  }, [bridge.editor])
+  const handleCloseExternalLinkSheet = useCallback(() => {
+    setExternalLinkState(null)
+  }, [])
 
   return (
     <NativeTentapEditorSurface
@@ -262,7 +305,10 @@ export function MobileWysiwygMarkdownEditor({
       onRegisterEditorCommands={onRegisterEditorCommands}
       pickerState={pickerState}
       sourceNote={note}
+      externalLinkState={externalLinkState}
+      onCloseExternalLinkSheet={handleCloseExternalLinkSheet}
       onCloseWikilinkPicker={handleCloseWikilinkPicker}
+      onOpenExternalLinkSheet={handleOpenExternalLinkSheet}
       onOpenToolbarWikilinkPicker={handleOpenToolbarWikilinkPicker}
     />
   )
@@ -270,6 +316,7 @@ export function MobileWysiwygMarkdownEditor({
 
 function NativeTentapEditorSurface({
   editor,
+  externalLinkState,
   flushEditorDocument,
   injectEditorCss,
   insertAttachment,
@@ -279,39 +326,35 @@ function NativeTentapEditorSurface({
   insertWikilink,
   layoutProbe,
   notes,
+  onCloseExternalLinkSheet,
   onCloseWikilinkPicker,
   onImportAttachment,
+  onOpenExternalLinkSheet,
   onOpenToolbarWikilinkPicker,
   onRegisterEditorCommands,
   pickerState,
   sourceNote,
 }: NativeTentapEditorSurfaceProps) {
-  const handleFormat = useNativeWysiwygToolbarHandler({
+  const actions = useNativeTentapEditorSurfaceActions({
     editor,
+    externalLinkState,
+    flushEditorDocument,
     insertAttachment,
     insertMarkdownBlock,
     insertPlainText,
+    insertSlashCommandBlock,
+    insertWikilink,
+    onCloseExternalLinkSheet,
+    onCloseWikilinkPicker,
     onImportAttachment,
+    onOpenExternalLinkSheet,
     onOpenToolbarWikilinkPicker,
+    pickerState,
   })
   useRegisteredMobileEditorCommands(onRegisterEditorCommands, {
-    pastePlainText: () => {
-      void handleFormat('pastePlainText')
-    },
+    pastePlainText: actions.handlePastePlainText,
     save: flushEditorDocument,
   })
-  const handleInsertWikilink = useCallback((payload: NativeWysiwygWikilinkPayload) => {
-    insertWikilink(payload, pickerState?.replacementRange)
-    onCloseWikilinkPicker()
-  }, [insertWikilink, onCloseWikilinkPicker, pickerState?.replacementRange])
-  const handleInsertEmoji = useCallback((payload: NativeWysiwygPlainTextPayload) => {
-    insertPlainText(payload, pickerState?.replacementRange)
-    onCloseWikilinkPicker()
-  }, [insertPlainText, onCloseWikilinkPicker, pickerState?.replacementRange])
-  const handleInsertSlashCommand = useCallback((payload: NativeWysiwygMarkdownBlockPayload) => {
-    insertSlashCommandBlock(payload, pickerState?.replacementRange)
-    onCloseWikilinkPicker()
-  }, [insertSlashCommandBlock, onCloseWikilinkPicker, pickerState?.replacementRange])
 
   return (
     <View {...probeProps(layoutProbe, 'editor.wysiwyg.form')} style={nativeEditorStyles.container} testID="editor-wysiwyg-form">
@@ -331,23 +374,151 @@ function NativeTentapEditorSurface({
           actions={nativeWysiwygFormattingActions}
           layoutProbe={layoutProbe}
           metricId="editor.wysiwyg.toolbar"
-          onFormat={handleFormat}
+          onFormat={actions.handleFormat}
         />
       </KeyboardAvoidingView>
-      {pickerState ? (
-        <MobileWysiwygWikilinkPicker
-          initialQuery={pickerState.query}
-          key={wikilinkPickerKey(pickerState)}
-          kind={pickerState.kind}
-          notes={notes}
-          sourceNote={sourceNote}
-          onClose={onCloseWikilinkPicker}
-          onSelectMarkdownBlock={handleInsertSlashCommand}
-          onSelect={handleInsertWikilink}
-          onSelectEmoji={handleInsertEmoji}
-        />
-      ) : null}
+      <NativeWysiwygPickerOverlay
+        actions={actions}
+        notes={notes}
+        pickerState={pickerState}
+        sourceNote={sourceNote}
+        onClose={onCloseWikilinkPicker}
+      />
+      <NativeWysiwygExternalLinkOverlay
+        actions={actions}
+        externalLinkState={externalLinkState}
+        onClose={onCloseExternalLinkSheet}
+      />
     </View>
+  )
+}
+
+function useNativeTentapEditorSurfaceActions({
+  editor,
+  externalLinkState,
+  flushEditorDocument,
+  insertAttachment,
+  insertMarkdownBlock,
+  insertPlainText,
+  insertSlashCommandBlock,
+  insertWikilink,
+  onCloseExternalLinkSheet,
+  onCloseWikilinkPicker,
+  onImportAttachment,
+  onOpenExternalLinkSheet,
+  onOpenToolbarWikilinkPicker,
+  pickerState,
+}: Pick<
+  NativeTentapEditorSurfaceProps,
+  'editor'
+  | 'externalLinkState'
+  | 'flushEditorDocument'
+  | 'insertAttachment'
+  | 'insertMarkdownBlock'
+  | 'insertPlainText'
+  | 'insertSlashCommandBlock'
+  | 'insertWikilink'
+  | 'onCloseExternalLinkSheet'
+  | 'onCloseWikilinkPicker'
+  | 'onImportAttachment'
+  | 'onOpenExternalLinkSheet'
+  | 'onOpenToolbarWikilinkPicker'
+  | 'pickerState'
+>): NativeTentapEditorSurfaceActions {
+  const handleFormat = useNativeWysiwygToolbarHandler({
+    editor,
+    insertAttachment,
+    insertMarkdownBlock,
+    insertPlainText,
+    onImportAttachment,
+    onOpenExternalLinkSheet,
+    onOpenToolbarWikilinkPicker,
+  })
+  const handlePastePlainText = useCallback(() => {
+    void handleFormat('pastePlainText')
+  }, [handleFormat])
+  const replacementRange = pickerState?.replacementRange
+  const handleInsertWikilink = useCallback((payload: NativeWysiwygWikilinkPayload) => {
+    insertWikilink(payload, replacementRange)
+    onCloseWikilinkPicker()
+  }, [insertWikilink, onCloseWikilinkPicker, replacementRange])
+  const handleInsertEmoji = useCallback((payload: NativeWysiwygPlainTextPayload) => {
+    insertPlainText(payload, replacementRange)
+    onCloseWikilinkPicker()
+  }, [insertPlainText, onCloseWikilinkPicker, replacementRange])
+  const handleInsertSlashCommand = useCallback((payload: NativeWysiwygSlashCommandPayload) => {
+    insertSlashCommandBlock(payload, replacementRange)
+    onCloseWikilinkPicker()
+  }, [insertSlashCommandBlock, onCloseWikilinkPicker, replacementRange])
+  const externalLinkSelection = externalLinkState?.selection
+  const handleApplyExternalLink = useCallback((url: string) => {
+    applyNativeWysiwygExternalLink(editor, url, flushEditorDocument, externalLinkSelection)
+    onCloseExternalLinkSheet()
+  }, [editor, externalLinkSelection, flushEditorDocument, onCloseExternalLinkSheet])
+  const handleRemoveExternalLink = useCallback(() => {
+    applyNativeWysiwygExternalLink(editor, null, flushEditorDocument, externalLinkSelection)
+    onCloseExternalLinkSheet()
+  }, [editor, externalLinkSelection, flushEditorDocument, onCloseExternalLinkSheet])
+
+  return {
+    handleApplyExternalLink,
+    handleFormat,
+    handleInsertEmoji,
+    handleInsertSlashCommand,
+    handleInsertWikilink,
+    handlePastePlainText,
+    handleRemoveExternalLink,
+  }
+}
+
+function NativeWysiwygPickerOverlay({
+  actions,
+  notes,
+  pickerState,
+  sourceNote,
+  onClose,
+}: {
+  actions: NativeTentapEditorSurfaceActions
+  notes: MobileNote[]
+  pickerState: NativeWysiwygPickerState | null
+  sourceNote: MobileNote
+  onClose: () => void
+}) {
+  if (!pickerState) return null
+
+  return (
+    <MobileWysiwygWikilinkPicker
+      initialQuery={pickerState.query}
+      key={wikilinkPickerKey(pickerState)}
+      kind={pickerState.kind}
+      notes={notes}
+      sourceNote={sourceNote}
+      onClose={onClose}
+      onSelect={actions.handleInsertWikilink}
+      onSelectEmoji={actions.handleInsertEmoji}
+      onSelectMarkdownBlock={actions.handleInsertSlashCommand}
+    />
+  )
+}
+
+function NativeWysiwygExternalLinkOverlay({
+  actions,
+  externalLinkState,
+  onClose,
+}: {
+  actions: NativeTentapEditorSurfaceActions
+  externalLinkState: NativeWysiwygExternalLinkSheetState | null
+  onClose: () => void
+}) {
+  if (!externalLinkState) return null
+
+  return (
+    <MobileWysiwygExternalLinkSheet
+      initialUrl={externalLinkState.initialUrl}
+      onApply={actions.handleApplyExternalLink}
+      onClose={onClose}
+      onRemove={actions.handleRemoveExternalLink}
+    />
   )
 }
 
@@ -357,19 +528,35 @@ function useNativeWysiwygToolbarHandler({
   insertMarkdownBlock,
   insertPlainText,
   onImportAttachment,
+  onOpenExternalLinkSheet,
   onOpenToolbarWikilinkPicker,
 }: Pick<
   NativeTentapEditorSurfaceProps,
-  'editor' | 'insertAttachment' | 'insertMarkdownBlock' | 'insertPlainText' | 'onImportAttachment' | 'onOpenToolbarWikilinkPicker'
+  'editor'
+  | 'insertAttachment'
+  | 'insertMarkdownBlock'
+  | 'insertPlainText'
+  | 'onImportAttachment'
+  | 'onOpenExternalLinkSheet'
+  | 'onOpenToolbarWikilinkPicker'
 >) {
   return useCallback(async (action: Parameters<typeof applyNativeWysiwygFormat>[1]) => {
     if (action === 'attachment') return insertImportedAttachment(onImportAttachment, insertAttachment)
+    if (action === 'link') return onOpenExternalLinkSheet()
     if (action === 'pastePlainText') return insertClipboardPlainText(insertPlainText)
     if (action === 'wikilink') return onOpenToolbarWikilinkPicker()
     if (isNativeWysiwygMarkdownBlockAction(action)) return insertMarkdownBlock({ action })
 
     applyNativeWysiwygFormat(editor as NativeWysiwygCommandBridge, action)
-  }, [editor, insertAttachment, insertMarkdownBlock, insertPlainText, onImportAttachment, onOpenToolbarWikilinkPicker])
+  }, [
+    editor,
+    insertAttachment,
+    insertMarkdownBlock,
+    insertPlainText,
+    onImportAttachment,
+    onOpenExternalLinkSheet,
+    onOpenToolbarWikilinkPicker,
+  ])
 }
 
 async function insertImportedAttachment(
@@ -408,6 +595,7 @@ function useNativeTentapEditorBridge({
   onUpdateContent,
   vaultRootUri = null,
   wysiwygAutocompleteProbe = false,
+  wysiwygExternalLinkProbe = false,
   wysiwygFormatCommandProbe = false,
   wysiwygInputTransformProbe = false,
   wysiwygMarkdownBlockProbe = false,
@@ -424,6 +612,7 @@ function useNativeTentapEditorBridge({
   const refs = useNativeTentapEditorRefs(initialDocumentContent)
 
   const flushEditorDocument = useFlushEditorDocument({
+    externalLinkProbeEnabled: wysiwygExternalLinkProbe,
     initialBodyHasContent,
     markdownBlockProbeEnabled: wysiwygMarkdownBlockProbe,
     mutationProbeEnabled: wysiwygMutationProbe,
@@ -479,6 +668,11 @@ function useNativeTentapEditorBridge({
   useEditableContentRef({ blocks, bullets, note, refs })
   useResetEditorChangeGate({ initialContent, noteId: note.id, refs })
   useNativeWysiwygAutocompleteProbe({ enabled: wysiwygAutocompleteProbe, refs })
+  useNativeWysiwygExternalLinkProbe({
+    enabled: wysiwygExternalLinkProbe,
+    flushEditorDocument,
+    refs,
+  })
   useNativeWysiwygInputTransformProbe({ enabled: wysiwygInputTransformProbe, refs })
   useNativeWysiwygFormatCommandProbe({ enabled: wysiwygFormatCommandProbe, refs })
   useNativeWysiwygDeferredInsertionProbe({
@@ -556,6 +750,7 @@ function useNativeTentapEditorRefs(initialDocumentContent: string): NativeTentap
 }
 
 function useFlushEditorDocument({
+  externalLinkProbeEnabled,
   initialBodyHasContent,
   markdownBlockProbeEnabled,
   mutationProbeEnabled,
@@ -566,6 +761,7 @@ function useFlushEditorDocument({
   vaultRootUri,
   wikilinkInsertProbeEnabled,
 }: {
+  externalLinkProbeEnabled: boolean
   initialBodyHasContent: boolean
   markdownBlockProbeEnabled: boolean
   mutationProbeEnabled: boolean
@@ -578,6 +774,7 @@ function useFlushEditorDocument({
 }) {
   return useCallback(() => {
     flushEditorDocumentFromBridge({
+      externalLinkProbeEnabled,
       initialBodyHasContent,
       markdownBlockProbeEnabled,
       mutationProbeEnabled,
@@ -589,6 +786,7 @@ function useFlushEditorDocument({
       wikilinkInsertProbeEnabled,
     })
   }, [
+    externalLinkProbeEnabled,
     initialBodyHasContent,
     markdownBlockProbeEnabled,
     mutationProbeEnabled,
@@ -602,6 +800,7 @@ function useFlushEditorDocument({
 }
 
 function flushEditorDocumentFromBridge({
+  externalLinkProbeEnabled,
   initialBodyHasContent,
   markdownBlockProbeEnabled,
   mutationProbeEnabled,
@@ -612,6 +811,7 @@ function flushEditorDocumentFromBridge({
   vaultRootUri,
   wikilinkInsertProbeEnabled,
 }: {
+  externalLinkProbeEnabled: boolean
   initialBodyHasContent: boolean
   markdownBlockProbeEnabled: boolean
   mutationProbeEnabled: boolean
@@ -627,6 +827,7 @@ function flushEditorDocumentFromBridge({
 
   void editor.getJSON()
     .then((json) => writeEditorJsonToMarkdown({
+      externalLinkProbeEnabled,
       initialBodyHasContent,
       json,
       markdownBlockProbeEnabled,
@@ -644,6 +845,7 @@ function flushEditorDocumentFromBridge({
 }
 
 function writeEditorJsonToMarkdown({
+  externalLinkProbeEnabled,
   initialBodyHasContent,
   json,
   markdownBlockProbeEnabled,
@@ -655,6 +857,7 @@ function writeEditorJsonToMarkdown({
   vaultRootUri,
   wikilinkInsertProbeEnabled,
 }: {
+  externalLinkProbeEnabled: boolean
   initialBodyHasContent: boolean
   json: unknown
   markdownBlockProbeEnabled: boolean
@@ -687,6 +890,7 @@ function writeEditorJsonToMarkdown({
       })
     }
     if (wikilinkInsertProbeEnabled) publishNativeWysiwygWikilinkInsertProof(noteId, nextContent.content)
+    if (externalLinkProbeEnabled) publishNativeWysiwygExternalLinkProof(noteId, nextContent.content)
   }
   if (nativeWysiwygShouldPublishMutationProof({ mutationProbeEnabled, skipped: nextContent.skipped })) {
     publishNativeWysiwygMutationProof(noteId, nextContent.content, json)
@@ -898,6 +1102,12 @@ function publishNativeWysiwygWikilinkInsertProof(noteId: string, content: string
   console.info(nativeWysiwygWikilinkInsertLogLine(nativeWysiwygWikilinkInsertProof({ content, noteId })))
 }
 
+function publishNativeWysiwygExternalLinkProof(noteId: string, content: string): void {
+  if (Platform.OS === 'web') return
+
+  console.info(nativeWysiwygExternalLinkLogLine(nativeWysiwygExternalLinkProof({ content, noteId })))
+}
+
 function useNativeWysiwygInserter<Payload>({
   flushEditorDocument,
   insertIntoEditor,
@@ -952,7 +1162,7 @@ async function insertMarkdownBlockIntoNativeEditor(
 
 async function insertSlashCommandBlockIntoNativeEditor(
   editor: EditorBridge | null,
-  payload: NativeWysiwygMarkdownBlockPayload,
+  payload: NativeWysiwygSlashCommandPayload,
   selection?: NativeWysiwygSelection,
 ): Promise<boolean> {
   return insertPayloadIntoNativeEditor(editor, payload, selection, nativeWysiwygDocumentWithInsertedSlashCommandBlock)
@@ -987,6 +1197,7 @@ async function insertMarkdownBlocksIntoNativeEditor(
     nextJson = insertedJson
   }
   nextJson = nativeWysiwygMarkdownBlockProbeTableGrowthJson(nextJson)
+  nextJson = nativeWysiwygMarkdownBlockProbeSlashCommandJson(nextJson)
   editor.setContent(nextJson)
   refs.markdownBlockRenderProofRef.current = await nativeWysiwygBlockMathRenderProof(editor)
   refs.markdownBlockProofReadyRef.current = true
@@ -1021,15 +1232,55 @@ async function insertPayloadIntoNativeEditor<Payload>(
 }
 
 function nativeWysiwygEditorSelection(editor: EditorBridge): NativeWysiwygSelection | undefined {
-  if (!isEditorStateReadableBridge(editor)) return undefined
-
-  const selection = editor.getEditorState().selection
+  const selection = nativeWysiwygEditorState(editor)?.selection
   if (typeof selection?.from !== 'number' || typeof selection.to !== 'number') return undefined
 
   return {
     from: selection.from,
     to: selection.to,
   }
+}
+
+function nativeWysiwygEditorState(editor: EditorBridge | null): NativeWysiwygEditorState | null {
+  return isEditorStateReadableBridge(editor) ? editor.getEditorState() : null
+}
+
+function applyNativeWysiwygExternalLink(
+  editor: EditorBridge,
+  url: string | null,
+  flushEditorDocument: () => void,
+  selection?: NativeWysiwygSelection,
+): void {
+  if (selection && isSelectionSettableEditorBridge(editor)) {
+    editor.setSelection(selection.from, selection.to)
+  }
+  if (url === null) {
+    void removeNativeWysiwygExternalLink(editor, selection, flushEditorDocument)
+    return
+  }
+
+  const commandBridge = editor as NativeWysiwygCommandBridge
+  if (typeof commandBridge.setLink !== 'function') return
+
+  commandBridge.setLink(url)
+  setTimeout(flushEditorDocument, 250)
+}
+
+async function removeNativeWysiwygExternalLink(
+  editor: EditorBridge,
+  selection: NativeWysiwygSelection | undefined,
+  flushEditorDocument: () => void,
+): Promise<void> {
+  if (!isJsonReadableEditorBridge(editor) || !isContentSettableEditorBridge(editor)) return
+
+  const nextJson = nativeWysiwygDocumentWithoutExternalLink({
+    json: await editor.getJSON(),
+    selection,
+  })
+  if (!nextJson) return
+
+  editor.setContent(nextJson)
+  setTimeout(flushEditorDocument, 250)
 }
 
 function useNativeWysiwygDeferredInsertionProbe({

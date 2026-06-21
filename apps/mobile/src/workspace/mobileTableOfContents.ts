@@ -25,11 +25,43 @@ type MobileTocInput = {
   note: MobileNote
   untitledLabel: HeadingTitle
 }
+type MobileTableOfContentsBlockTargetInput = {
+  blocks: MobileEditorBlock[]
+  title: HeadingTitle
+}
 
 export const mobileTableOfContentsTitleTargetId = 'toc-title'
 
 export function mobileTableOfContentsHeadingTargetId(index: number): string {
   return `toc-heading-${index}`
+}
+
+export function mobileTableOfContentsTargetIdsForBlocks({
+  blocks,
+  title,
+}: MobileTableOfContentsBlockTargetInput): Array<string | undefined> {
+  const targetIds: Array<string | undefined> = []
+  let firstVisibleHeading = true
+  let visibleHeadingIndex = 0
+
+  for (const block of blocks) {
+    if (block.kind !== 'heading' || !tableOfContentsLevelVisible(block.level)) {
+      targetIds.push(undefined)
+      continue
+    }
+
+    const skipDuplicateTitle = firstVisibleHeading && block.level === 1 && sameHeadingTitle(block.text, title)
+    firstVisibleHeading = false
+    if (skipDuplicateTitle) {
+      targetIds.push(undefined)
+      continue
+    }
+
+    targetIds.push(mobileTableOfContentsHeadingTargetId(visibleHeadingIndex))
+    visibleHeadingIndex += 1
+  }
+
+  return targetIds
 }
 
 export function buildMobileTableOfContents({
@@ -87,6 +119,10 @@ function markdownHeading(line: MarkdownLine): MobileTocHeading | null {
     level: match[1]?.length as MobileTableOfContentsLevel,
     title,
   }
+}
+
+function tableOfContentsLevelVisible(level: number): level is MobileTableOfContentsLevel {
+  return level >= 1 && level <= 3
 }
 
 function shouldSkipDuplicateTitleHeading({

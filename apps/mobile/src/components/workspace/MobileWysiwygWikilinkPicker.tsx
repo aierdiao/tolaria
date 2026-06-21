@@ -21,27 +21,37 @@ import {
 } from './MobileWysiwygWikilinkPickerModel'
 import type {
   NativeWysiwygInlineAutocompleteKind,
-  NativeWysiwygMarkdownBlockPayload,
   NativeWysiwygPlainTextPayload,
+  NativeWysiwygSlashCommandAction,
+  NativeWysiwygSlashCommandPayload,
   NativeWysiwygWikilinkPayload,
 } from './MobileWysiwygWikilinkBridgeModel'
-import type { NativeWysiwygMarkdownBlockAction } from './MobileWysiwygFormatCommands'
 
 const slashCommandLabelKeys = {
+  bulletList: 'editor.formatting.bulletList',
   codeBlock: 'editor.formatting.codeBlock',
   divider: 'editor.formatting.divider',
+  heading1: 'editor.formatting.heading1',
+  heading2: 'editor.formatting.heading2',
+  heading3: 'editor.formatting.heading3',
+  heading4: 'editor.formatting.heading4',
+  heading5: 'editor.formatting.heading5',
+  heading6: 'editor.formatting.heading6',
   mathBlock: 'editor.formatting.mathBlock',
   mermaid: 'editor.formatting.mermaid',
+  orderedList: 'editor.formatting.orderedList',
+  quote: 'editor.formatting.quote',
   table: 'editor.formatting.table',
+  taskList: 'editor.formatting.taskList',
   whiteboard: 'editor.formatting.whiteboard',
-} as const satisfies Record<NativeWysiwygMarkdownBlockAction, Parameters<typeof mobileText>[0]>
+} as const satisfies Record<NativeWysiwygSlashCommandAction, Parameters<typeof mobileText>[0]>
 
 type MobileWysiwygWikilinkPickerProps = {
   initialQuery?: string
   kind?: NativeWysiwygInlineAutocompleteKind
   notes: MobileNote[]
   onClose: () => void
-  onSelectMarkdownBlock: (payload: NativeWysiwygMarkdownBlockPayload) => void
+  onSelectMarkdownBlock: (payload: NativeWysiwygSlashCommandPayload) => void
   onSelect: (payload: NativeWysiwygWikilinkPayload) => void
   onSelectEmoji: (payload: NativeWysiwygPlainTextPayload) => void
   sourceNote?: MobileNote | null
@@ -168,7 +178,7 @@ function pickerHasSuggestions({
   return suggestions.length > 0
 }
 
-function slashCommandLabel(action: NativeWysiwygMarkdownBlockAction): string {
+function slashCommandLabel(action: NativeWysiwygSlashCommandAction): string {
   return mobileText(slashCommandLabelKeys[action])
 }
 

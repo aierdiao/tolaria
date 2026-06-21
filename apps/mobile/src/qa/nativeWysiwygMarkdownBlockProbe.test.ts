@@ -6,6 +6,7 @@ import {
   nativeWysiwygMarkdownBlockProbeEnabled,
   nativeWysiwygMarkdownBlockProbePlainTextPayload,
   nativeWysiwygMarkdownBlockProbePayloads,
+  nativeWysiwygMarkdownBlockProbeSlashCommandJson,
   nativeWysiwygMarkdownBlockProbeTableGrowthJson,
   nativeWysiwygMarkdownBlockProof,
   nativeWysiwygMarkdownBlockStructuredCodeBlock,
@@ -86,6 +87,14 @@ describe('native WYSIWYG markdown block probe', () => {
         message: 'Native WYSIWYG Mermaid insertion saves as desktop fenced-diagram markdown',
       },
       {
+        id: 'editor.wysiwyg.markdownBlocks.slashHeading',
+        message: 'Native WYSIWYG heading slash-command transforms save as desktop heading markdown',
+      },
+      {
+        id: 'editor.wysiwyg.markdownBlocks.slashTaskList',
+        message: 'Native WYSIWYG task-list slash-command transforms save as desktop task-list markdown',
+      },
+      {
         id: 'editor.wysiwyg.markdownBlocks.table',
         message: 'Native WYSIWYG table insertion saves as desktop markdown table source lines',
       },
@@ -156,6 +165,27 @@ describe('native WYSIWYG markdown block probe', () => {
     expect(JSON.stringify(grownJson)).toContain('Detail')
   })
 
+  it('adds desktop text-block slash-command transforms to the native probe document', () => {
+    const json = nativeWysiwygMarkdownBlockProbeSlashCommandJson(documentNode(sourceParagraph(['Intro'])))
+
+    expect(json).toMatchObject(documentNode(
+      sourceParagraph(['Intro']),
+      {
+        attrs: { level: 2 },
+        content: textNodes('Insert', ' ', 'later'),
+        type: 'heading',
+      },
+      {
+        content: [{
+          attrs: { checked: false },
+          content: [{ content: textNodes('Ship', ' ', 'later'), type: 'paragraph' }],
+          type: 'taskItem',
+        }],
+        type: 'taskList',
+      },
+    ))
+  })
+
   it('detects the native QA query flag', () => {
     expect(nativeWysiwygMarkdownBlockProbeEnabled(new globalThis.URLSearchParams('wysiwygMarkdownBlockProbe=1'))).toBe(true)
     expect(nativeWysiwygMarkdownBlockProbeEnabled(new globalThis.URLSearchParams('wysiwygMarkdownBlockProbe=0'))).toBe(false)
@@ -179,6 +209,8 @@ function expectPassingMarkdownBlockProof(
     mathBlockRendered: true,
     mermaidSaved: true,
     plainTextSaved: true,
+    slashHeadingSaved: true,
+    slashTaskListSaved: true,
     tableGrowthSaved: true,
     tableSaved: true,
     tableStructured: true,
@@ -218,6 +250,10 @@ function sourceParagraph(lines: string[]) {
   }
 }
 
+function textNodes(...texts: string[]) {
+  return texts.map((text) => ({ text, type: 'text' }))
+}
+
 function markdownBlockProofContent({
   divider = true,
   frontmatter = false,
@@ -246,6 +282,10 @@ function markdownBlockProofContent({
     'flowchart TD',
     '    edit["Switch to the raw editor to edit"]',
     '```',
+    '',
+    '## Insert later',
+    '',
+    '- [ ] Ship later',
     '',
     '| Column |  | Value |',
     '| --- | --- | --- |',

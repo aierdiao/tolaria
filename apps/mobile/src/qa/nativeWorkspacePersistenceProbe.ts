@@ -5,6 +5,7 @@ export type NativeWorkspacePersistenceProof = {
   bulkEditHydrated: boolean
   changedNoteTypeHydrated: boolean
   createdNoteHydrated: boolean
+  createdTitleLessNoteHydrated: boolean
   deletedNoteRemoved: boolean
   deletedTypeDefinitionRemoved: boolean
   deletedViewRemoved: boolean
@@ -83,6 +84,7 @@ export function assertNativeWorkspacePersistenceProofs(
   return [
     proofFailure(latest.persistedToNativeRepository, 'workspace.persistence.native', 'Workspace writes ran through the native Expo filesystem repository'),
     proofFailure(latest.createdNoteHydrated, 'workspace.persistence.createNote', 'Created notes rehydrate from the native vault snapshot'),
+    proofFailure(latest.createdTitleLessNoteHydrated, 'workspace.persistence.createNote.titleLess', 'Title-less typed notes rehydrate from native filesystem writes without title frontmatter'),
     proofFailure(latest.movedNoteContentPreserved, 'workspace.persistence.moveNote', 'Saved and moved note content is read back from the native repository'),
     proofFailure(latest.renamedNoteFileHydrated, 'workspace.persistence.renameNoteFile', 'Explicit note filename renames and inbound wikilink rewrites rehydrate from native filesystem writes'),
     proofFailure(latest.deletedNoteRemoved, 'workspace.persistence.deleteNote', 'Deleted notes are absent from native filesystem snapshots after reducer-generated delete writes'),
@@ -183,6 +185,7 @@ const workspacePersistenceProofKeys = [
   'bulkEditHydrated',
   'changedNoteTypeHydrated',
   'createdNoteHydrated',
+  'createdTitleLessNoteHydrated',
   'deletedNoteRemoved',
   'deletedTypeDefinitionRemoved',
   'deletedViewRemoved',

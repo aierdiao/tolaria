@@ -5,10 +5,18 @@ import { openMobileNoteFile } from '../workspace/mobileNoteFileOpen'
 import { buildMobileFilePathForNote } from '../workspace/mobileNoteFilePath'
 import { revealMobileNoteFile } from '../workspace/mobileNoteFileReveal'
 import { exportMobileNoteAsPdf } from '../workspace/mobilePdfExport'
-import { toggleMobileNoteWidth } from '../workspace/mobileNoteWidth'
 import type { MobileWorkspaceEdit } from '../workspace/mobileWorkspaceEditing'
 import type { ReadOnlyWorkspaceRequest } from '../workspace/readOnlyWorkspaceRepository'
 import { tabletWorkspaceBulkNoteActions } from './tabletWorkspaceBulkActions'
+import {
+  deleteSelectedNoteEdit,
+  editorContentUpdateEdit,
+  setArchivedEdit,
+  setDefaultNoteWidthEdit,
+  setOrganizedEdit,
+  toggleFavoriteEdit,
+  toggleNoteWidthEdit,
+} from './tabletWorkspaceEditorEditActions'
 
 type ApplyWorkspaceEdit = (edit: MobileWorkspaceEdit) => void
 type EditorActionContext = {
@@ -44,7 +52,7 @@ export function editorWorkspaceActions({
       copyEditorClipboardText(editorClipboardInput(context, 'filePath'))
     },
     onDeleteNote: () => {
-      if (selectedNote) applyEdit({ noteId: selectedNote.id, type: 'deleteNote' })
+      applyOptionalEdit(applyEdit, deleteSelectedNoteEdit(selectedNote))
     },
     onExportNoteAsPdf: () => {
       void exportMobileNoteAsPdf(selectedNote).catch((error) => {
@@ -68,27 +76,22 @@ export function editorWorkspaceActions({
       })
     },
     onSetArchived: (archived: boolean) => {
-      if (selectedNote) applyEdit({ archived, noteId: selectedNote.id, type: 'setArchived' })
+      applyOptionalEdit(applyEdit, setArchivedEdit(selectedNote, archived))
     },
     onSetDefaultNoteWidth: (mode: MobileNoteWidth) => {
-      applyEdit({ mode, type: 'setDefaultNoteWidth' })
+      applyEdit(setDefaultNoteWidthEdit(mode))
     },
     onSetOrganized: (organized: boolean) => {
-      if (selectedNote) applyEdit({ noteId: selectedNote.id, organized, type: 'setOrganized' })
+      applyOptionalEdit(applyEdit, setOrganizedEdit(selectedNote, organized))
     },
     onToggleFavorite: () => {
-      if (selectedNote) applyEdit({ noteId: selectedNote.id, type: 'toggleFavorite' })
+      applyOptionalEdit(applyEdit, toggleFavoriteEdit(selectedNote))
     },
     onToggleNoteWidth: () => {
-      if (selectedNote) applyEdit({
-        key: '_width',
-        noteId: selectedNote.id,
-        type: 'updateProperty',
-        value: toggleMobileNoteWidth(selectedNote.noteWidth),
-      })
+      applyOptionalEdit(applyEdit, toggleNoteWidthEdit(selectedNote))
     },
     onUpdateNoteContent: (noteId: string, content: string) => {
-      applyEdit(editorContentUpdate(workspaceSnapshot, noteId, content))
+      applyOptionalEdit(applyEdit, editorContentUpdateEdit(workspaceSnapshot, noteId, content))
     },
     ...tabletWorkspaceBulkNoteActions(applyEdit),
   }
@@ -126,17 +129,6 @@ function copyEditorClipboardText({ label, source, text }: EditorClipboardInput) 
   })
 }
 
-function editorContentUpdate(
-  snapshot: MobileWorkspaceSnapshot,
-  noteId: string,
-  content: string,
-): MobileWorkspaceEdit {
-  const note = workspaceNotes(snapshot).find((candidate) => candidate.id === noteId)
-  return note?.fileKind === 'text'
-    ? { content, noteId, type: 'updateTextFileContent' }
-    : { content, noteId, type: 'updateNoteContent' }
-}
-
-function workspaceNotes(snapshot: MobileWorkspaceSnapshot): MobileNote[] {
-  return snapshot.allNotes ?? snapshot.notes
+function applyOptionalEdit(applyEdit: ApplyWorkspaceEdit, edit: MobileWorkspaceEdit | null) {
+  if (edit) applyEdit(edit)
 }

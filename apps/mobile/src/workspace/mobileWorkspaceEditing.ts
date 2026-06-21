@@ -126,7 +126,7 @@ export type MobileWorkspaceEdit =
   | { key: FrontmatterKey; noteId: NoteId; value: MobilePropertyValue; type: 'updateProperty' }
   | { key: FrontmatterKey; noteId: NoteId; type: 'deleteProperty' }
   | { key: FrontmatterKey; noteId: NoteId; targetRef?: WikilinkRef; targetTitle: NoteTitle; type: 'addRelationship' }
-  | { defaults?: MobileCreateNoteDefaults; key: FrontmatterKey; sourceNoteId: NoteId; targetTitle: NoteTitle; type: 'createRelationshipTarget' }
+  | { defaults?: MobileCreateNoteDefaults; key: FrontmatterKey; sourceNoteId: NoteId; targetRef?: WikilinkRef; targetTitle: NoteTitle; type: 'createRelationshipTarget' }
   | { key: FrontmatterKey; noteId: NoteId; ref: WikilinkRef; type: 'removeRelationship' }
   | { noteId: NoteId; type: 'changeNoteType'; value: NoteTitle }
   | { folderPath: FolderPath; noteId: NoteId; type: 'moveNoteToFolder' }
@@ -852,7 +852,7 @@ function createRelationshipTarget(
   const relationshipKey = edit.key.trim()
   if (!sourceNote?.rawContent || !targetTitle || !relationshipKey) return { snapshot, writes: [] }
 
-  const explicitTarget = parseMobileWikilink(targetTitle)?.target
+  const explicitTarget = relationshipTargetWikilinkTarget(edit.targetRef) ?? relationshipTargetWikilinkTarget(targetTitle)
   const existingTargetNote = explicitTarget
     ? mobileNoteForWikilinkTarget(workspaceNotePool(snapshot), explicitTarget)
     : null
@@ -873,6 +873,11 @@ function createRelationshipTarget(
     sourceNote,
     targetTitle,
   })
+}
+
+function relationshipTargetWikilinkTarget(value: string | undefined): WikilinkTarget | null {
+  const target = parseMobileWikilink(value ?? '')?.target.trim()
+  return target || null
 }
 
 function createNewRelationshipTarget({

@@ -3,12 +3,20 @@ import {
   assertNativeTableOfContentsProofs,
   formatNativeTableOfContentsFailures,
   nativeTableOfContentsLogLine,
+  nativeTableOfContentsProbeContent,
   nativeTableOfContentsProbeEnabled,
   nativeTableOfContentsScrollProof,
   parseNativeTableOfContentsProofs,
 } from './nativeTableOfContentsProbe'
 
 describe('native table of contents probe', () => {
+  it('keeps the target heading tall but inside the rendered block budget', () => {
+    const contentBeforeTarget = nativeTableOfContentsProbeContent().split('## Target Section')[0] ?? ''
+
+    expect(contentBeforeTarget.match(/^Paragraph \d+/gmu)?.length).toBe(8)
+    expect(contentBeforeTarget.length).toBeGreaterThan(2800)
+  })
+
   it('builds a passing proof from native scroll positions', () => {
     const proof = nativeTableOfContentsScrollProof({
       afterY: 184,

@@ -7,27 +7,51 @@ import { searchEmojis, type EmojiEntry } from '../../../../../src/utils/emoji'
 import type { MobileNote } from '../../workspace/mobileWorkspaceModel'
 import type {
   NativeWysiwygInlineAutocompleteKind,
-  NativeWysiwygMarkdownBlockPayload,
   NativeWysiwygPlainTextPayload,
+  NativeWysiwygSlashCommandAction,
+  NativeWysiwygSlashCommandPayload,
   NativeWysiwygWikilinkPayload,
 } from './MobileWysiwygWikilinkBridgeModel'
-import {
-  nativeWysiwygMarkdownBlockActions,
-  type NativeWysiwygMarkdownBlockAction,
-} from './MobileWysiwygFormatCommands'
+import { nativeWysiwygMarkdownBlockActions } from './MobileWysiwygFormatCommands'
 
 const EMOJI_SHORTCODE_RESULT_LIMIT = 80
 const slashCommandKeywords = {
+  bulletList: ['bullet', 'bulleted', 'list', 'ul'],
   codeBlock: ['code', 'fence', 'snippet'],
   divider: ['divider', 'horizontal', 'rule', 'hr'],
+  heading1: ['heading', 'h1', 'title'],
+  heading2: ['heading', 'h2', 'subtitle'],
+  heading3: ['heading', 'h3'],
+  heading4: ['heading', 'h4'],
+  heading5: ['heading', 'h5'],
+  heading6: ['heading', 'h6'],
   mathBlock: ['math', 'equation', 'latex', 'formula'],
   mermaid: ['mermaid', 'diagram', 'flowchart', 'graph'],
+  orderedList: ['numbered', 'ordered', 'list', 'ol'],
+  quote: ['quote', 'blockquote'],
   table: ['table', 'grid'],
+  taskList: ['task', 'checklist', 'todo', 'list'],
   whiteboard: ['whiteboard', 'tldraw', 'drawing', 'canvas'],
-} as const satisfies Record<NativeWysiwygMarkdownBlockAction, readonly string[]>
+} as const satisfies Record<NativeWysiwygSlashCommandAction, readonly string[]>
+const nativeWysiwygTextBlockSlashCommandActions = [
+  'heading1',
+  'heading2',
+  'heading3',
+  'heading4',
+  'heading5',
+  'heading6',
+  'bulletList',
+  'orderedList',
+  'taskList',
+  'quote',
+] as const satisfies readonly NativeWysiwygSlashCommandAction[]
+const nativeWysiwygSlashCommandActions = [
+  ...nativeWysiwygTextBlockSlashCommandActions,
+  ...nativeWysiwygMarkdownBlockActions,
+] as const satisfies readonly NativeWysiwygSlashCommandAction[]
 
 export type MobileWysiwygSlashCommandSuggestion = {
-  action: NativeWysiwygMarkdownBlockAction
+  action: NativeWysiwygSlashCommandAction
   keywords: readonly string[]
 }
 
@@ -57,7 +81,7 @@ export function mobileWysiwygEmojiPickerSuggestions(query: string): EmojiEntry[]
 
 export function mobileWysiwygSlashCommandPickerSuggestions(query: string): MobileWysiwygSlashCommandSuggestion[] {
   const normalizedQuery = query.trim().toLowerCase()
-  const suggestions = nativeWysiwygMarkdownBlockActions.map((action) => ({
+  const suggestions = nativeWysiwygSlashCommandActions.map((action) => ({
     action,
     keywords: slashCommandKeywords[action],
   }))
@@ -73,8 +97,8 @@ export function mobileWysiwygEmojiPayloadForEntry(
 }
 
 export function mobileWysiwygSlashCommandPayloadForAction(
-  action: NativeWysiwygMarkdownBlockAction,
-): NativeWysiwygMarkdownBlockPayload {
+  action: NativeWysiwygSlashCommandAction,
+): NativeWysiwygSlashCommandPayload {
   return { action }
 }
 

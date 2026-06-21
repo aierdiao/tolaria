@@ -1,4 +1,5 @@
 import type { MobileNote } from './mobileWorkspaceModel'
+import { isMobileMarkdownActionNote, mobileNoteActionMode } from './mobileNoteActionMode'
 
 type TextFileContent = string
 
@@ -12,13 +13,13 @@ export function applyMobileTextFileContentEdit(
   note: MobileNote,
   edit: MobileTextFileContentEditInput,
 ): MobileNote {
-  if (note.fileKind !== 'text') return note
+  if (mobileNoteActionMode(note) !== 'text-file') return note
   const rawContent = edit.type === 'hydrateTextFileContent' ? edit.rawContent : edit.content
   return mobileTextFileNoteWithContent(note, rawContent)
 }
 
 export function canApplyMobileMarkdownEdit(note: Pick<MobileNote, 'fileKind'>): boolean {
-  return (note.fileKind ?? 'markdown') === 'markdown'
+  return isMobileMarkdownActionNote(note)
 }
 
 export function isMobileTextFileContentEdit(edit: { type: string }): edit is MobileTextFileContentEditInput {

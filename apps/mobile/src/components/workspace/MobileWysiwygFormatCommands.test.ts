@@ -25,7 +25,6 @@ describe('native WYSIWYG format commands', () => {
     ['heading6', 'toggleHeading', [6]],
     ['highlight', 'toggleHighlight', [mobileColors.yellowSoft]],
     ['indent', 'sink', []],
-    ['link', 'setLink', ['https://']],
     ['outdent', 'lift', []],
     ['tableAddColumnAfter', 'addColumnAfter', []],
     ['tableAddRowAfter', 'addRowAfter', []],
@@ -65,7 +64,7 @@ describe('native WYSIWYG format commands', () => {
     expect(nativeWysiwygFormattingActions).toContain('wikilink')
   })
 
-  it.each(['attachment', 'pastePlainText'] as const)('keeps %s visible as a native editor-side action without mapping it to a TenTap command', (action) => {
+  it.each(['attachment', 'link', 'pastePlainText'] as const)('keeps %s visible as a native editor-side action without mapping it to a TenTap command', (action) => {
     const editor = fakeEditor()
 
     applyNativeWysiwygFormat(editor, action)

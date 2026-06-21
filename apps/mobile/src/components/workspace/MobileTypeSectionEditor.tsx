@@ -36,7 +36,7 @@ type MobileTypeSectionEditorProps = {
   sortPropertyOptions: string[]
   template: string
   typeIcon: string
-  tone: MobileTone
+  tone: string
   typeName: string
   typeRenameName: string
   visible: boolean

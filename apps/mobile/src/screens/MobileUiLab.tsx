@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { Linking, useWindowDimensions } from 'react-native'
 import { PhoneWorkspace, type PhoneWorkspaceState } from './PhoneWorkspace'
 import { TabletWorkspace } from './TabletWorkspace'
@@ -28,6 +28,9 @@ import {
   nativeWysiwygInputTransformProbeEnabled,
 } from '../qa/nativeWysiwygInputTransformProbe'
 import {
+  nativeWysiwygExternalLinkProbeEnabled,
+} from '../qa/nativeWysiwygExternalLinkProbe'
+import {
   nativeWysiwygWikilinkInsertProbeEnabled,
 } from '../qa/nativeWysiwygWikilinkInsertProbe'
 import {
@@ -54,6 +57,14 @@ import {
   nativeTableOfContentsProbeTitle,
   type NativeTableOfContentsProof,
 } from '../qa/nativeTableOfContentsProbe'
+import {
+  nativeMobileActionAdapterLogLine,
+  nativeMobileActionAdapterProbeEnabled,
+  nativeMobileActionAdapterProof,
+} from '../qa/nativeMobileActionAdapterProbe'
+import {
+  nativeMobileCommandPaletteProbeEnabled,
+} from '../qa/nativeMobileCommandPaletteProbe'
 import { setMobileLayoutMetricSinkUrl } from '../qa/mobileLayoutProbe'
 import type { MobileNote, MobileWorkspaceSnapshot } from '../workspace/mobileWorkspaceModel'
 import {
@@ -85,6 +96,8 @@ export function MobileUiLab() {
   )
   const qa = mobileUiQaFlags(searchParams, { wysiwygPersistenceProbe })
   const metricSinkUrl = qa.layoutProbe ? searchParams.get('metricSink') : null
+  const actionAdapterProbeRunKey = searchParams.get('qaRun') ?? 'interactive'
+  const actionAdapterProbeLastRunKey = useRef<string | null>(null)
   const baseSnapshot = repository.readSnapshot(repositoryRequest)
   const snapshot = mobileSnapshotForProbes(baseSnapshot, {
     tableOfContentsProbe: qa.tableOfContentsProbe,
@@ -113,6 +126,20 @@ export function MobileUiLab() {
     return () => setMobileLayoutMetricSinkUrl(null)
   }, [metricSinkUrl])
 
+  useEffect(() => {
+    if (!qa.mobileActionAdapterProbe) return
+    if (actionAdapterProbeLastRunKey.current === actionAdapterProbeRunKey) return
+
+    actionAdapterProbeLastRunKey.current = actionAdapterProbeRunKey
+    void nativeMobileActionAdapterProof({ repositoryRequest, snapshot })
+      .then((proof) => {
+        console.info(nativeMobileActionAdapterLogLine(proof))
+      })
+      .catch((error) => {
+        console.warn('[mobile-action-adapter-probe] Failed to collect proof:', error)
+      })
+  }, [actionAdapterProbeRunKey, qa.mobileActionAdapterProbe, repositoryRequest, snapshot])
+
   if (isWideEnoughForTablet) {
     return (
       <TabletWorkspace
@@ -120,6 +147,7 @@ export function MobileUiLab() {
         forceDesktopPanels={qa.forceDesktopPanels}
         initialEditorEditing={qa.initialEditorEditing}
         initialEditorEditingMode={qa.initialEditorEditingMode}
+        commandPaletteProbe={qa.mobileCommandPaletteProbe}
         layoutProbe={qa.layoutProbe}
         onOpenNativeVault={handleOpenNativeVault}
         repository={repository}
@@ -130,6 +158,7 @@ export function MobileUiLab() {
         tableOfContentsProbe={qa.tableOfContentsProbe}
         onTableOfContentsScrollProof={qa.tableOfContentsProbe ? handleTableOfContentsScrollProof : undefined}
         wysiwygAutocompleteProbe={qa.wysiwygAutocompleteProbe}
+        wysiwygExternalLinkProbe={qa.wysiwygExternalLinkProbe}
         wysiwygFormatCommandProbe={qa.wysiwygFormatCommandProbe}
         wysiwygInputTransformProbe={qa.wysiwygInputTransformProbe}
         wysiwygMarkdownBlockProbe={qa.wysiwygMarkdownBlockProbe}
@@ -145,6 +174,7 @@ export function MobileUiLab() {
       key={workspaceKey}
       initialEditorEditing={qa.initialEditorEditing}
       initialEditorEditingMode={qa.initialEditorEditingMode}
+      commandPaletteProbe={qa.mobileCommandPaletteProbe}
       initialState={currentPhoneState(searchParams)}
       layoutProbe={qa.layoutProbe}
       onOpenNativeVault={handleOpenNativeVault}
@@ -154,6 +184,7 @@ export function MobileUiLab() {
       sourceSelectionProbe={qa.sourceSelectionProbe}
       snapshot={snapshot}
       wysiwygAutocompleteProbe={qa.wysiwygAutocompleteProbe}
+      wysiwygExternalLinkProbe={qa.wysiwygExternalLinkProbe}
       wysiwygFormatCommandProbe={qa.wysiwygFormatCommandProbe}
       wysiwygInputTransformProbe={qa.wysiwygInputTransformProbe}
       wysiwygMarkdownBlockProbe={qa.wysiwygMarkdownBlockProbe}
@@ -203,10 +234,13 @@ function mobileUiQaFlags(
     forceDesktopPanels: tabletPanelsMode(searchParams) === 'all',
     initialEditorEditing,
     initialEditorEditingMode,
+    mobileCommandPaletteProbe: nativeMobileCommandPaletteProbeEnabled(searchParams),
     layoutProbe: layoutProbeEnabled(searchParams),
+    mobileActionAdapterProbe: nativeMobileActionAdapterProbeEnabled(searchParams),
     sourceSelectionProbe: nativeSourceSelectionProbeEnabled(searchParams),
     tableOfContentsProbe: nativeTableOfContentsProbeEnabled(searchParams),
     wysiwygAutocompleteProbe: nativeWysiwygAutocompleteProbeEnabled(searchParams),
+    wysiwygExternalLinkProbe: nativeWysiwygExternalLinkProbeEnabled(searchParams),
     wysiwygFormatCommandProbe: nativeWysiwygFormatCommandProbeEnabled(searchParams),
     wysiwygInputTransformProbe: nativeWysiwygInputTransformProbeEnabled(searchParams),
     wysiwygMarkdownBlockProbe: nativeWysiwygMarkdownBlockProbeEnabled(searchParams),
@@ -346,14 +380,17 @@ function mobileWorkspaceKey({
   initialEditorEditingMode,
   forceDesktopPanels,
   layoutProbe,
+  mobileCommandPaletteProbe,
   qaRun,
   scenarioId,
   snapshot,
   source,
   sourceSelectionProbe,
+  mobileActionAdapterProbe,
   tableOfContentsProbe,
   workspacePersistenceProbe,
   wysiwygAutocompleteProbe,
+  wysiwygExternalLinkProbe,
   wysiwygFormatCommandProbe,
   wysiwygInputTransformProbe,
   wysiwygMarkdownBlockProbe,
@@ -366,14 +403,17 @@ function mobileWorkspaceKey({
   initialEditorEditingMode: string
   forceDesktopPanels: boolean
   layoutProbe: boolean
+  mobileCommandPaletteProbe: boolean
   qaRun: string | null
   scenarioId: string | null
   snapshot: ReturnType<typeof readOnlyWorkspaceRepository.readSnapshot>
   source: ReturnType<typeof currentSnapshotSource>
   sourceSelectionProbe: boolean
+  mobileActionAdapterProbe: boolean
   tableOfContentsProbe: boolean
   workspacePersistenceProbe: boolean
   wysiwygAutocompleteProbe: boolean
+  wysiwygExternalLinkProbe: boolean
   wysiwygFormatCommandProbe: boolean
   wysiwygInputTransformProbe: boolean
   wysiwygMarkdownBlockProbe: boolean
@@ -391,10 +431,13 @@ function mobileWorkspaceKey({
     flagKey(initialEditorEditing, 'raw-editor', 'read-editor'),
     initialEditorEditingMode,
     flagKey(forceDesktopPanels, 'desktop-panels', 'responsive-panels'),
+    flagKey(mobileCommandPaletteProbe, 'mobile-command-palette-probe', 'no-mobile-command-palette-probe'),
     flagKey(sourceSelectionProbe, 'source-selection-probe', 'no-source-selection-probe'),
+    flagKey(mobileActionAdapterProbe, 'mobile-action-adapter-probe', 'no-mobile-action-adapter-probe'),
     flagKey(tableOfContentsProbe, 'table-of-contents-probe', 'no-table-of-contents-probe'),
     flagKey(workspacePersistenceProbe, 'workspace-persistence-probe', 'no-workspace-persistence-probe'),
     flagKey(wysiwygAutocompleteProbe, 'wysiwyg-autocomplete-probe', 'no-wysiwyg-autocomplete-probe'),
+    flagKey(wysiwygExternalLinkProbe, 'wysiwyg-external-link-probe', 'no-wysiwyg-external-link-probe'),
     flagKey(wysiwygFormatCommandProbe, 'wysiwyg-format-command-probe', 'no-wysiwyg-format-command-probe'),
     flagKey(wysiwygInputTransformProbe, 'wysiwyg-input-transform-probe', 'no-wysiwyg-input-transform-probe'),
     flagKey(wysiwygMarkdownBlockProbe, 'wysiwyg-markdown-block-probe', 'no-wysiwyg-markdown-block-probe'),

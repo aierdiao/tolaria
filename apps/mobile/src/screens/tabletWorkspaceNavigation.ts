@@ -24,6 +24,7 @@ import type {
 } from '../components/workspace/MobileWorkspaceSidebar'
 import { mobileNoteListMatchesQuery, normalizedMobileSearchQuery, type MobileNoteListSearchContext } from '../workspace/mobileNoteSearch'
 import { mobileAllNotesFileVisibilityFromVaultConfig } from '../workspace/mobileVaultConfig'
+import { mobileTypeNameFromSidebarLabel } from '../workspace/mobileTypeNames'
 
 export type NoteCount = number
 export type NoteCountText = string
@@ -659,12 +660,13 @@ function typeNameForSelection(
   selection: TabletSidebarItemSelection,
 ) {
   if (selection.typeName) return selection.typeName
-
-  return snapshot.sidebarSections
+  const sidebarTypeName = snapshot.sidebarSections
     .find((section) => section.id === 'types')
     ?.items
     ?.find((item) => item.id === selection.id)
-    ?.typeName ?? null
+    ?.typeName
+
+  return mobileTypeNameFromSidebarLabel(selection.label, sidebarTypeName)
 }
 
 export function filterNotesBySearch(
@@ -691,10 +693,11 @@ function noteBelongsToFolder(note: MobileNote, selection: Extract<TabletSidebarS
 }
 
 function noteMatchesType(note: MobileNote, selection: TabletSidebarItemSelection) {
-  if (selection.typeName) return normalizedLabel(note.type) === normalizedLabel(selection.typeName)
+  const selectionTypeName = mobileTypeNameFromSidebarLabel(selection.label, selection.typeName)
+  if (selectionTypeName) return normalizedLabel(note.type) === normalizedLabel(selectionTypeName)
 
   return normalizedLabel(selection.id) === normalizedLabel(`type-${note.type}`)
-    || normalizedLabel(selection.label).replace(/s$/, '') === normalizedLabel(note.type)
+    || normalizedLabel(selection.label) === normalizedLabel(note.type)
 }
 
 function normalizedLabel(label: SidebarLabel) {

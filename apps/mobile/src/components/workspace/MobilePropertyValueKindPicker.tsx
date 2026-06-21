@@ -3,6 +3,7 @@ import { Text } from '../ui/text'
 import { mobileText } from '../../i18n/mobileText'
 import { mobileColors, mobileRadius, mobileSpace, mobileType } from '../../ui/tokens'
 import type { MobilePropertyValueKind } from '../../workspace/mobilePropertyValues'
+import { mobilePropertyValueKindOptions } from './mobilePropertyValueKindOptions'
 
 export function MobilePropertyValueKindPicker({
   lockedListKind,
@@ -17,7 +18,7 @@ export function MobilePropertyValueKindPicker({
     <View style={styles.kindGroup} testID="workspace-property-kind-picker">
       <Text style={styles.kindLabel}>{mobileText('inspector.properties.valueKind')}</Text>
       <View style={styles.kindOptions}>
-        {propertyValueKindOptions.map((option) => (
+        {mobilePropertyValueKindOptions.map((option) => (
           <PropertyValueKindButton
             disabled={lockedListKind && option.kind !== 'list'}
             key={option.kind}
@@ -187,17 +188,6 @@ function PropertyValueButton({
     </Pressable>
   )
 }
-
-const propertyValueKindOptions: Array<{ kind: MobilePropertyValueKind; labelKey: Parameters<typeof mobileText>[0] }> = [
-  { kind: 'string', labelKey: 'inspector.properties.valueKind.text' },
-  { kind: 'list', labelKey: 'inspector.properties.valueKind.list' },
-  { kind: 'number', labelKey: 'inspector.properties.valueKind.number' },
-  { kind: 'boolean', labelKey: 'inspector.properties.valueKind.boolean' },
-  { kind: 'status', labelKey: 'inspector.properties.valueKind.status' },
-  { kind: 'date', labelKey: 'inspector.properties.valueKind.date' },
-  { kind: 'url', labelKey: 'inspector.properties.valueKind.url' },
-  { kind: 'color', labelKey: 'inspector.properties.valueKind.color' },
-]
 
 const propertyColorOptions = [
   colorOption('gray', mobileColors.textMuted, mobileColors.graySoft),

@@ -15,6 +15,7 @@ import {
   mobileAllNotesFileVisibilityFromVaultConfig,
   mobileDefaultNoteWidthFromVaultConfig,
 } from '../workspace/mobileVaultConfig'
+import { mobileNoteActionMode } from '../workspace/mobileNoteActionMode'
 import { mobileWorkspacePathHistoryEntry } from './tabletWorkspacePathHistory'
 
 type WorkspaceHistoryEdit = MobileWorkspaceEdit
@@ -295,7 +296,9 @@ function noteContentHistoryKind(
 }
 
 function noteContentKind(note: MobileNote): 'binary' | 'markdown' | 'text' {
-  return note.fileKind ?? 'markdown'
+  const actionMode = mobileNoteActionMode(note)
+  if (actionMode === 'binary-file') return 'binary'
+  return actionMode === 'text-file' ? 'text' : 'markdown'
 }
 
 function editableContent(note: MobileNote, snapshot: MobileWorkspaceSnapshot): string | null {

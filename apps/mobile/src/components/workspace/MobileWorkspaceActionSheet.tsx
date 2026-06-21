@@ -57,6 +57,7 @@ import { MobileFavoriteActions, MobileSavedViewActions, MobileTypeSectionActions
 import { MobileWorkspaceSuggestionList } from './MobileWorkspaceSuggestionList'
 import type { MobileWorkspaceSuggestionItem } from './MobileWorkspaceSuggestionList'
 import { chipTone, noteTypeColor, noteTypeSoftColor, statusTone, tagTone } from './mobileWorkspaceTone'
+import { mobileSingleTextFieldSubmitDisabled } from './MobileWorkspaceActionSheetModel'
 
 export type MobileWorkspaceAction =
   | 'addProperty'
@@ -217,7 +218,7 @@ export type MobileWorkspaceActionSheetProps = {
   typeSort: string
   typeTemplate: string
   typeIcon: string
-  typeTone: MobileTone
+  typeTone: string
   typeVisible: boolean
   viewDisplayProperties: string[]
   viewFilters: MobileViewFilterGroup
@@ -227,7 +228,7 @@ export type MobileWorkspaceActionSheetProps = {
   viewPropertyQuery: string
   viewSortPropertyOptions: string[]
   viewSort: string
-  viewTone: MobileTone | null
+  viewTone: string | null
   onTypeDisplayPropertiesChange: (value: string[]) => void
   onTypeNameChange: (value: string) => void
   onTypePropertyQueryChange: (value: string) => void
@@ -250,6 +251,7 @@ export type MobileWorkspaceActionSheetProps = {
 }
 
 type SingleTextFieldConfig = {
+  allowEmptyInput?: boolean
   extraContent?: ReactNode
   inputLabel: string
   inputPlaceholder: string
@@ -434,6 +436,7 @@ function quickOpenCreateLabel(title: string): string {
 
 function SingleTextFieldContent({ config }: { config: SingleTextFieldConfig }) {
   const {
+    allowEmptyInput,
     extraContent,
     inputLabel,
     inputPlaceholder,
@@ -461,7 +464,12 @@ function SingleTextFieldContent({ config }: { config: SingleTextFieldConfig }) {
       <SheetFooter>
         {secondaryAction}
         <MobileButton label={mobileText('common.cancel')} variant="ghost" onPress={onCancel} />
-        <MobileButton disabled={submitDisabled || inputValue.trim().length === 0} label={submitLabel} variant="primary" onPress={onSubmit} />
+        <MobileButton
+          disabled={mobileSingleTextFieldSubmitDisabled({ allowEmptyInput, inputValue, submitDisabled })}
+          label={submitLabel}
+          variant="primary"
+          onPress={onSubmit}
+        />
       </SheetFooter>
     </ScrollView>
   )
@@ -562,6 +570,7 @@ function singleTextFieldConfig(props: MobileWorkspaceActionSheetProps) {
   }
 
   return {
+    allowEmptyInput: true,
     inputLabel: mobileText('command.note.newNote'),
     inputPlaceholder: mobileText('noteList.createNote'),
     inputTestId: 'workspace-create-note-title-input',
