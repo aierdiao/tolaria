@@ -3,6 +3,7 @@ export type MobileMarkdownListKind = 'bullet' | 'ordered' | 'task'
 export type MobileMarkdownListItem = {
   checked?: boolean
   depth: number
+  hardBreak?: boolean
   kind?: MobileMarkdownListKind
   markerNumber?: number
   paragraphs?: string[]
@@ -99,7 +100,9 @@ function listItemHtml(
 }
 
 function listItemParagraphsHtml(item: MobileMarkdownListItem, inlineHtml: InlineHtmlRenderer): string {
-  return [item.text, ...(item.paragraphs ?? [])]
-    .map((paragraph) => `<p>${inlineHtml(paragraph)}</p>`)
-    .join('')
+  const [firstParagraph, ...rest] = [item.text, ...(item.paragraphs ?? [])]
+  return [
+    `<p>${inlineHtml(firstParagraph ?? '')}${item.hardBreak ? '<br>' : ''}</p>`,
+    ...rest.map((paragraph) => `<p>${inlineHtml(paragraph)}</p>`),
+  ].join('')
 }

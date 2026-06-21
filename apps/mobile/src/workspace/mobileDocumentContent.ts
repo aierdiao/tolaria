@@ -399,9 +399,13 @@ function readListContinuationSourceBlock(lines: MarkdownLines, startIndex: numbe
 
 function readListHardBreakSourceBlock(lines: MarkdownLines, startIndex: number): ReadHtmlBlockResult | null {
   const source = readListSourceLines(lines, startIndex)
-  if (!source?.hasHardBreak) return null
+  if (!source?.hasHardBreak || !hasUnsupportedListHardBreakSource(source)) return null
 
   return sourceLinesParagraphBlock(source.lines, source.nextIndex)
+}
+
+function hasUnsupportedListHardBreakSource(source: ReadListSourceLinesResult): boolean {
+  return source.lines.some(isBackslashListHardBreakSourceLine)
 }
 
 function hasUnsupportedListContinuationSource(source: ReadListSourceLinesResult): boolean {
@@ -569,18 +573,33 @@ function isBlockStart(lines: MarkdownLines, index: number): boolean {
 function listLine(line: MarkdownLine): (MobileMarkdownListItem & { kind: ListKind }) | null {
   const task = line.match(/^(\s*)[-*+]\s+\[([ xX])\](?:\s+(.*))?$/u)
   if (task) {
-    return { checked: task[2].toLowerCase() === 'x', depth: listDepth(task[1]), kind: 'task', text: task[3] ?? '' }
+    return {
+      ...listItemText(task[3] ?? ''),
+      checked: task[2].toLowerCase() === 'x',
+      depth: listDepth(task[1]),
+      kind: 'task',
+    }
   }
 
   const bullet = line.match(/^(\s*)[-*+](?:\s+(.*))?$/u)
-  if (bullet) return { depth: listDepth(bullet[1]), kind: 'bullet', text: bullet[2] ?? '' }
+  if (bullet) return { ...listItemText(bullet[2] ?? ''), depth: listDepth(bullet[1]), kind: 'bullet' }
 
   const ordered = line.match(/^(\s*)(\d+)[.)](?:\s+(.*))?$/u)
   if (ordered) {
-    return { depth: listDepth(ordered[1]), kind: 'ordered', markerNumber: Number(ordered[2]), text: ordered[3] ?? '' }
+    return {
+      ...listItemText(ordered[3] ?? ''),
+      depth: listDepth(ordered[1]),
+      kind: 'ordered',
+      markerNumber: Number(ordered[2]),
+    }
   }
 
   return null
+}
+
+function listItemText(source: MarkdownLine): Pick<MobileMarkdownListItem, 'hardBreak' | 'text'> {
+  const hardBreak = explicitMarkdownHardBreak(source)
+  return { hardBreak: hardBreak.break, text: hardBreak.text }
 }
 
 function isIndentedListSourceLine(line: MarkdownLine): boolean {
@@ -598,6 +617,11 @@ function isListContinuationSourceLine(line: MarkdownLine, baseIndent: number): b
 function isListHardBreakSourceLine(line: MarkdownLine): boolean {
   const item = listLine(line)
   return Boolean(item && item.text.trim().length > 0 && explicitMarkdownHardBreak(line).break)
+}
+
+function isBackslashListHardBreakSourceLine(line: MarkdownLine): boolean {
+  const item = listLine(line)
+  return Boolean(item && item.text.trim().length > 0 && line.trimEnd().endsWith('\\'))
 }
 
 function isOrderedParenListSourceLine(line: MarkdownLine): boolean {
@@ -1133,7 +1157,7 @@ function serializeTextNode(node: TiptapJsonNode, options: SerializeInlineOptions
 
 function serializeList(node: TiptapJsonNode, kind: ListKind, options: TiptapMarkdownOptions): MarkdownBody {
   const start = numberAttr(node.attrs?.start) ?? 1
-  return (node.content ?? []).map((item, index) => {
+  const items = (node.content ?? []).map((item, index) => {
     if (kind === 'task') {
       const checked = item.attrs?.checked === true ? 'x' : ' '
       return `- [${checked}] ${serializeListItem(item, options)}`
@@ -1141,7 +1165,15 @@ function serializeList(node: TiptapJsonNode, kind: ListKind, options: TiptapMark
 
     const marker = kind === 'ordered' ? `${start + index}.` : '-'
     return `${marker} ${serializeListItem(item, options)}`
-  }).join('\n')
+  })
+  return joinSerializedListItems(items)
+}
+
+function joinSerializedListItems(items: MarkdownLines): MarkdownBody {
+  return items.reduce((markdown, item) => {
+    if (!markdown) return item
+    return `${markdown}${markdown.endsWith('\n') ? '' : '\n'}${item}`
+  }, '')
 }
 
 function serializeListItem(item: TiptapJsonNode, options: TiptapMarkdownOptions): string {
