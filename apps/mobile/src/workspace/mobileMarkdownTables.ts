@@ -4,6 +4,7 @@ export type MobileMarkdownTable = {
   alignments: MobileMarkdownTableAlignment[]
   endLine: number
   headers: string[]
+  indent: string
   key: string
   rows: string[][]
   startLine: number
@@ -19,6 +20,17 @@ type MarkdownTableUpdate = {
 export type MobileMarkdownTableMatch = {
   nextLine: number
   table: MobileMarkdownTable
+}
+
+type ParsedTableStart = {
+  alignments: MobileMarkdownTableAlignment[]
+  headers: string[]
+  indent: string
+}
+
+type ParsedTableBody = {
+  nextLine: number
+  rows: string[][]
 }
 
 export function readMobileMarkdownTables({ markdown }: { markdown: string }): MobileMarkdownTable[] {
@@ -64,6 +76,7 @@ export function updateMobileMarkdownTable({
   const nextSource = mobileMarkdownTableSource({
     alignments: update.alignments ?? table.alignments,
     headers: update.headers,
+    indent: table.indent,
     rows: update.rows,
   })
   return {
@@ -79,21 +92,23 @@ export function updateMobileMarkdownTable({
 export function mobileMarkdownTableSource({
   alignments = [],
   headers,
+  indent = '',
   rows,
 }: {
   alignments?: MobileMarkdownTableAlignment[]
   headers: string[]
+  indent?: string
   rows: string[][]
 }): string {
   const columnCount = normalizedColumnCount({ headers, rows })
   const normalizedHeaders = normalizedCells({ cells: headers, columnCount })
   const normalizedAlignments = normalizedTableAlignments({ alignments, columnCount })
   const normalizedRows = rows.map((cells) => normalizedCells({ cells, columnCount }))
-  return [
+  return indentTableSource([
     tableRowSource({ cells: normalizedHeaders }),
     tableRowSource({ cells: normalizedAlignments.map(tableDividerSource) }),
     ...normalizedRows.map((cells) => tableRowSource({ cells })),
-  ].join('\n')
+  ].join('\n'), indent)
 }
 
 function readMarkdownTableAt({
@@ -103,32 +118,76 @@ function readMarkdownTableAt({
   lineNumber: number
   lines: string[]
 }): MobileMarkdownTableMatch | null {
-  const headers = tableCells({ line: lines[lineNumber] ?? '' })
-  const divider = tableCells({ line: lines[lineNumber + 1] ?? '' })
-  if (!isTableHeader({ cells: headers })) return null
-  if (!isTableDivider({ cells: divider })) return null
-  if (divider.length !== headers.length) return null
+  const start = readTableStart({ lineNumber, lines })
+  if (!start) return null
 
-  const rows: string[][] = []
-  let nextLine = lineNumber + 2
-  while (nextLine < lines.length) {
-    const cells = tableCells({ line: lines[nextLine] ?? '' })
-    if (!isTableBodyRow({ cells })) break
-    rows.push(normalizedCells({ cells, columnCount: headers.length }))
-    nextLine += 1
-  }
+  const body = readTableBody({ columnCount: start.headers.length, lineNumber: lineNumber + 2, lines })
 
   return {
-    nextLine,
+    nextLine: body.nextLine,
     table: {
-      alignments: divider.map(tableAlignment),
-      endLine: nextLine - 1,
-      headers,
+      alignments: start.alignments,
+      endLine: body.nextLine - 1,
+      headers: start.headers,
+      indent: start.indent,
       key: `line:${lineNumber}`,
-      rows,
+      rows: body.rows,
       startLine: lineNumber,
     },
   }
+}
+
+function readTableStart({
+  lineNumber,
+  lines,
+}: {
+  lineNumber: number
+  lines: string[]
+}): ParsedTableStart | null {
+  const headerLine = tableLine({ line: lines[lineNumber] ?? '' })
+  const dividerLine = tableLine({ line: lines[lineNumber + 1] ?? '' })
+  if (!headerLine || !dividerLine) return null
+  if (!isValidTableStart({ dividerLine, headerLine })) return null
+
+  return {
+    alignments: dividerLine.cells.map(tableAlignment),
+    headers: headerLine.cells,
+    indent: headerLine.indent,
+  }
+}
+
+function isValidTableStart({
+  dividerLine,
+  headerLine,
+}: {
+  dividerLine: { cells: string[] }
+  headerLine: { cells: string[] }
+}): boolean {
+  return isTableHeader({ cells: headerLine.cells })
+    && isTableDivider({ cells: dividerLine.cells })
+    && dividerLine.cells.length === headerLine.cells.length
+}
+
+function readTableBody({
+  columnCount,
+  lineNumber,
+  lines,
+}: {
+  columnCount: number
+  lineNumber: number
+  lines: string[]
+}): ParsedTableBody {
+  const rows: string[][] = []
+  let nextLine = lineNumber
+
+  while (nextLine < lines.length) {
+    const bodyLine = tableLine({ line: lines[nextLine] ?? '' })
+    if (!bodyLine || !isTableBodyRow({ cells: bodyLine.cells })) break
+    rows.push(normalizedCells({ cells: bodyLine.cells, columnCount }))
+    nextLine += 1
+  }
+
+  return { nextLine, rows }
 }
 
 function isTableHeader({ cells }: { cells: string[] }): boolean {
@@ -167,6 +226,14 @@ function normalizedTableAlignments({
   return Array.from({ length: columnCount }, (_value, index) => alignments[index] ?? 'default')
 }
 
+function tableLine({ line }: { line: string }): { cells: string[]; indent: string } | null {
+  const sourceLine = sourceTableLine(line)
+  if (!sourceLine) return null
+
+  const cells = tableCells({ line: sourceLine.content })
+  return cells.length > 0 ? { cells, indent: sourceLine.indent } : null
+}
+
 function tableCells({ line }: { line: string }): string[] {
   const row = trimmedOuterPipes({ line })
   if (!row.includes('|')) return []
@@ -202,6 +269,15 @@ function tableDividerSource(alignment: MobileMarkdownTableAlignment): string {
 
 function tableCellSource(cell: string): string {
   return cell.replace(/\r?\n/gu, ' ').replaceAll('|', '\\|').trim()
+}
+
+function indentTableSource(source: string, indent: string): string {
+  return indent ? source.split('\n').map((line) => `${indent}${line}`).join('\n') : source
+}
+
+function sourceTableLine(line: string): { content: string; indent: string } | null {
+  const match = /^( {0,3})(\S.*)$/u.exec(line)
+  return match ? { content: match[2] ?? '', indent: match[1] ?? '' } : null
 }
 
 function tableAlignment(cell: string): MobileMarkdownTableAlignment {

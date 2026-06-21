@@ -22,6 +22,7 @@ describe('mobile markdown tables', () => {
       alignments: ['default', 'default'],
       endLine: 5,
       headers: ['Surface', 'Target'],
+      indent: '',
       key: 'line:2',
       rows: [
         ['Editor', 'Mobile'],
@@ -107,6 +108,54 @@ describe('mobile markdown tables', () => {
     })
   })
 
+  it('preserves non-code leading spaces when updating desktop markdown tables', () => {
+    const content = tableNote({
+      divider: '  | --- | --- | --- |',
+      indent: '  ',
+      row: '  | Editor | BlockNote | TenTap |',
+    })
+
+    const [table] = readMobileMarkdownTables({ markdown: content })
+    expect(table).toMatchObject({
+      headers: ['Surface', 'Desktop', 'Mobile'],
+      indent: '  ',
+      key: 'line:2',
+      rows: [['Editor', 'BlockNote', 'TenTap']],
+    })
+
+    expectUpdatedTable({
+      content,
+      expectedDivider: '  | :--- | --- | :---: |',
+      expectedRow: '  | Editor | BlockNote | Native WYSIWYG |',
+      indent: '  ',
+      update: {
+        alignments: ['left', 'default', 'center'],
+        headers: ['Surface', 'Desktop', 'Mobile'],
+        key: 'line:2',
+        rows: [['Editor', 'BlockNote', 'Native WYSIWYG']],
+      },
+    })
+  })
+
+  it('does not read code-indented table-looking text as a desktop markdown table', () => {
+    const tables = readMobileMarkdownTables({ markdown: [
+      '    | Surface | Target |',
+      '    | --- | --- |',
+      '    | Literal | Code |',
+      '',
+      '| Real | Table |',
+      '| --- | --- |',
+      '| Editor | Mobile |',
+    ].join('\n') })
+
+    expect(tables).toHaveLength(1)
+    expect(tables[0]).toMatchObject({
+      headers: ['Real', 'Table'],
+      key: 'line:4',
+      rows: [['Editor', 'Mobile']],
+    })
+  })
+
   it('serializes new columns with default alignment while preserving existing aligned columns', () => {
     expect(mobileMarkdownTableSource({
       alignments: ['left', 'center'],
@@ -153,11 +202,11 @@ describe('mobile markdown tables', () => {
   })
 })
 
-function tableNote({ divider, row }: { divider: string; row: string }): string {
+function tableNote({ divider, indent = '', row }: { divider: string; indent?: string; row: string }): string {
   return [
     'Intro',
     '',
-    '| Surface | Desktop | Mobile |',
+    `${indent}| Surface | Desktop | Mobile |`,
     divider,
     row,
     '',
@@ -169,11 +218,13 @@ function expectUpdatedTable({
   content,
   expectedDivider,
   expectedRow,
+  indent = '',
   update,
 }: {
   content: string
   expectedDivider: string
   expectedRow: string
+  indent?: string
   update: Parameters<typeof updateMobileMarkdownTable>[0]['update']
 }) {
   const result = updateMobileMarkdownTable({ markdown: content, update })
@@ -181,6 +232,7 @@ function expectUpdatedTable({
   expect(result.updated).toBe(true)
   expect(result.markdown).toBe(tableNote({
     divider: expectedDivider,
+    indent,
     row: expectedRow,
   }))
 }
