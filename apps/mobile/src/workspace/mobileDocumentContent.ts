@@ -358,7 +358,7 @@ function readQuoteParagraphs(lines: MarkdownLines, startIndex: number): ReadQuot
   let quoteMarkers = 0
 
   while (index < lines.length) {
-    const match = lines[index]?.match(/^>\s?(.*)$/)
+    const match = lines[index]?.match(/^ {0,3}>\s?(.*)$/)
     if (!match) break
 
     quoteMarkers += 1

@@ -210,6 +210,19 @@ Updated body.
     expect(html).toBe('<blockquote><p>First quote line<br>Second line</p><p>Follow-up paragraph</p></blockquote>\n<p>Done</p>')
   })
 
+  it('hydrates blockquotes with non-code leading spaces as native quote nodes', () => {
+    const html = mobileMarkdownBodyToTentapHtml('  > First quote line\n  > Second line\n\nDone\n')
+
+    expect(html).toBe('<blockquote><p>First quote line Second line</p></blockquote>\n<p>Done</p>')
+  })
+
+  it('keeps code-indented blockquote markers editable as source until indented code editing is supported', () => {
+    const html = mobileMarkdownBodyToTentapHtml('    > First quote line\n    > Second line\n\nDone\n')
+
+    expect(html).toBe('<p>    &gt; First quote line<br>    &gt; Second line</p>\n<p>Done</p>')
+    expect(html).not.toContain('<blockquote>')
+  })
+
   it('hydrates display math with non-code leading spaces as native TenTap math nodes', () => {
     const html = mobileMarkdownBodyToTentapHtml('  $$\n  x^2\n  $$\n\nDone\n')
 
