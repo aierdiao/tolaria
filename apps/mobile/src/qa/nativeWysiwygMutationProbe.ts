@@ -88,8 +88,8 @@ const mutationIndentedDisplayMathSource = mutationIndentedDisplayMathLines.join(
 const mutationIndentedImageLines = ['    ![](https://example.com/agent.png)'] as const
 const mutationIndentedImageSource = mutationIndentedImageLines.join('\n')
 const mutationIndentedListLines = [
-  '  1. Contextualize: Dump TOC into an LLM.',
-  '  2. Summarize major sections.',
+  '    1. Contextualize: Dump TOC into an LLM.',
+  '    2. Summarize major sections.',
 ] as const
 const mutationIndentedListSource = mutationIndentedListLines.join('\n')
 const mutationIndentedTextLines = [
@@ -280,7 +280,7 @@ export function assertNativeWysiwygMutationProofs(
     proofFailure(latest.htmlCommentSourceSaved, 'editor.wysiwyg.mutation.source.htmlComment', 'Unsupported HTML comment blocks stay as editable desktop markdown source'),
     proofFailure(latest.indentedDisplayMathSourceSaved, 'editor.wysiwyg.mutation.source.indentedDisplayMath', 'Code-indented display math stays as editable desktop markdown source'),
     proofFailure(latest.indentedImageSourceSaved, 'editor.wysiwyg.mutation.source.indentedImage', 'Code-indented markdown images stay as editable desktop markdown source'),
-    proofFailure(latest.indentedListSourceSaved, 'editor.wysiwyg.mutation.source.indentedList', 'Detached indented lists stay as editable desktop markdown source'),
+    proofFailure(latest.indentedListSourceSaved, 'editor.wysiwyg.mutation.source.indentedList', 'Code-indented lists stay as editable desktop markdown source'),
     proofFailure(latest.indentedTextSourceSaved, 'editor.wysiwyg.mutation.source.indentedText', 'Indented text blocks stay as editable desktop markdown source'),
   ].filter((failure): failure is NativeWysiwygMutationAssertionFailure => failure !== null)
 }

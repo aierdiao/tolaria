@@ -362,10 +362,16 @@ Updated body.
     expect(html).not.toContain('<h3>')
   })
 
-  it('keeps detached indented list markers editable as source until nested block editing is supported', () => {
+  it('hydrates list markers with non-code leading spaces as native list nodes', () => {
     const html = mobileMarkdownBodyToTentapHtml('  1. Contextualize: Dump TOC into an LLM.\n  2. Summarize major sections.\n\nDone\n')
 
-    expect(html).toBe('<p>  1. Contextualize: Dump TOC into an LLM.<br>  2. Summarize major sections.</p>\n<p>Done</p>')
+    expect(html).toBe('<ol><li><p>Contextualize: Dump TOC into an LLM.</p></li><li><p>Summarize major sections.</p></li></ol>\n<p>Done</p>')
+  })
+
+  it('keeps code-indented list markers editable as source until indented code editing is supported', () => {
+    const html = mobileMarkdownBodyToTentapHtml('    1. Contextualize: Dump TOC into an LLM.\n    2. Summarize major sections.\n\nDone\n')
+
+    expect(html).toBe('<p>    1. Contextualize: Dump TOC into an LLM.<br>    2. Summarize major sections.</p>\n<p>Done</p>')
     expect(html).not.toContain('<ol>')
   })
 
@@ -714,15 +720,15 @@ Updated body.
     expect(tiptapJsonToMobileMarkdown(document)).toBe(['<!--', '{"fold":true}', '-->'].join('\n'))
   })
 
-  it('keeps detached indented list paragraphs as editable markdown source after native saves', () => {
+  it('keeps code-indented list paragraphs as editable markdown source after native saves', () => {
     const document = paragraphDocument(
-      '  1. Contextualize: Dump TOC into an LLM.',
-      '  2. Summarize major sections.',
+      '    1. Contextualize: Dump TOC into an LLM.',
+      '    2. Summarize major sections.',
     )
 
     expect(tiptapJsonToMobileMarkdown(document)).toBe([
-      '  1. Contextualize: Dump TOC into an LLM.',
-      '  2. Summarize major sections.',
+      '    1. Contextualize: Dump TOC into an LLM.',
+      '    2. Summarize major sections.',
     ].join('\n'))
   })
 

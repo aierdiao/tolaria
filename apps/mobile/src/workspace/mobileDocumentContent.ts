@@ -617,7 +617,7 @@ function listItemText(source: MarkdownLine): Pick<MobileMarkdownListItem, 'hardB
 }
 
 function isIndentedListSourceLine(line: MarkdownLine): boolean {
-  return hasLeadingWhitespace(line) && listLine(line) !== null
+  return isCodeIndentedLine(line) && listLine(line) !== null
 }
 
 function isOutdentedListSourceLine(line: MarkdownLine, baseIndent: number): boolean {
