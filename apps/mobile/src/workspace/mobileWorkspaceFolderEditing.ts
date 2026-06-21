@@ -53,7 +53,7 @@ function createMobileFolder(
   edit: Extract<MobileWorkspaceEdit, { type: 'createFolder' }>,
 ): MobileWorkspaceEditResult {
   const path = mobileFolderChildPath(edit.parentPath, edit.name)
-  if (!path || workspaceFolderPathExists(snapshot, path)) return { snapshot, writes: [] }
+  if (!path || workspacePathExists(snapshot, path)) return { snapshot, writes: [] }
 
   return {
     snapshot: snapshotWithFolderPaths(snapshot, folderPathsWithCreated(workspaceFolderPaths(snapshot), path)),
@@ -69,7 +69,7 @@ function renameMobileFolder(
   const previousPath = normalizedMobileFolderPath(edit.folderPath)
   const nextPath = mobileFolderChildPath(mobileFolderParentPath(previousPath), edit.name)
   if (!previousPath || !nextPath || previousPath === nextPath) return { snapshot, writes: [] }
-  if (!workspaceFolderPathExists(snapshot, previousPath) || workspaceFolderPathExists(snapshot, nextPath)) return { snapshot, writes: [] }
+  if (!workspaceFolderPathExists(snapshot, previousPath) || workspacePathExists(snapshot, nextPath)) return { snapshot, writes: [] }
 
   return renameFolderSubtree(snapshot, previousPath, nextPath, rebuildSnapshot)
 }
@@ -202,6 +202,20 @@ function snapshotWithFolderPaths(
 function workspaceFolderPathExists(snapshot: MobileWorkspaceSnapshot, folderPath: FolderPath): boolean {
   const normalizedPath = normalizedMobileFolderPath(folderPath)
   return workspaceFolderPaths(snapshot).some((path) => normalizedMobileFolderPath(path) === normalizedPath)
+}
+
+function workspacePathExists(snapshot: MobileWorkspaceSnapshot, path: FolderPath): boolean {
+  const normalizedPath = normalizedMobileFolderPath(path)
+  return workspaceFolderPathExists(snapshot, normalizedPath)
+    || workspaceNotePool(snapshot).some((note) => notePathExists(note, normalizedPath))
+}
+
+function notePathExists(note: MobileNote, path: FolderPath): boolean {
+  return noteIdentityPaths(note).some((candidate) => normalizedMobileFolderPath(candidate) === path)
+}
+
+function noteIdentityPaths(note: MobileNote): FolderPath[] {
+  return [note.id, note.path ?? '', noteWritePath(note)]
 }
 
 function workspaceFolderPaths(snapshot: MobileWorkspaceSnapshot): FolderPath[] {
