@@ -184,7 +184,11 @@ function TabletWorkspaceChrome(props: TabletWorkspaceChromeProps) {
         onRegisterEditorCommands={editorCommandRegistry.register}
         onNavigateWikilink={handleNavigateWikilink}
       />
-      <TabletPropertiesPanelHost {...props} gestures={gestures} />
+      <TabletPropertiesPanelHost
+        {...props}
+        gestures={gestures}
+        onFixInvalidFrontmatter={editorCommandRegistry.commands.toggleRawEditor}
+      />
       <WorkspaceActionSheetHost
         {...props}
         suggestionNotes={suggestionNotes}
@@ -199,6 +203,7 @@ type TabletTableOfContentsTargetRequest = MobileTableOfContentsTarget & { reques
 type TabletPanelGestures = ReturnType<typeof useTabletPanelGestures>
 type TabletPanelHostProps = TabletWorkspaceChromeProps & { gestures: TabletPanelGestures }
 type TabletSidebarHostProps = TabletPanelHostProps & { onOpenCommandPalette: () => void }
+type TabletPropertiesPanelHostProps = TabletPanelHostProps & { onFixInvalidFrontmatter?: () => void }
 
 function TabletSidebarHost({
   activeFolderId,
@@ -404,6 +409,8 @@ function TabletPropertiesPanelHost({
   onAddRelationship,
   onDeleteProperty,
   onEditProperty,
+  onFixInvalidFrontmatter,
+  onInitializeProperties,
   onOpenChangeNoteType,
   onOpenCreateTypeWithName,
   onEnterNeighborhood,
@@ -411,7 +418,7 @@ function TabletPropertiesPanelHost({
   onSelectNote,
   selectedNote,
   snapshot,
-}: TabletPanelHostProps) {
+}: TabletPropertiesPanelHostProps) {
   const referenceGroups = useMobileInspectorReferenceGroups(selectedNote, snapshot)
 
   if (!gestures.propertiesVisible) return <SwipeRail edge="right" swipeHandlers={gestures.propertiesRevealSwipe} />
@@ -427,6 +434,8 @@ function TabletPropertiesPanelHost({
         onDeleteProperty={onDeleteProperty}
         onEditProperty={onEditProperty}
         onCreateMissingType={onOpenCreateTypeWithName}
+        onFixInvalidFrontmatter={onFixInvalidFrontmatter}
+        onInitializeProperties={onInitializeProperties}
         onOpenChangeNoteType={onOpenChangeNoteType}
         onEnterNeighborhood={onEnterNeighborhood}
         onSelectNote={onSelectNote}

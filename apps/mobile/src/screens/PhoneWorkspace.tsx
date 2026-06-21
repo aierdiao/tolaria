@@ -88,6 +88,7 @@ export function PhoneWorkspace({
 }) {
   const controller = useTabletWorkspaceController({ repository, repositoryRequest, snapshot })
   const { phoneState, previousPhoneState, setPhoneState } = usePhoneState(initialState)
+  const [sourceModeRequest, setSourceModeRequest] = useState(0)
   const { width } = useWindowDimensions()
   const dragPreview = usePhoneDragPreview(phoneState, width)
   const editorCommandRegistry = useMobileEditorCommandRegistry()
@@ -100,6 +101,10 @@ export function PhoneWorkspace({
     if (noteId) controller.onSelectNote(noteId)
     setPhoneState('editor')
   }, [controller, setPhoneState])
+  const openSourceEditor = useCallback(() => {
+    setSourceModeRequest((current) => current + 1)
+    setPhoneState('editor')
+  }, [setPhoneState])
   const openNeighborhoodList = useCallback((noteId: string) => {
     controller.onEnterNeighborhood(noteId)
     setPhoneState('list')
@@ -145,11 +150,13 @@ export function PhoneWorkspace({
     initialEditorEditing,
     initialEditorEditingMode,
     openEditor,
+    openSourceEditor,
     openCommandPalette: commandPalette.open,
     openList,
     openProperties,
     openSidebar,
     suggestionNotes,
+    sourceModeRequest,
   })
   return (
     <View {...phoneLayoutProbe.probe('phone.root')} style={styles.root}>
@@ -166,6 +173,7 @@ export function PhoneWorkspace({
           initialEditorEditingMode={initialEditorEditingMode}
           layoutProbe={layoutProbe}
           openEditor={openEditor}
+          openSourceEditor={openSourceEditor}
           openCommandPalette={commandPalette.open}
           openList={openList}
           openProperties={openProperties}
@@ -175,6 +183,7 @@ export function PhoneWorkspace({
           phoneSwipePreview={dragPreview}
           onRegisterEditorCommands={editorCommandRegistry.register}
           sourceIdleSave={sourceIdleSave}
+          sourceModeRequest={sourceModeRequest}
           sourceSelectionProbe={sourceSelectionProbe}
           suggestionNotes={suggestionNotes}
           tableOfContentsTarget={tableOfContentsTarget}
@@ -385,22 +394,26 @@ function phoneWorkspaceDragPreview({
   initialEditorEditing,
   initialEditorEditingMode,
   openEditor,
+  openSourceEditor,
   openCommandPalette,
   openList,
   openProperties,
   openSidebar,
   suggestionNotes,
+  sourceModeRequest,
 }: {
   controller: PhoneWorkspaceController
   dragPreview: PhoneSwipePreview
   initialEditorEditing: boolean
   initialEditorEditingMode: EditorEditingMode
   openEditor: (noteId?: string) => void
+  openSourceEditor: () => void
   openCommandPalette: () => void
   openList: () => void
   openProperties: () => void
   openSidebar: () => void
   suggestionNotes: MobileNote[]
+  sourceModeRequest: number
 }): ReactNode {
   if (!dragPreview.previewState) return null
 
@@ -411,6 +424,7 @@ function phoneWorkspaceDragPreview({
       initialEditorEditingMode={initialEditorEditingMode}
       layoutProbe={false}
       openEditor={openEditor}
+      openSourceEditor={openSourceEditor}
       openCommandPalette={openCommandPalette}
       openList={openList}
       openProperties={openProperties}
@@ -419,6 +433,7 @@ function phoneWorkspaceDragPreview({
       phoneState={dragPreview.previewState}
       phoneSwipePreview={dragPreview}
       sourceIdleSave
+      sourceModeRequest={sourceModeRequest}
       sourceSelectionProbe={false}
       suggestionNotes={suggestionNotes}
       tableOfContentsTarget={null}
@@ -441,6 +456,7 @@ type PhoneWorkspaceStateViewProps = {
   initialEditorEditingMode: EditorEditingMode
   layoutProbe: boolean
   openEditor: (noteId?: string) => void
+  openSourceEditor: () => void
   openCommandPalette: () => void
   openList: () => void
   openProperties: () => void
@@ -450,6 +466,7 @@ type PhoneWorkspaceStateViewProps = {
   phoneSwipePreview: PhoneSwipePreview
   onRegisterEditorCommands?: RegisterMobileEditorCommands
   sourceIdleSave: boolean
+  sourceModeRequest: number
   sourceSelectionProbe: boolean
   suggestionNotes: MobileNote[]
   tableOfContentsTarget: PhoneTableOfContentsTargetRequest | null
@@ -620,6 +637,7 @@ function PhoneEditorScreen({
   phoneLayoutProbe,
   phoneSwipePreview,
   sourceIdleSave,
+  sourceModeRequest,
   sourceSelectionProbe,
   suggestionNotes,
   tableOfContentsTarget,
@@ -657,6 +675,7 @@ function PhoneEditorScreen({
         onNavigateWikilink={handleNavigateWikilink}
         onRegisterEditorCommands={onRegisterEditorCommands}
         sourceIdleSave={sourceIdleSave}
+        sourceModeRequest={sourceModeRequest}
         sourceSelectionProbe={sourceSelectionProbe}
         tableOfContentsTarget={tableOfContentsTarget}
         wysiwygAutocompleteProbe={wysiwygAutocompleteProbe}
@@ -707,6 +726,7 @@ function PhoneEditorBody({
   onNavigateWikilink,
   onRegisterEditorCommands,
   sourceIdleSave,
+  sourceModeRequest,
   sourceSelectionProbe,
   tableOfContentsTarget,
   wysiwygAutocompleteProbe,
@@ -727,6 +747,7 @@ function PhoneEditorBody({
   onNavigateWikilink: (target: string) => void
   onRegisterEditorCommands?: RegisterMobileEditorCommands
   sourceIdleSave: boolean
+  sourceModeRequest: number
   sourceSelectionProbe: boolean
   tableOfContentsTarget: PhoneTableOfContentsTargetRequest | null
   wysiwygAutocompleteProbe: boolean
@@ -739,13 +760,16 @@ function PhoneEditorBody({
   wysiwygWikilinkInsertProbe: boolean
   wysiwygMutationProbe: boolean
 }) {
+  const sourceModeRequested = sourceModeRequest > 0
+
   return (
     <TabletEditorPanel
+      key={`phone-editor-${controller.selectedNote?.id ?? 'none'}-${sourceModeRequest}`}
       blocks={controller.editorBlocks}
       bullets={controller.editorBullets}
       compact
-      initialEditing={initialEditorEditing}
-      initialEditingMode={initialEditorEditingMode}
+      initialEditing={sourceModeRequested || initialEditorEditing}
+      initialEditingMode={sourceModeRequested ? 'source' : initialEditorEditingMode}
       layoutProbe={layoutProbe}
       note={controller.selectedNote}
       notes={notes}
@@ -775,6 +799,7 @@ function PhonePropertiesScreen({
   controller,
   layoutProbe,
   openEditor,
+  openSourceEditor,
   openCommandPalette,
   openList,
   phoneLayoutProbe,
@@ -807,6 +832,8 @@ function PhonePropertiesScreen({
         onDeleteProperty={controller.onDeleteProperty}
         onEditProperty={controller.onEditProperty}
         onEnterNeighborhood={enterNeighborhood}
+        onFixInvalidFrontmatter={openSourceEditor}
+        onInitializeProperties={controller.onInitializeProperties}
         onCreateMissingType={controller.onOpenCreateTypeWithName}
         onOpenChangeNoteType={controller.onOpenChangeNoteType}
         onRemoveRelationship={controller.onRemoveRelationship}

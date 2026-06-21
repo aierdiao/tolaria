@@ -99,6 +99,13 @@ export const mobileParityInventory = [
     surface: 'Properties panel',
   },
   {
+    assertions: ['frontmatter state unit tests and properties-panel user-flow checks'],
+    contracts: ['desktopPropertyParity'],
+    desktopSource: 'InitializePropertiesPrompt and InvalidFrontmatterNotice from InspectorChrome',
+    mobileFile: 'src/components/workspace/MobileFrontmatterStateNotice.tsx',
+    surface: 'Properties frontmatter state notice',
+  },
+  {
     assertions: ['sync footer computed styles'],
     contracts: ['desktopStatusBarParity'],
     desktopSource: 'StatusBarFooter and StatusBarBadges',

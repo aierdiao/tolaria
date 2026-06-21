@@ -179,6 +179,7 @@ export type TabletWorkspaceChromeProps = {
   onOpenReplaceInNote: () => void
   onOpenRenameNoteFile: () => void
   onOpenSetNoteIcon: () => void
+  onInitializeProperties: (noteId: NoteId) => void
   onOpenSearch: () => void
   onOpenTableOfContents: () => void
   onTableOfContentsScrollProof?: (proof: NativeTableOfContentsProof) => void

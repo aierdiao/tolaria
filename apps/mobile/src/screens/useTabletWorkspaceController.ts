@@ -763,6 +763,14 @@ function propertyWorkspaceActions({
       const edit = deletePropertyEdit(noteId, key)
       if (edit) applyEdit(edit)
     },
+    onInitializeProperties: (noteId: string) => {
+      applyEdit({
+        key: 'type',
+        noteId,
+        type: 'updateProperty',
+        value: 'Note',
+      })
+    },
     onEditProperty: (_noteId: string, key: string, value: MobilePropertyValue) => {
       openAction('editProperty', editPropertyFields(key, value, workspaceSnapshot.vaultConfig?.propertyDisplayModes))
     },

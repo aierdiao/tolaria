@@ -21,7 +21,9 @@ import {
 } from '../../workspace/mobileInspectorSchema'
 import { MobileTypeIcon } from './MobileWorkspaceIcons'
 import { chipTone, noteTypeColor, noteTypeSoftColor, statusTone, tagTone } from './mobileWorkspaceTone'
+import { MobileFrontmatterStateNotice } from './MobileFrontmatterStateNotice'
 import { mobileRelationshipValueMetricSegments } from './MobilePropertiesPanelModel'
+import { mobileFrontmatterState, needsMobileFrontmatterNotice } from '../../workspace/mobileFrontmatterState'
 
 export function MobilePropertiesPanel({
   compact,
@@ -33,6 +35,8 @@ export function MobilePropertiesPanel({
   onDeleteProperty,
   onEditProperty,
   onEnterNeighborhood,
+  onFixInvalidFrontmatter,
+  onInitializeProperties,
   onCreateMissingType,
   onOpenChangeNoteType,
   onRemoveRelationship,
@@ -50,6 +54,8 @@ export function MobilePropertiesPanel({
   onDeleteProperty: (noteId: string, key: string) => void
   onEditProperty: (noteId: string, key: string, value: MobilePropertyValue) => void
   onEnterNeighborhood?: (noteId: string) => void
+  onFixInvalidFrontmatter?: () => void
+  onInitializeProperties: (noteId: string) => void
   onCreateMissingType: (typeName: string) => void
   onOpenChangeNoteType: () => void
   onRemoveRelationship: (noteId: string, key: string, ref: string) => void
@@ -83,6 +89,8 @@ export function MobilePropertiesPanel({
             onDeleteProperty={onDeleteProperty}
             onEditProperty={onEditProperty}
             onEnterNeighborhood={onEnterNeighborhood}
+            onFixInvalidFrontmatter={onFixInvalidFrontmatter}
+            onInitializeProperties={onInitializeProperties}
             onCreateMissingType={onCreateMissingType}
             onOpenChangeNoteType={onOpenChangeNoteType}
             onRemoveRelationship={onRemoveRelationship}
@@ -97,6 +105,25 @@ export function MobilePropertiesPanel({
   )
 }
 
+type NotePropertiesProps = {
+  layoutProbe: MobileLayoutProbe
+  note: MobileNote
+  onAddProperty: (key?: string) => void
+  onAddRelationship: (key?: string) => void
+  onDeleteProperty: (noteId: string, key: string) => void
+  onEditProperty: (noteId: string, key: string, value: MobilePropertyValue) => void
+  onEnterNeighborhood?: (noteId: string) => void
+  onFixInvalidFrontmatter?: () => void
+  onInitializeProperties: (noteId: string) => void
+  onCreateMissingType: (typeName: string) => void
+  onOpenChangeNoteType: () => void
+  onRemoveRelationship: (noteId: string, key: string, ref: string) => void
+  onSelectNote: (noteId: string) => void
+  propertyDisplayModes?: Record<string, MobilePropertyDisplayMode> | null
+  referenceGroups: MobileNeighborhoodGroup[]
+  typeDefinitions?: MobileTypeDefinitions
+}
+
 function NoteProperties({
   layoutProbe,
   note,
@@ -105,6 +132,8 @@ function NoteProperties({
   onDeleteProperty,
   onEditProperty,
   onEnterNeighborhood,
+  onFixInvalidFrontmatter,
+  onInitializeProperties,
   onCreateMissingType,
   onOpenChangeNoteType,
   onRemoveRelationship,
@@ -112,25 +141,24 @@ function NoteProperties({
   propertyDisplayModes,
   referenceGroups,
   typeDefinitions,
-}: {
-  layoutProbe: MobileLayoutProbe
-  note: MobileNote
-  onAddProperty: (key?: string) => void
-  onAddRelationship: (key?: string) => void
-  onDeleteProperty: (noteId: string, key: string) => void
-  onEditProperty: (noteId: string, key: string, value: MobilePropertyValue) => void
-  onEnterNeighborhood?: (noteId: string) => void
-  onCreateMissingType: (typeName: string) => void
-  onOpenChangeNoteType: () => void
-  onRemoveRelationship: (noteId: string, key: string, ref: string) => void
-  onSelectNote: (noteId: string) => void
-  propertyDisplayModes?: Record<string, MobilePropertyDisplayMode> | null
-  referenceGroups: MobileNeighborhoodGroup[]
-  typeDefinitions?: MobileTypeDefinitions
-}) {
+}: NotePropertiesProps) {
+  const frontmatterState = mobileFrontmatterState(note)
   const propertySlots = mobileInspectorPropertySlots(note, typeDefinitions)
   const relationshipSlots = mobileInspectorRelationshipSlots(note, typeDefinitions)
   const missingTypeName = resolveMobileMissingTypeName(note, typeDefinitions)
+
+  if (needsMobileFrontmatterNotice(frontmatterState)) {
+    return (
+      <>
+        <MobileFrontmatterStateNotice
+          state={frontmatterState}
+          onFixInvalidFrontmatter={onFixInvalidFrontmatter}
+          onInitializeProperties={() => onInitializeProperties(note.id)}
+        />
+        <ReferenceGroups groups={referenceGroups} onSelectNote={onSelectNote} />
+      </>
+    )
+  }
 
   return (
     <>

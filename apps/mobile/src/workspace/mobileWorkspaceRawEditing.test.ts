@@ -64,6 +64,26 @@ describe('mobile raw workspace editing', () => {
       title: 'Body Only Contract',
     })
   })
+
+  it('initializes missing properties with the desktop Note type seed', () => {
+    const withoutMetadata = applyMobileWorkspaceEdit(editableWorkflowScenario(), {
+      content: '# Body Only Contract\n\nPlain body.\n',
+      noteId: workflowNoteId,
+      type: 'updateNoteContent',
+    })
+    const initialized = applyMobileWorkspaceEdit(withoutMetadata, {
+      key: 'type',
+      noteId: workflowNoteId,
+      type: 'updateProperty',
+      value: 'Note',
+    })
+
+    expect(workflowNote(initialized)).toMatchObject({
+      title: 'Body Only Contract',
+      type: 'Note',
+    })
+    expect(workflowNote(initialized).rawContent).toBe('---\ntype: Note\n---\n# Body Only Contract\n\nPlain body.\n')
+  })
 })
 
 function editableWorkflowScenario(): MobileWorkspaceSnapshot {
