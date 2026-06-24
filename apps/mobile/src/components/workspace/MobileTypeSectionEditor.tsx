@@ -15,7 +15,8 @@ import {
 import { MobileMetadataPicker } from './MobileMetadataPicker'
 import { MobileSortPicker } from './MobileSortPicker'
 import { MobileViewDisplayPropertiesPicker } from './MobileViewDisplayPropertiesPicker'
-import { MobileWorkspaceSuggestionList, type MobileWorkspaceSuggestionItem } from './MobileWorkspaceSuggestionList'
+import { MobileWorkspaceSuggestionList } from './MobileWorkspaceSuggestionList'
+import type { MobileWorkspaceSuggestionItem } from './MobileWorkspaceSuggestionListModel'
 import { mobileWorkspaceFormSheetAutoFocus } from './MobileWorkspaceActionSheetModel'
 
 type MobileTypeSectionEditorProps = {
