@@ -8,7 +8,7 @@ import { MobileChip } from '../../ui/MobileChip'
 import { MobileListRow } from '../../ui/MobileListRow'
 import { MobilePanel, MobileToolbar, MobileToolbarSpacer, MobileToolbarTitle } from '../../ui/MobilePanel'
 import { MobileTextInput } from '../../ui/MobileTextInput'
-import { desktopPanelParity, desktopToolbarActionParity } from '../../ui/desktopParity'
+import { desktopToolbarActionParity } from '../../ui/desktopParity'
 import { mobileColors, mobileRadius, mobileSpace, mobileType } from '../../ui/tokens'
 import type { MobileEditorBlock, MobileNote, MobileSidebarIcon, MobileTone, MobileTypeDefinitions, MobileViewFilterGroup } from '../../workspace/mobileWorkspaceModel'
 import type {
@@ -58,7 +58,10 @@ import { MobileFavoriteActions, MobileSavedViewActions, MobileTypeSectionActions
 import { MobileWorkspaceSuggestionList } from './MobileWorkspaceSuggestionList'
 import type { MobileWorkspaceSuggestionItem } from './MobileWorkspaceSuggestionList'
 import { chipTone, noteTypeSoftColor, statusTone, tagTone } from './mobileWorkspaceTone'
-import { mobileSingleTextFieldSubmitDisabled } from './MobileWorkspaceActionSheetModel'
+import {
+  mobileActionSheetLayoutContract,
+  mobileSingleTextFieldSubmitDisabled,
+} from './MobileWorkspaceActionSheetModel'
 
 export type MobileWorkspaceAction =
   | 'addProperty'
@@ -1056,7 +1059,7 @@ function retargetNoteInputConfig(props: MobileWorkspaceActionSheetProps & { reta
 
 function SuggestionInputActionContent({ config }: { config: SuggestionInputActionConfig }) {
   return (
-    <View style={styles.content}>
+    <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" style={styles.scrollArea}>
       <MobileTextInput
         autoFocus
         label={config.inputLabel}
@@ -1075,7 +1078,7 @@ function SuggestionInputActionContent({ config }: { config: SuggestionInputActio
         <MobileButton label={mobileText('common.cancel')} variant="ghost" onPress={config.onCancel} />
         <MobileButton disabled={config.submitDisabled || config.inputValue.trim().length === 0} label={config.submitLabel} variant="primary" onPress={config.onSubmit} />
       </SheetFooter>
-    </View>
+    </ScrollView>
   )
 }
 
@@ -1187,8 +1190,8 @@ const styles = StyleSheet.create({
   },
   content: {
     alignSelf: 'stretch',
-    gap: mobileSpace.md,
-    padding: mobileSpace.lg,
+    gap: mobileActionSheetLayoutContract.contentGap,
+    padding: mobileActionSheetLayoutContract.contentPadding,
   },
   emptyState: {
     minHeight: 96,
@@ -1212,8 +1215,8 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: mobileSpace.xl,
-    paddingVertical: desktopPanelParity.toolbarHeight + mobileSpace.xl,
+    paddingHorizontal: mobileActionSheetLayoutContract.overlayPaddingHorizontal,
+    paddingVertical: mobileActionSheetLayoutContract.overlayPaddingVertical,
     zIndex: 20,
   },
   resultList: {
@@ -1288,8 +1291,8 @@ const styles = StyleSheet.create({
 
 const sheetStyles = StyleSheet.create({
   sheet: {
-    maxHeight: '84%',
-    maxWidth: 640,
+    maxHeight: mobileActionSheetLayoutContract.sheetMaxHeight,
+    maxWidth: mobileActionSheetLayoutContract.sheetMaxWidth,
     width: '100%',
     backgroundColor: mobileColors.card,
     borderColor: mobileColors.borderStrong,

@@ -12,13 +12,13 @@ import { Input } from '../ui/input'
 import { mobileText } from '../../i18n/mobileText'
 import { MobileButton } from '../../ui/MobileButton'
 import { MobilePanel, MobileToolbar, MobileToolbarSpacer, MobileToolbarTitle } from '../../ui/MobilePanel'
-import { desktopPanelParity } from '../../ui/desktopParity'
-import { mobileColors, mobileRadius, mobileSpace, mobileType } from '../../ui/tokens'
+import { mobileColors, mobileSpace, mobileType } from '../../ui/tokens'
 import {
   mobileCommandGroupLabel,
   mobileCommandPaletteResults,
   type MobileCommandPaletteCommand,
 } from '../../workspace/mobileCommandPalette'
+import { mobileCommandPaletteLayoutContract } from './MobileCommandPaletteLayout'
 
 type MobileCommandPaletteProps = {
   commands: MobileCommandPaletteCommand[]
@@ -83,6 +83,7 @@ export function MobileCommandPalette({ commands, onClose }: MobileCommandPalette
           onHover={setSelectedIndex}
           onSelect={selectCommand}
         />
+        <CommandFooter />
       </MobilePanel>
     </View>
   )
@@ -170,13 +171,23 @@ function Shortcut({ children }: { children: ReactNode }) {
   return <Text numberOfLines={1} style={styles.shortcut}>{children}</Text>
 }
 
+function CommandFooter() {
+  return (
+    <View style={styles.footer}>
+      <Text style={styles.footerText}>{mobileText('command.footerNavigate')}</Text>
+      <Text style={styles.footerText}>{mobileText('command.footerSelect')}</Text>
+      <Text style={styles.footerText}>{mobileText('command.footerClose')}</Text>
+    </View>
+  )
+}
+
 const styles = StyleSheet.create({
   backdrop: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(55, 53, 47, 0.14)',
   },
   emptyState: {
-    minHeight: 144,
+    minHeight: mobileCommandPaletteLayoutContract.emptyMinHeight,
     alignItems: 'center',
     justifyContent: 'center',
     padding: mobileSpace.lg,
@@ -189,34 +200,35 @@ const styles = StyleSheet.create({
     color: mobileColors.textMuted,
     fontSize: 11,
     fontWeight: '500',
-    paddingBottom: mobileSpace.xs,
-    paddingHorizontal: mobileSpace.md,
-    paddingTop: mobileSpace.sm,
+    paddingBottom: mobileCommandPaletteLayoutContract.groupLabelPaddingBottom,
+    paddingHorizontal: mobileCommandPaletteLayoutContract.groupLabelPaddingHorizontal,
+    paddingTop: mobileCommandPaletteLayoutContract.groupLabelPaddingTop,
   },
   input: {
-    minHeight: 44,
+    minHeight: mobileCommandPaletteLayoutContract.inputMinHeight,
     borderBottomColor: mobileColors.border,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderRadius: 0,
     borderWidth: 0,
     color: mobileColors.text,
-    fontSize: mobileType.body,
-    paddingHorizontal: mobileSpace.md,
+    fontSize: mobileCommandPaletteLayoutContract.inputTextSize,
+    paddingHorizontal: mobileCommandPaletteLayoutContract.inputPaddingHorizontal,
+    paddingVertical: mobileCommandPaletteLayoutContract.inputPaddingVertical,
   },
   overlay: {
     ...StyleSheet.absoluteFillObject,
     alignItems: 'center',
     justifyContent: 'flex-start',
-    paddingTop: desktopPanelParity.toolbarHeight + mobileSpace.xl,
+    paddingTop: mobileCommandPaletteLayoutContract.overlayPaddingTop,
     zIndex: 30,
   },
   palette: {
-    maxHeight: 520,
-    maxWidth: 540,
+    maxHeight: mobileCommandPaletteLayoutContract.paletteMaxHeight,
+    maxWidth: mobileCommandPaletteLayoutContract.paletteMaxWidth,
     width: '92%',
     backgroundColor: mobileColors.card,
     borderColor: mobileColors.borderStrong,
-    borderRadius: mobileRadius.lg,
+    borderRadius: mobileCommandPaletteLayoutContract.paletteBorderRadius,
     borderWidth: StyleSheet.hairlineWidth,
     overflow: 'hidden',
     shadowColor: '#000000',
@@ -229,20 +241,20 @@ const styles = StyleSheet.create({
     paddingTop: mobileSpace.xs,
   },
   row: {
-    minHeight: 34,
+    minHeight: mobileCommandPaletteLayoutContract.rowMinHeight,
     alignItems: 'center',
     flexDirection: 'row',
     gap: mobileSpace.sm,
-    borderRadius: 6,
-    marginHorizontal: mobileSpace.xs,
-    paddingHorizontal: mobileSpace.sm,
-    paddingVertical: mobileSpace.xs,
+    borderRadius: mobileCommandPaletteLayoutContract.rowBorderRadius,
+    marginHorizontal: mobileCommandPaletteLayoutContract.rowMarginHorizontal,
+    paddingHorizontal: mobileCommandPaletteLayoutContract.rowPaddingHorizontal,
+    paddingVertical: mobileCommandPaletteLayoutContract.rowPaddingVertical,
   },
   rowLabel: {
     minWidth: 0,
     flex: 1,
     color: mobileColors.text,
-    fontSize: mobileType.body,
+    fontSize: mobileCommandPaletteLayoutContract.rowTextSize,
   },
   rowPressed: {
     opacity: 0.78,
@@ -252,6 +264,19 @@ const styles = StyleSheet.create({
   },
   shortcut: {
     color: mobileColors.textMuted,
-    fontSize: mobileType.caption,
+    fontSize: mobileCommandPaletteLayoutContract.shortcutTextSize,
+  },
+  footer: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: mobileSpace.md,
+    borderTopColor: mobileColors.border,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    paddingHorizontal: mobileCommandPaletteLayoutContract.footerPaddingHorizontal,
+    paddingVertical: mobileCommandPaletteLayoutContract.footerPaddingVertical,
+  },
+  footerText: {
+    color: mobileColors.textMuted,
+    fontSize: mobileType.micro,
   },
 })

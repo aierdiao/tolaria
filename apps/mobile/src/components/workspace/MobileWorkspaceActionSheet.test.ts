@@ -1,7 +1,23 @@
 import { describe, expect, it } from 'vitest'
-import { mobileSingleTextFieldSubmitDisabled } from './MobileWorkspaceActionSheetModel'
+import { desktopPanelParity } from '../../ui/desktopParity'
+import { mobileSpace } from '../../ui/tokens'
+import {
+  mobileActionSheetLayoutContract,
+  mobileSingleTextFieldSubmitDisabled,
+} from './MobileWorkspaceActionSheetModel'
 
 describe('mobile workspace action sheet', () => {
+  it('keeps sheet spacing explicit for native modals', () => {
+    expect(mobileActionSheetLayoutContract).toEqual({
+      contentGap: mobileSpace.md,
+      contentPadding: mobileSpace.lg,
+      overlayPaddingHorizontal: mobileSpace.xl,
+      overlayPaddingVertical: desktopPanelParity.toolbarHeight + mobileSpace.xl,
+      sheetMaxHeight: '84%',
+      sheetMaxWidth: 640,
+    })
+  })
+
   it('allows title-less note creation while keeping required field guards', () => {
     expect(mobileSingleTextFieldSubmitDisabled({
       allowEmptyInput: true,

@@ -1,3 +1,15 @@
+import { desktopPanelParity } from '../../ui/desktopParity'
+import { mobileSpace } from '../../ui/tokens'
+
+export const mobileActionSheetLayoutContract = {
+  contentGap: mobileSpace.md,
+  contentPadding: mobileSpace.lg,
+  overlayPaddingHorizontal: mobileSpace.xl,
+  overlayPaddingVertical: desktopPanelParity.toolbarHeight + mobileSpace.xl,
+  sheetMaxHeight: '84%',
+  sheetMaxWidth: 640,
+} as const
+
 export function mobileSingleTextFieldSubmitDisabled({
   allowEmptyInput = false,
   inputValue,
