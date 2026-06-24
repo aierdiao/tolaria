@@ -107,6 +107,7 @@ export type TabletWorkspaceChromeProps = {
   canUndoWorkspaceEdit: boolean
   canDeleteType: boolean
   compactTablet: boolean
+  initialCommandPaletteOpen?: boolean
   commandPaletteProbe?: boolean
   defaultPropertiesVisible: boolean
   defaultNoteWidth: MobileNoteWidth | null

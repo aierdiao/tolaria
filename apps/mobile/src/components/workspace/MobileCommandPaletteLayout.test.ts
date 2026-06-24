@@ -16,9 +16,9 @@ describe('mobile command palette layout contract', () => {
       paletteMaxWidth: 540,
       rowBorderRadius: mobileRadius.md,
       rowMarginHorizontal: mobileSpace.xs,
-      rowMinHeight: 34,
+      rowMinHeight: 38,
       rowPaddingHorizontal: mobileSpace.md,
-      rowPaddingVertical: 6,
+      rowPaddingVertical: 7,
       rowTextSize: mobileType.body,
     })
   })

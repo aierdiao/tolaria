@@ -159,6 +159,7 @@ export function MobileUiLab() {
       <TabletWorkspace
         key={workspaceKey}
         forceDesktopPanels={qa.forceDesktopPanels}
+        initialCommandPaletteOpen={qa.initialCommandPaletteOpen}
         initialActionSheet={qa.initialActionSheet}
         initialEditorEditing={qa.initialEditorEditing}
         initialEditorEditingMode={qa.initialEditorEditingMode}
@@ -190,6 +191,7 @@ export function MobileUiLab() {
       key={workspaceKey}
       initialEditorEditing={qa.initialEditorEditing}
       initialEditorEditingMode={qa.initialEditorEditingMode}
+      initialCommandPaletteOpen={qa.initialCommandPaletteOpen}
       initialActionSheet={qa.initialActionSheet}
       commandPaletteProbe={qa.mobileCommandPaletteProbe}
       initialState={currentPhoneState(searchParams)}
@@ -256,6 +258,7 @@ function mobileUiQaFlags(
 
   return {
     forceDesktopPanels: tabletPanelsMode(searchParams) === 'all',
+    initialCommandPaletteOpen: initialCommandPaletteOpen(searchParams),
     initialActionSheet: requestedActionSheetQaTarget(searchParams),
     initialEditorEditing,
     initialEditorEditingMode,
@@ -459,6 +462,7 @@ function snapshotWithWysiwygMutationProbeContent(snapshot: MobileWorkspaceSnapsh
 function mobileWorkspaceKey({
   initialEditorEditing,
   initialEditorEditingMode,
+  initialCommandPaletteOpen,
   forceDesktopPanels,
   layoutProbe,
   mobileCommandPaletteProbe,
@@ -483,6 +487,7 @@ function mobileWorkspaceKey({
 }: {
   initialEditorEditing: boolean
   initialEditorEditingMode: string
+  initialCommandPaletteOpen: boolean
   forceDesktopPanels: boolean
   layoutProbe: boolean
   mobileCommandPaletteProbe: boolean
@@ -513,6 +518,7 @@ function mobileWorkspaceKey({
     qaRun ?? 'interactive',
     flagKey(initialEditorEditing, 'raw-editor', 'read-editor'),
     initialEditorEditingMode,
+    flagKey(initialCommandPaletteOpen, 'command-palette-open', 'command-palette-closed'),
     flagKey(forceDesktopPanels, 'desktop-panels', 'responsive-panels'),
     flagKey(mobileCommandPaletteProbe, 'mobile-command-palette-probe', 'no-mobile-command-palette-probe'),
     flagKey(sourceSelectionProbe, 'source-selection-probe', 'no-source-selection-probe'),
@@ -549,6 +555,10 @@ function scenarioIdOrDefault(scenarioId: string | null) {
 
 function layoutProbeMode(layoutProbe: boolean) {
   return layoutProbe ? 'probe' : 'view'
+}
+
+function initialCommandPaletteOpen(searchParams: URLSearchParams) {
+  return searchParams.get('commandPalette') === '1'
 }
 
 function firstNoteId(snapshot: ReturnType<typeof readOnlyWorkspaceRepository.readSnapshot>) {

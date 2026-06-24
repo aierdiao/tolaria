@@ -50,6 +50,7 @@ import {
 export type { PhoneWorkspaceState } from './phoneWorkspaceTransitions'
 
 type PhoneWorkspaceProps = {
+  initialCommandPaletteOpen?: boolean
   initialEditorEditing?: boolean
   initialEditorEditingMode?: EditorEditingMode
   initialActionSheet?: MobileActionSheetQaTarget
@@ -127,6 +128,7 @@ function PhoneWorkspaceChrome(props: PhoneWorkspaceChromeProps) {
   const selectPreviousNote = useCallback(() => selectAdjacentVisiblePhoneNote(controller.notes, controller.selectedNoteId, controller.onSelectNote, -1), [controller])
   const commandPalette = usePhoneCommandPalette({
     controller,
+    initialOpen: props.initialCommandPaletteOpen,
     onOpenNativeVault,
     onPastePlainText: editorCommandRegistry.commands.pastePlainText,
     onSaveActiveEditor: editorCommandRegistry.commands.save,
@@ -393,6 +395,7 @@ type PhoneTableOfContentsTargetRequest = MobileTableOfContentsTarget & { request
 
 function usePhoneCommandPalette({
   controller,
+  initialOpen = false,
   onOpenNativeVault,
   onPastePlainText,
   onSaveActiveEditor,
@@ -405,6 +408,7 @@ function usePhoneCommandPalette({
   phoneState,
 }: {
   controller: PhoneWorkspaceController
+  initialOpen?: boolean
   onOpenNativeVault?: () => void
   onPastePlainText?: () => void
   onSaveActiveEditor?: () => void
@@ -416,7 +420,7 @@ function usePhoneCommandPalette({
   openSidebar: () => void
   phoneState: PhoneWorkspaceState
 }) {
-  const [visible, setVisible] = useState(false)
+  const [visible, setVisible] = useState(initialOpen)
   const open = useCallback(() => setVisible(true), [])
   const close = useCallback(() => setVisible(false), [])
   const toggleProperties = useCallback(() => {

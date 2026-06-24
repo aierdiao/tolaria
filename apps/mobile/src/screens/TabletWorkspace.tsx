@@ -42,6 +42,7 @@ import {
 
 export function TabletWorkspace({
   forceDesktopPanels = false,
+  initialCommandPaletteOpen = false,
   initialEditorEditing = true,
   initialEditorEditingMode = 'wysiwyg',
   initialActionSheet,
@@ -66,6 +67,7 @@ export function TabletWorkspace({
   wysiwygMutationProbe = false,
 }: {
   forceDesktopPanels?: boolean
+  initialCommandPaletteOpen?: boolean
   initialEditorEditing?: boolean
   initialEditorEditingMode?: TabletWorkspaceChromeProps['initialEditorEditingMode']
   initialActionSheet?: MobileActionSheetQaTarget
@@ -99,6 +101,7 @@ export function TabletWorkspace({
         compactTablet={compactTablet}
         commandPaletteProbe={commandPaletteProbe}
         defaultPropertiesVisible={defaultPropertiesVisible}
+        initialCommandPaletteOpen={initialCommandPaletteOpen}
         initialEditorEditing={initialEditorEditing}
         initialEditorEditingMode={initialEditorEditingMode}
         layoutProbe={layoutProbe}
@@ -139,8 +142,16 @@ function useTabletScreenMode(forceDesktopPanels: boolean) {
 }
 
 function TabletWorkspaceChrome(props: TabletWorkspaceChromeProps) {
-  const { commandPaletteProbe, compactTablet, defaultPropertiesVisible, onOpenNativeVault, onSelectNote, snapshot } = props
-  const [commandPaletteOpen, setCommandPaletteOpen] = useState(false)
+  const {
+    commandPaletteProbe,
+    compactTablet,
+    defaultPropertiesVisible,
+    initialCommandPaletteOpen = false,
+    onOpenNativeVault,
+    onSelectNote,
+    snapshot,
+  } = props
+  const [commandPaletteOpen, setCommandPaletteOpen] = useState(initialCommandPaletteOpen)
   const [tableOfContentsTarget, setTableOfContentsTarget] = useState<TabletTableOfContentsTargetRequest | null>(null)
   const editorCommandRegistry = useMobileEditorCommandRegistry()
   const gestures = useTabletPanelGestures(compactTablet, defaultPropertiesVisible)

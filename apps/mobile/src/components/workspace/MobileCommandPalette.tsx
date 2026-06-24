@@ -110,9 +110,13 @@ function CommandResults({
 
   const indexedGroups = indexedCommandGroups(groups)
   return (
-    <ScrollView contentContainerStyle={styles.results} keyboardShouldPersistTaps="handled">
+    <ScrollView
+      contentContainerStyle={styles.results}
+      keyboardShouldPersistTaps="handled"
+      style={styles.resultsScroll}
+    >
       {indexedGroups.map((group) => (
-        <View key={group.group}>
+        <View key={group.group} style={styles.group}>
           <Text style={styles.groupLabel}>{mobileCommandGroupLabel(group.group)}</Text>
           {group.items.map(({ command, index }) => (
             <CommandRow
@@ -156,13 +160,17 @@ function CommandRow({
     <Pressable
       accessibilityRole="button"
       accessibilityState={{ selected }}
-      style={({ pressed }) => [styles.row, selected ? styles.rowSelected : null, pressed ? styles.rowPressed : null]}
+      style={styles.rowPressable}
       testID={`mobile-command-palette-command-${command.id}`}
       onPress={onSelect}
       onPressIn={onHover}
     >
-      <Text numberOfLines={1} style={styles.rowLabel}>{command.label}</Text>
-      {command.shortcut ? <Shortcut>{command.shortcut}</Shortcut> : null}
+      {({ pressed }) => (
+        <View style={[styles.row, selected ? styles.rowSelected : null, pressed ? styles.rowPressed : null]}>
+          <Text numberOfLines={1} style={styles.rowLabel}>{command.label}</Text>
+          {command.shortcut ? <Shortcut>{command.shortcut}</Shortcut> : null}
+        </View>
+      )}
     </Pressable>
   )
 }
@@ -200,9 +208,14 @@ const styles = StyleSheet.create({
     color: mobileColors.textMuted,
     fontSize: 11,
     fontWeight: '500',
+    lineHeight: 14,
     paddingBottom: mobileCommandPaletteLayoutContract.groupLabelPaddingBottom,
     paddingHorizontal: mobileCommandPaletteLayoutContract.groupLabelPaddingHorizontal,
     paddingTop: mobileCommandPaletteLayoutContract.groupLabelPaddingTop,
+  },
+  group: {
+    alignSelf: 'stretch',
+    width: '100%',
   },
   input: {
     minHeight: mobileCommandPaletteLayoutContract.inputMinHeight,
@@ -237,24 +250,38 @@ const styles = StyleSheet.create({
     shadowRadius: 28,
   },
   results: {
+    alignItems: 'stretch',
     paddingBottom: mobileSpace.sm,
     paddingTop: mobileSpace.xs,
+    width: '100%',
+  },
+  resultsScroll: {
+    alignSelf: 'stretch',
+    width: '100%',
   },
   row: {
-    minHeight: mobileCommandPaletteLayoutContract.rowMinHeight,
     alignItems: 'center',
+    alignSelf: 'stretch',
+    borderRadius: mobileCommandPaletteLayoutContract.rowBorderRadius,
     flexDirection: 'row',
     gap: mobileSpace.sm,
-    borderRadius: mobileCommandPaletteLayoutContract.rowBorderRadius,
-    marginHorizontal: mobileCommandPaletteLayoutContract.rowMarginHorizontal,
+    justifyContent: 'space-between',
+    minHeight: mobileCommandPaletteLayoutContract.rowMinHeight,
     paddingHorizontal: mobileCommandPaletteLayoutContract.rowPaddingHorizontal,
     paddingVertical: mobileCommandPaletteLayoutContract.rowPaddingVertical,
+    width: '100%',
+  },
+  rowPressable: {
+    alignSelf: 'stretch',
+    marginHorizontal: mobileCommandPaletteLayoutContract.rowMarginHorizontal,
+    width: 'auto',
   },
   rowLabel: {
-    minWidth: 0,
     flex: 1,
+    minWidth: 0,
     color: mobileColors.text,
     fontSize: mobileCommandPaletteLayoutContract.rowTextSize,
+    lineHeight: 18,
   },
   rowPressed: {
     opacity: 0.78,
@@ -265,6 +292,7 @@ const styles = StyleSheet.create({
   shortcut: {
     color: mobileColors.textMuted,
     fontSize: mobileCommandPaletteLayoutContract.shortcutTextSize,
+    lineHeight: 16,
   },
   footer: {
     alignItems: 'center',
