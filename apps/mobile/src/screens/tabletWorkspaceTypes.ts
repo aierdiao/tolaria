@@ -36,6 +36,7 @@ export type MobileActionSheetQaTarget =
   | 'addProperty'
   | 'addRelationship'
   | 'createView'
+  | 'editProperty'
   | 'editTypeSection'
   | 'editTypeVisibility'
   | 'editView'

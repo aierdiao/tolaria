@@ -11,6 +11,7 @@ function isMobileActionSheetQaTarget(value: string | null): value is MobileActio
   return value === 'addProperty'
     || value === 'addRelationship'
     || value === 'createView'
+    || value === 'editProperty'
     || value === 'editTypeSection'
     || value === 'editTypeVisibility'
     || value === 'editView'

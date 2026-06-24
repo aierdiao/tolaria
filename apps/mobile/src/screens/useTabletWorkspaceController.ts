@@ -332,6 +332,11 @@ function openMobileActionSheetQaTarget({
     actions.onOpenCreateView()
     return
   }
+  if (target === 'editProperty') {
+    const editableProperty = firstEditableProperty(workspaceSnapshot)
+    if (editableProperty) actions.onOpenEditProperty(editableProperty.key, editableProperty.value)
+    return
+  }
   if (target === 'editTypeVisibility') {
     actions.onOpenTypeVisibility()
     return
@@ -347,6 +352,27 @@ function openMobileActionSheetQaTarget({
     return
   }
   actions.onOpenSearch()
+}
+
+function firstEditableProperty(snapshot: MobileWorkspaceSnapshot): { key: string, value: MobilePropertyValue } | null {
+  const note = selectedSnapshotNote(snapshot)
+  if (!note) return null
+
+  const property = note.properties?.[0]
+  if (property) return { key: property.key, value: property.value }
+  if (note.tags.length > 0) return { key: 'tags', value: note.tags }
+  if (note.status) return { key: 'Status', value: note.status }
+
+  return null
+}
+
+function selectedSnapshotNote(snapshot: MobileWorkspaceSnapshot): MobileNote | null {
+  const selectedNoteId = snapshot.selectedNoteId
+  if (!selectedNoteId) return null
+
+  return snapshot.notes.find((note) => note.id === selectedNoteId)
+    ?? snapshot.allNotes?.find((note) => note.id === selectedNoteId)
+    ?? null
 }
 
 function firstSidebarItemSelection(
@@ -481,6 +507,9 @@ function actionSheetWorkspaceActions({
 
   return {
     onCloseAction: closeAction,
+    onOpenEditProperty: (key: string, value: MobilePropertyValue) => {
+      openAction('editProperty', editPropertyFields(key, value, workspaceSnapshot.vaultConfig?.propertyDisplayModes))
+    },
     ...coreWorkspaceActionOpeners({ navigation, onCreateNoteDirect, openAction, setOpenAction, updateReadOnlyForm, workspaceSnapshot }),
     ...noteWorkspaceActionOpeners({ openAction, selectedNote, setOpenAction }),
     ...sidebarWorkspaceActionOpeners({ setOpenAction, updateReadOnlyForm, workspaceSnapshot }),

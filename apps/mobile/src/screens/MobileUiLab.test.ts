@@ -19,6 +19,7 @@ describe('requestedActionSheetQaTarget', () => {
     expect(requestedActionSheetQaTarget(new URLSearchParams('actionSheet=editView'))).toBe('editView')
     expect(requestedActionSheetQaTarget(new URLSearchParams('actionSheet=editTypeSection'))).toBe('editTypeSection')
     expect(requestedActionSheetQaTarget(new URLSearchParams('actionSheet=addProperty'))).toBe('addProperty')
+    expect(requestedActionSheetQaTarget(new URLSearchParams('actionSheet=editProperty'))).toBe('editProperty')
   })
 
   it('ignores unknown action sheet targets', () => {
