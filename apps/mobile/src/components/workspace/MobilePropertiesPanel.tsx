@@ -23,6 +23,7 @@ import { MobileTypeIcon } from './MobileWorkspaceIcons'
 import { chipTone, noteTypeColor, noteTypeSoftColor, statusTone, tagTone } from './mobileWorkspaceTone'
 import { MobileFrontmatterStateNotice } from './MobileFrontmatterStateNotice'
 import {
+  mobileInspectorPlaceholderRowLayoutContract,
   mobileInspectorReferenceRowLayoutContract,
   mobileRelationshipValueMetricSegments,
 } from './MobilePropertiesPanelModel'
@@ -217,6 +218,7 @@ function NoteProperties({
       {propertySlots.map((slot) => (
         <PlaceholderPropertyRow
           key={`${slot.source}:${slot.key}`}
+          layoutProbe={layoutProbe}
           slot={slot}
           onPress={() => onAddProperty(slot.key)}
         />
@@ -243,6 +245,7 @@ function NoteProperties({
       {relationshipSlots.map((slot) => (
         <PlaceholderRelationshipSection
           key={`${slot.source}:${slot.key}`}
+          layoutProbe={layoutProbe}
           slot={slot}
           onPress={() => onAddRelationship(slot.key)}
         />
@@ -478,28 +481,36 @@ function PropertiesEmptyState() {
 }
 
 function PlaceholderPropertyRow({
+  layoutProbe,
   onPress,
   slot,
 }: {
+  layoutProbe: MobileLayoutProbe
   onPress: () => void
   slot: MobileInspectorPropertySlot
 }) {
   const sourceSegment = slot.source === 'typeDerived' ? 'type-derived' : 'suggested'
+  const testID = `property-placeholder-${sourceSegment}-${testIdSegment(slot.key)}`
 
   return (
-    <Pressable
-      accessibilityLabel={slot.label}
-      accessibilityRole="button"
-      style={({ pressed }) => [propertyStyles.placeholderRow, pressed ? propertyStyles.editableValuePressed : null]}
-      testID={`property-placeholder-${sourceSegment}-${testIdSegment(slot.key)}`}
-      onPress={onPress}
-    >
-      <Text style={propertyStyles.placeholderLabel}>{slot.label}</Text>
-      <View style={propertyStyles.placeholderAddValue}>
-        <Plus color={mobileColors.textFaint} size={14} />
-        <Text style={propertyStyles.placeholderValue}>{mobileText('inspector.relationship.add')}</Text>
-      </View>
-    </Pressable>
+    <MobilePropertyRow
+      label={slot.label}
+      layoutProbe={layoutProbe}
+      layoutProbeId={`properties.placeholder.${testIdSegment(slot.key)}`}
+      testID={testID}
+      value={(
+        <Pressable
+          accessibilityLabel={slot.label}
+          accessibilityRole="button"
+          style={({ pressed }) => [propertyStyles.placeholderAddValue, pressed ? propertyStyles.editableValuePressed : null]}
+          testID={`${testID}-add`}
+          onPress={onPress}
+        >
+          <Plus color={mobileColors.textFaint} size={14} />
+          <Text numberOfLines={1} style={propertyStyles.placeholderValue}>{mobileText('inspector.relationship.add')}</Text>
+        </Pressable>
+      )}
+    />
   )
 }
 
@@ -571,9 +582,11 @@ function PropertyActionRow({
 }
 
 function PlaceholderRelationshipSection({
+  layoutProbe,
   onPress,
   slot,
 }: {
+  layoutProbe: MobileLayoutProbe
   onPress: () => void
   slot: MobileInspectorRelationshipSlot
 }) {
@@ -581,7 +594,13 @@ function PlaceholderRelationshipSection({
   const testID = `relationship-placeholder-${sourceSegment}-${testIdSegment(slot.key)}`
 
   return (
-    <PropertySection label={slot.label} labelVariant="placeholder" testID={testID}>
+    <PropertySection
+      label={slot.label}
+      labelVariant="placeholder"
+      layoutProbe={layoutProbe}
+      layoutProbeId={`properties.relationship-placeholder.${testIdSegment(slot.key)}`}
+      testID={testID}
+    >
       <Pressable
         accessibilityLabel={mobileText('inspector.relationship.add')}
         accessibilityRole="button"
@@ -959,21 +978,15 @@ const propertyStyles = StyleSheet.create({
     fontSize: desktopPropertyParity.labelTextSize,
   },
   placeholderAddValue: {
+    minHeight: mobileInspectorPlaceholderRowLayoutContract.minHeight,
     minWidth: 0,
     alignItems: 'center',
     flex: 1,
     flexDirection: 'row',
     gap: mobileSpace.xs,
     justifyContent: 'flex-end',
-  },
-  placeholderRow: {
-    minHeight: desktopPropertyParity.rowMinHeight,
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: mobileSpace.sm,
-    borderBottomColor: mobileColors.border,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    paddingHorizontal: desktopPropertyParity.rowPaddingHorizontal,
+    borderRadius: 4,
+    paddingHorizontal: mobileSpace.xs,
   },
   placeholderValue: {
     minWidth: 0,

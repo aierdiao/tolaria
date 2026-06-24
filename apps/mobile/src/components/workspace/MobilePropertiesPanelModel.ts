@@ -11,6 +11,12 @@ export const mobileInspectorReferenceRowLayoutContract = {
   textFontWeight: desktopRelationshipParity.textFontWeight,
 } as const
 
+export const mobileInspectorPlaceholderRowLayoutContract = {
+  labelTextSize: desktopPropertyParity.labelTextSize,
+  minHeight: desktopPropertyParity.rowMinHeight,
+  paddingHorizontal: desktopPropertyParity.rowPaddingHorizontal,
+} as const
+
 export function mobileRelationshipValueMetricSegments(
   values: MobileRelationship['values'],
 ): string[] {

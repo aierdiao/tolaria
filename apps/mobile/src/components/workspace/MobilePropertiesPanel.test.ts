@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  mobileInspectorPlaceholderRowLayoutContract,
   mobileInspectorReferenceRowLayoutContract,
   mobileRelationshipValueMetricSegments,
 } from './MobilePropertiesPanelModel'
@@ -18,6 +19,14 @@ describe('mobileRelationshipValueMetricSegments', () => {
       radius: desktopRelationshipParity.rowRadius,
       textFontSize: desktopRelationshipParity.textFontSize,
       textFontWeight: desktopRelationshipParity.textFontWeight,
+    })
+  })
+
+  it('keeps placeholder add rows aligned with desktop property row density', () => {
+    expect(mobileInspectorPlaceholderRowLayoutContract).toEqual({
+      labelTextSize: desktopPropertyParity.labelTextSize,
+      minHeight: desktopPropertyParity.rowMinHeight,
+      paddingHorizontal: desktopPropertyParity.rowPaddingHorizontal,
     })
   })
 
