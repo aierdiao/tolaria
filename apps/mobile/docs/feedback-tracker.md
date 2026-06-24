@@ -50,7 +50,7 @@ Observed from the June 24 iPad recording:
 | Note-list header should have a sidebar button | Done | `MobileNoteListPanel` accepts `leading`; tablet shell provides `tablet-note-list-sidebar-action`, verified in native snapshot. |
 | Editor breadcrumbs/toolbar should have a left chevron to hide sidebar plus note list | Done | `TabletEditorPanel` accepts `leading`; tablet shell provides `tablet-editor-chrome-toggle`, verified in native snapshot. |
 | Left chrome and properties panel show/hide should be smooth and animated | Done | `TabletWorkspace` uses animated offsets for sidebar/note-list chrome and properties; `tabletWorkspacePanelTransitions.test.ts` covers transition math. |
-| Phone navigation should use the Bear-style structure without copying Bear styling | Partial | `PhoneWorkspace` has list/sidebar/editor/properties states, swipe previews, and transition tests. Needs fresh native phone proof against the June 24 video. |
+| Phone navigation should use the Bear-style structure without copying Bear styling | Partial | `PhoneWorkspace` has list/sidebar/editor/properties states, swipe previews, and transition tests. `pnpm mobile:qa:ios-phone-layout` now passes native iOS simulator metrics for real-vault list, sidebar, and properties states. Needs native gesture proof against the June 24 video. |
 
 ## Still To Fix Or Prove
 

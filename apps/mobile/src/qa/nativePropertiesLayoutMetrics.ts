@@ -52,6 +52,20 @@ type RelationshipLayoutSpec = {
 }
 
 const layoutTolerance = 1.5
+const propertyRowPrefix = 'properties.row.'
+const propertySectionPrefix = 'properties.section.'
+const relationshipPrefix = 'properties.relationship.'
+const rowMetricSuffix = '.row'
+const tagsSectionId = 'properties.section.tags'
+const fallbackRelationshipSectionId = 'properties.section.belongs-to'
+
+const requiredPropertyRowIds = [
+  'properties.row.type',
+  'properties.row.created',
+  'properties.row.modified',
+  'properties.row.workspace',
+  'properties.row.links',
+] as const
 
 export const nativePropertiesMetricContract = {
   labelWidth: 86,
@@ -63,23 +77,49 @@ export const nativePropertiesMetricContract = {
 } as const
 
 export function assertNativePropertiesLayoutMetrics(context: PropertyLayoutContext): NativeLayoutAssertionFailure[] {
-  const rowContext = (id: string): PropertyLayoutSpec => ({ ...context, id })
-
   return [
     ...assertPropertiesPanelLayout(context),
-    ...assertPropertyRowLayout(rowContext('properties.row.type')),
-    ...assertPropertyRowLayout(rowContext('properties.row.created')),
-    ...assertPropertyRowLayout(rowContext('properties.row.modified')),
-    ...assertPropertyRowLayout(rowContext('properties.row.workspace')),
-    ...assertPropertyRowLayout(rowContext('properties.row.links')),
-    ...assertPropertySectionLayout(rowContext('properties.section.tags')),
-    ...assertPropertySectionLayout(rowContext('properties.section.belongs-to')),
-    ...assertRelationshipRowLayout({
-      id: 'properties.relationship.llm-workflow',
+    ...propertyRowIdsForMetrics(context.metrics).flatMap((id) => assertPropertyRowLayout({ ...context, id })),
+    ...propertySectionIdsForMetrics(context.metrics).flatMap((id) => assertPropertySectionLayout({ ...context, id })),
+    ...relationshipMetricIdsForMetrics(context.metrics).flatMap((id) => assertRelationshipRowLayout({
+      id,
       metrics: context.metrics,
-      sectionId: 'properties.section.belongs-to',
-    }),
+      sectionId: relationshipSectionIdForMetrics(context.metrics),
+    })),
   ]
+}
+
+function propertyRowIdsForMetrics(metrics: NativeLayoutMetricMap): string[] {
+  return uniqueMetricIds([
+    ...requiredPropertyRowIds,
+    ...metricBaseIds(metrics, propertyRowPrefix),
+  ])
+}
+
+function propertySectionIdsForMetrics(metrics: NativeLayoutMetricMap): string[] {
+  return uniqueMetricIds([
+    tagsSectionId,
+    ...metricBaseIds(metrics, propertySectionPrefix),
+  ])
+}
+
+function relationshipMetricIdsForMetrics(metrics: NativeLayoutMetricMap): string[] {
+  return metricBaseIds(metrics, relationshipPrefix)
+}
+
+function relationshipSectionIdForMetrics(metrics: NativeLayoutMetricMap): string {
+  return propertySectionIdsForMetrics(metrics).find((id) => id !== tagsSectionId)
+    ?? fallbackRelationshipSectionId
+}
+
+function metricBaseIds(metrics: NativeLayoutMetricMap, prefix: string): string[] {
+  return Object.keys(metrics)
+    .filter((id) => id.startsWith(prefix) && id.endsWith(rowMetricSuffix))
+    .map((id) => id.slice(0, -rowMetricSuffix.length))
+}
+
+function uniqueMetricIds(ids: readonly string[]): string[] {
+  return [...new Set(ids)]
 }
 
 function assertPropertiesPanelLayout({

@@ -107,6 +107,19 @@ describe('native layout metrics', () => {
     expect(assertNativePhoneLayoutMetrics(metrics, 'list')).toEqual([])
   })
 
+  it('accepts native phone list metrics from real-vault note ids', () => {
+    const phoneWidth = 402
+    const metrics = latestNativeLayoutMetrics([
+      phoneRootMetric({ width: phoneWidth }),
+      phoneScreenMetric('list', { width: phoneWidth }),
+      noteListPanelMetric({ width: phoneWidth }),
+      noteListItemMetric('noteList.item.tolaria-release-v2026-06-23.md', { frameWidth: phoneWidth, selected: true }),
+      noteListItemMetric('noteList.item.refactoring-newsletter-36-month-business-plan.md', { frameWidth: phoneWidth }),
+    ].flat())
+
+    expect(assertNativePhoneLayoutMetrics(metrics, 'list')).toEqual([])
+  })
+
   it('reports native phone sidebar metrics that miss drawer or shared sidebar spacing evidence', () => {
     const phoneWidth = 390
     const metrics = latestNativeLayoutMetrics([

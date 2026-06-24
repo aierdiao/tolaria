@@ -93,7 +93,7 @@ type WysiwygEditorMetrics = {
 }
 
 type SectionTitleMetricSpec = {
-  firstContentMetricId: string
+  firstContentMetricId?: string
   sectionId: string
 }
 
@@ -195,6 +195,11 @@ const sidebarItemMetricSpecs: SidebarItemMetricSpec[] = [
   { contentHeight: nativeSidebarMetricContract.itemContentHeight.withCount, id: 'sidebar.item.procedures', padding: nativeSidebarMetricContract.itemPadding.withCount },
   { contentHeight: nativeSidebarMetricContract.itemContentHeight.withCount, id: 'sidebar.item.responsibilities', padding: nativeSidebarMetricContract.itemPadding.withCount },
 ]
+const primarySidebarItemMetricIds = ['sidebar.item.inbox', 'sidebar.item.all-notes', 'sidebar.item.archive'] as const
+const fixtureTypeSidebarItemMetricIds = ['sidebar.item.essays', 'sidebar.item.procedures', 'sidebar.item.responsibilities'] as const
+const sidebarItemPrefix = 'sidebar.item.'
+const sidebarItemRowSuffix = '.row'
+const sidebarCountContainerSuffix = '.count.container'
 
 const sidebarItemRowOrder = [
   ['sidebar.item.inbox', 'sidebar.item.all-notes', 'sidebar.item.archive'],
@@ -210,6 +215,9 @@ const folderMetricSpecs = [
   { expectedLeftInset: nativeSidebarMetricContract.folderRowContentInset + nativeSidebarMetricContract.folderRowIndent, id: 'sidebar.folder.tolaria-mobile-ui' },
   { expectedLeftInset: nativeSidebarMetricContract.folderRowContentInset + nativeSidebarMetricContract.folderRowIndent, id: 'sidebar.folder.tolaria-releases' },
 ] as const
+const sidebarFolderPrefix = 'sidebar.folder.'
+const sidebarFolderContainerSuffix = '.container'
+const sidebarFolderRowSuffix = '.row'
 
 const countPillMetricSpecs: CountPillLayout[] = [
   { id: 'sidebar.item.inbox.count' },
@@ -226,6 +234,8 @@ const noteListItemMetricSpecs: NoteListItemMetricSpec[] = [
   { id: 'noteList.item.workflow-orchestration' },
   { id: 'noteList.item.open-source-project' },
 ]
+const noteListItemFrameSuffix = '.frame'
+const noteListItemPrefix = 'noteList.item.'
 
 const sectionTitleMetricSpecs: SectionTitleMetricSpec[] = [
   { firstContentMetricId: 'sidebar.item.personal-journal.row', sectionId: 'favorites' },
@@ -449,7 +459,7 @@ const assertWysiwygToolbarActionSequence = (metrics: NativeLayoutMetricMap): Nat
 function assertNativeNoteListLayoutMetrics(metrics: NativeLayoutMetricMap): NativeLayoutAssertionFailure[] {
   return [
     ...assertNoteListPanelLayout(metrics),
-    ...noteListItemMetricSpecs.flatMap((spec) => assertNoteListItemLayout({ ...spec, metrics })),
+    ...noteListItemMetricSpecsForMetrics(metrics).flatMap((spec) => assertNoteListItemLayout({ ...spec, metrics })),
   ]
 }
 
@@ -584,8 +594,21 @@ function assertNativePhoneNoteListLayoutMetrics(metrics: NativeLayoutMetricMap):
       message: 'phone note-list panel is captured before checking native note row spacing',
       metric: panel,
     }),
-    ...noteListItemMetricSpecs.flatMap((spec) => assertPhoneNoteListItemLayout({ ...spec, metrics, panel })),
+    ...noteListItemMetricSpecsForMetrics(metrics).flatMap((spec) => assertPhoneNoteListItemLayout({ ...spec, metrics, panel })),
   ]
+}
+
+function noteListItemMetricSpecsForMetrics(metrics: NativeLayoutMetricMap): NoteListItemMetricSpec[] {
+  const liveRowIds = noteListItemMetricIds(metrics)
+  if (liveRowIds.length === 0) return noteListItemMetricSpecs
+
+  return liveRowIds.slice(0, noteListItemMetricSpecs.length).map((id) => ({ id }))
+}
+
+function noteListItemMetricIds(metrics: NativeLayoutMetricMap): string[] {
+  return Object.keys(metrics)
+    .filter((id) => id.startsWith(noteListItemPrefix) && id.endsWith(noteListItemFrameSuffix))
+    .map((id) => id.slice(0, -noteListItemFrameSuffix.length))
 }
 
 function assertPhoneNoteListItemLayout({
@@ -637,17 +660,106 @@ function assertSidebarSectionLayouts(metrics: NativeLayoutMetricMap): NativeLayo
 
 function assertSidebarItemLayouts(metrics: NativeLayoutMetricMap): NativeLayoutAssertionFailure[] {
   return [
-    ...sidebarItemMetricSpecs.flatMap((spec) => assertSidebarItemLayout({ ...spec, metrics })),
-    ...sidebarItemRowOrder.flatMap((ids) => assertStackedRows(metrics, ids)),
+    ...sidebarItemMetricSpecsForMetrics(metrics).flatMap((spec) => assertSidebarItemLayout({ ...spec, metrics })),
+    ...sidebarItemRowOrderForMetrics(metrics).flatMap((ids) => assertStackedRows(metrics, ids)),
   ]
 }
 
 function assertSectionTitleLayouts(metrics: NativeLayoutMetricMap): NativeLayoutAssertionFailure[] {
-  return sectionTitleMetricSpecs.flatMap((spec) => assertSectionTitleLayout({ ...spec, metrics }))
+  return sectionTitleMetricSpecsForMetrics(metrics).flatMap((spec) => assertSectionTitleLayout({ ...spec, metrics }))
 }
 
 function assertFolderLayouts(metrics: NativeLayoutMetricMap): NativeLayoutAssertionFailure[] {
-  return folderMetricSpecs.flatMap((spec) => assertFolderLayout({ ...spec, metrics }))
+  return folderMetricSpecsForMetrics(metrics).flatMap((spec) => assertFolderLayout({ ...spec, metrics }))
+}
+
+function sidebarItemMetricSpecsForMetrics(metrics: NativeLayoutMetricMap): SidebarItemMetricSpec[] {
+  const ids = sidebarItemMetricIds(metrics)
+  if (ids.length === 0) return sidebarItemMetricSpecs
+
+  const countIds = countPillIds(metrics)
+  return ids.map((id) => {
+    const hasCount = countIds.has(`${id}.count`)
+    return {
+      contentHeight: hasCount
+        ? nativeSidebarMetricContract.itemContentHeight.withCount
+        : nativeSidebarMetricContract.itemContentHeight.regular,
+      id,
+      padding: hasCount
+        ? nativeSidebarMetricContract.itemPadding.withCount
+        : nativeSidebarMetricContract.itemPadding.regular,
+    }
+  })
+}
+
+function sidebarItemMetricIds(metrics: NativeLayoutMetricMap): string[] {
+  return Object.keys(metrics)
+    .filter((id) => id.startsWith(sidebarItemPrefix) && id.endsWith(sidebarItemRowSuffix))
+    .map((id) => id.slice(0, -sidebarItemRowSuffix.length))
+}
+
+function sidebarItemRowOrderForMetrics(metrics: NativeLayoutMetricMap): string[][] {
+  const ids = sidebarItemMetricIds(metrics)
+  if (ids.length === 0) return sidebarItemRowOrder.map((group) => [...group])
+
+  const primary = primarySidebarItemMetricIds.filter((id) => ids.includes(id))
+  const views = ids.filter((id) => id.startsWith('sidebar.item.view-'))
+  const types = ids.filter(isTypeSidebarItemMetricId)
+  const favorites = ids.filter((id) => !isPrimarySidebarItemMetricId(id) && !views.includes(id) && !types.includes(id))
+
+  return [primary, favorites, views, types].filter((group) => group.length > 1)
+}
+
+function sectionTitleMetricSpecsForMetrics(metrics: NativeLayoutMetricMap): SectionTitleMetricSpec[] {
+  const ids = sidebarItemMetricIds(metrics)
+  if (ids.length === 0) return sectionTitleMetricSpecs
+
+  const groups = sidebarItemRowOrderForMetrics(metrics)
+  const favorites = groups.find((group) => group.some((id) => !isPrimarySidebarItemMetricId(id) && !id.startsWith('sidebar.item.view-') && !isTypeSidebarItemMetricId(id)))
+  const views = groups.find((group) => group.some((id) => id.startsWith('sidebar.item.view-')))
+  const types = groups.find((group) => group.some(isTypeSidebarItemMetricId))
+
+  return [
+    { firstContentMetricId: favorites?.[0] ? `${favorites[0]}.row` : undefined, sectionId: 'favorites' },
+    { firstContentMetricId: views?.[0] ? `${views[0]}.row` : undefined, sectionId: 'views' },
+    { firstContentMetricId: types?.[0] ? `${types[0]}.row` : undefined, sectionId: 'types' },
+    { firstContentMetricId: metrics['sidebar.folderTree.root'] ? 'sidebar.folderTree.root' : undefined, sectionId: 'folders' },
+  ]
+}
+
+function isPrimarySidebarItemMetricId(id: string): boolean {
+  return primarySidebarItemMetricIds.includes(id as typeof primarySidebarItemMetricIds[number])
+}
+
+function isTypeSidebarItemMetricId(id: string): boolean {
+  return id.startsWith('sidebar.item.type-')
+    || fixtureTypeSidebarItemMetricIds.includes(id as typeof fixtureTypeSidebarItemMetricIds[number])
+}
+
+function folderMetricSpecsForMetrics(metrics: NativeLayoutMetricMap): Array<{ expectedLeftInset: number; id: string }> {
+  const ids = sidebarFolderMetricIds(metrics)
+  if (ids.length === 0) return [...folderMetricSpecs]
+
+  return ids.map((id) => ({
+    expectedLeftInset: expectedFolderLeftInset(metrics[`${id}.content`]?.x ?? null),
+    id,
+  }))
+}
+
+function sidebarFolderMetricIds(metrics: NativeLayoutMetricMap): string[] {
+  return Object.keys(metrics)
+    .filter((id) => id.startsWith(sidebarFolderPrefix) && id.endsWith(sidebarFolderRowSuffix))
+    .map((id) => id.slice(0, -sidebarFolderRowSuffix.length))
+}
+
+function expectedFolderLeftInset(actual: number | null): number {
+  if (actual === null) return nativeSidebarMetricContract.folderRowContentInset
+
+  const depth = Math.max(
+    0,
+    Math.round((actual - nativeSidebarMetricContract.folderRowContentInset) / nativeSidebarMetricContract.folderRowIndent),
+  )
+  return nativeSidebarMetricContract.folderRowContentInset + depth * nativeSidebarMetricContract.folderRowIndent
 }
 
 function assertPrimarySectionLayout(metrics: NativeLayoutMetricMap): NativeLayoutAssertionFailure[] {
@@ -740,14 +852,14 @@ function assertSectionTitleLayout({
   metrics,
   sectionId,
 }: {
-  firstContentMetricId: string
+  firstContentMetricId?: string
   metrics: NativeLayoutMetricMap
   sectionId: string
 }): NativeLayoutAssertionFailure[] {
   const id = `sidebar.section.${sectionId}`
   const titleRow = metrics[`${id}.row`]
   const titleLabel = metrics[`${id}.label`]
-  const firstContent = metrics[firstContentMetricId]
+  const firstContent = firstContentMetricId ? metrics[firstContentMetricId] : undefined
 
   return [
     ...expectMetric({
@@ -759,11 +871,6 @@ function assertSectionTitleLayout({
       id,
       message: 'section title label is captured before checking native text alignment',
       metric: titleLabel,
-    }),
-    ...expectMetric({
-      id: firstContentMetricId,
-      message: 'first section content is captured before checking native sidebar spacing',
-      metric: firstContent,
     }),
     ...expectClose({
       actual: titleRow?.x ?? null,
@@ -790,6 +897,27 @@ function assertSectionTitleLayout({
         : (nativeSidebarMetricContract.sectionTitleMinHeight - nativeSidebarMetricContract.sectionTitleLineHeight) / 2,
       id,
       message: 'section title label keeps desktop vertical placement',
+    }),
+    ...assertSectionFirstContentLayout({ firstContent, firstContentMetricId, titleRow }),
+  ]
+}
+
+function assertSectionFirstContentLayout({
+  firstContent,
+  firstContentMetricId,
+  titleRow,
+}: {
+  firstContent: NativeLayoutMetric | undefined
+  firstContentMetricId: string | undefined
+  titleRow: NativeLayoutMetric | undefined
+}): NativeLayoutAssertionFailure[] {
+  if (!firstContentMetricId) return []
+
+  return [
+    ...expectMetric({
+      id: firstContentMetricId,
+      message: 'first section content is captured before checking native sidebar spacing',
+      metric: firstContent,
     }),
     ...expectClose({
       actual: titleRow && firstContent ? firstContent.y - titleRow.y - titleRow.height : null,
@@ -1067,9 +1195,27 @@ function assertNoteListItemTextLayout(id: string, item: NoteListItemMetrics): Na
 
 function assertFolderTreeLayout(metrics: NativeLayoutMetricMap): NativeLayoutAssertionFailure[] {
   const tree = folderTreeMetrics(metrics)
+  const containers = sidebarFolderContainerMetrics(metrics)
 
   return [
-    ...assertFolderTreeRootLayout(tree),
+    ...assertFolderTreeRootLayout(tree, containers.at(-1)),
+    ...(hasFixtureFolderStackingMetrics(tree) ? assertFixtureFolderStacking(tree) : []),
+  ]
+}
+
+function hasFixtureFolderStackingMetrics(tree: FolderTreeMetrics): boolean {
+  return Boolean(
+    tree.tolaria
+      && tree.tolariaMobile
+      && tree.tolariaReleases
+      && tree.writing
+      && tree.writingDrafts
+      && tree.writingEssays,
+  )
+}
+
+function assertFixtureFolderStacking(tree: FolderTreeMetrics): NativeLayoutAssertionFailure[] {
+  return [
     ...assertStackedMetricPair({
       current: tree.tolaria,
       currentId: 'sidebar.folder.tolaria',
@@ -1091,6 +1237,15 @@ function assertFolderTreeLayout(metrics: NativeLayoutMetricMap): NativeLayoutAss
   ]
 }
 
+function sidebarFolderContainerMetrics(metrics: NativeLayoutMetricMap): Array<{ id: string; metric: NativeLayoutMetric }> {
+  return Object.entries(metrics)
+    .filter(([id]) => id.startsWith(sidebarFolderPrefix) && id.endsWith(sidebarFolderContainerSuffix))
+    .map(([id, metric]) => ({
+      id: id.slice(0, -sidebarFolderContainerSuffix.length),
+      metric,
+    }))
+}
+
 function folderTreeMetrics(metrics: NativeLayoutMetricMap): FolderTreeMetrics {
   return {
     root: metrics['sidebar.folderTree.root'],
@@ -1103,7 +1258,12 @@ function folderTreeMetrics(metrics: NativeLayoutMetricMap): FolderTreeMetrics {
   }
 }
 
-function assertFolderTreeRootLayout(tree: FolderTreeMetrics): NativeLayoutAssertionFailure[] {
+function assertFolderTreeRootLayout(
+  tree: FolderTreeMetrics,
+  lastFolder: { id: string; metric: NativeLayoutMetric } | undefined,
+): NativeLayoutAssertionFailure[] {
+  const bottomReference = lastFolder?.metric ?? tree.tolaria
+
   return [
     ...expectMetric({
       id: 'sidebar.folderTree.root',
@@ -1117,7 +1277,7 @@ function assertFolderTreeRootLayout(tree: FolderTreeMetrics): NativeLayoutAssert
       message: 'folder tree keeps desktop section inset',
     }),
     ...expectAtLeast({
-      actual: tree.root && tree.tolaria ? tree.root.height - tree.tolaria.y - tree.tolaria.height : null,
+      actual: tree.root && bottomReference ? tree.root.height - bottomReference.y - bottomReference.height : null,
       expected: nativeSidebarMetricContract.folderSectionContentPaddingBottom,
       id: 'sidebar.folderTree.root',
       message: 'folder tree keeps desktop bottom padding',
@@ -1213,7 +1373,23 @@ function assertFolderLayout({
 }
 
 function assertCountPillLayouts(metrics: NativeLayoutMetricMap): NativeLayoutAssertionFailure[] {
-  return countPillMetricSpecs.flatMap((spec) => assertCountPillLayout(metrics, spec))
+  return countPillMetricSpecsForMetrics(metrics).flatMap((spec) => assertCountPillLayout(metrics, spec))
+}
+
+function countPillMetricSpecsForMetrics(metrics: NativeLayoutMetricMap): CountPillLayout[] {
+  const ids = [...countPillIds(metrics)]
+  if (ids.length === 0) return countPillMetricSpecs
+
+  return ids.map((id) => ({
+    compact: id.startsWith('sidebar.section.'),
+    id,
+  }))
+}
+
+function countPillIds(metrics: NativeLayoutMetricMap): Set<string> {
+  return new Set(Object.keys(metrics)
+    .filter((id) => id.endsWith(sidebarCountContainerSuffix))
+    .map((id) => id.slice(0, -'.container'.length)))
 }
 
 function assertCountPillLayout(
