@@ -44,6 +44,8 @@ Observed from the June 24 iPad recording:
 | Raw editor bottom formatting bar should stay at the bottom | Done | `MobileMarkdownSourceEditor` renders `MobileMarkdownFormattingToolbar` in `toolbarHost` after the editor body. |
 | Raw editor gray border should be removed | Done | Source editor input uses transparent/borderless input styling (`border-0 bg-transparent`, `underlineColorAndroid="transparent"`). |
 | Raw editor should have Markdown syntax highlighting | Done | `SourceEditorInput` renders a non-interactive `syntaxLayer` from `markdownSyntaxTokens` behind the transparent input; source editor tests cover token rendering. |
+| Remove slash commands from the editor | Done | Slash-command autocomplete and slash-query block replacement were removed from the mobile autocomplete model, WYSIWYG bridge, native probes, and tests. Formatting/block insertion remains available only through explicit toolbar actions. |
+| Notes should open directly in editable WYSIWYG mode, without a separate edit mode | Done | Tablet, phone, and Mobile UI Lab defaults now open the WYSIWYG editor as editable unless a raw/source QA route explicitly requests source mode. |
 | Views section should appear even when empty so the user can press `+` | Done | Native snapshot exposed `sidebar-section-create-views` on an empty real-vault Views section. |
 | Note-list header should have a sidebar button | Done | `MobileNoteListPanel` accepts `leading`; tablet shell provides `tablet-note-list-sidebar-action`, verified in native snapshot. |
 | Editor breadcrumbs/toolbar should have a left chevron to hide sidebar plus note list | Done | `TabletEditorPanel` accepts `leading`; tablet shell provides `tablet-editor-chrome-toggle`, verified in native snapshot. |
@@ -55,12 +57,11 @@ Observed from the June 24 iPad recording:
 | Feedback | Status | Next action |
 | --- | --- | --- |
 | Make a complete fixed-vs-remaining list | Partial | This file is the tracker; keep it updated as each item is proved or fixed. |
-| Remove slash commands from the editor | Partial | Verify the current TenTap editor no longer exposes slash-command UI on native iPad/phone; remove any remaining bridge/plugin if present. |
 | Remove open/archived selectors altogether from the note list | Partial | Current screenshots no longer show the selectors, but add/keep a focused assertion that the note-list filter control is absent. |
 | General keyboard shortcuts should work (`Cmd+O`, `Cmd+P`, `Cmd+F`, `Cmd+K`, `Cmd+\`) | Partial | Parser/model coverage exists in `mobileWorkspaceKeyboardShortcuts.test.ts`; native Expo Go hardware-key dispatch is not proven and likely needs a native/dev-client strategy or a focused bridge. |
 | Keyboard navigation of the note list should work | Partial | Arrow-key action parsing exists; native focus and dispatch for the note list is not proven. |
 | Many type icons are not rendered correctly | Partial | Primary note-list, properties/relationship, search/action-sheet, and type-visibility surfaces now prefer the vault Type document's configured Phosphor icon names; focused tests and a native real-Laputa screenshot cover this path. Remaining lower-frequency editor toolbar/file fallback and WYSIWYG picker icons still need Type-definition plumbing or explicit acceptance. |
-| WYSIWYG editor should load note content on first open | Partial | Native WYSIWYG probes exist, but the exact user-reported initial-empty regression needs current native reproduction/proof on real Laputa notes. |
+| WYSIWYG editor should load note content on first open | Partial | Native initial content now retries `setContent` during the WebView readiness window before accepting user edits. Needs current simulator proof on real Laputa notes. |
 | Modals/action sheets such as section edit, view edit, command palette should be properly designed | Open | Audit and align `MobileWorkspaceActionSheet`, `MobileCommandPalette`, `MobileTypeSectionEditor`, saved-view forms, and nested controls against desktop tokens and native screenshots. |
 | Properties panel still has remaining issues | Partial | Internal metadata leak and relationship row visibility are fixed. Remaining property add/edit discoverability and type-schema/action-sheet polish need native proof and fixes. |
 | Swipe left on the note list should drag both the note list and sidebar together | Partial | Transition math exists for coupled chrome; needs native gesture proof and possibly tighter drag coupling acceptance metrics. |

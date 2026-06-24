@@ -12,5 +12,5 @@ export function initialMobileEditorStateFromMode(mode: string | null): InitialMo
     return { initialEditorEditing: true, initialEditorEditingMode: 'wysiwyg' }
   }
 
-  return { initialEditorEditing: false, initialEditorEditingMode: 'wysiwyg' }
+  return { initialEditorEditing: true, initialEditorEditingMode: 'wysiwyg' }
 }

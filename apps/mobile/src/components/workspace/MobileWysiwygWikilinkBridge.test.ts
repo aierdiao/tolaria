@@ -5,7 +5,6 @@ import {
   nativeWysiwygDocumentWithInsertedAttachment,
   nativeWysiwygDocumentWithInsertedMarkdownBlock,
   nativeWysiwygDocumentWithInsertedPlainText,
-  nativeWysiwygDocumentWithInsertedSlashCommandBlock,
   nativeWysiwygInlineAutocompleteAtSelection,
   nativeWysiwygAttachmentContent,
   nativeWysiwygPlainTextContent,
@@ -172,51 +171,6 @@ describe('native WYSIWYG wikilink bridge', () => {
     )
   })
 
-  it('replaces a native slash-command query with the selected markdown block', () => {
-    const nextDocument = nativeWysiwygDocumentWithInsertedSlashCommandBlock({
-      json: documentNode(paragraphNode('/table'), paragraphNode('Tail')),
-      payload: { action: 'table' },
-      selection: { from: 1, to: 7 },
-    })
-
-    expect(tiptapJsonToMobileMarkdown(nextDocument)).toBe([
-      '| Column | Value |',
-      '| --- | --- |',
-      '| Item | Detail |',
-      '',
-      'Tail',
-    ].join('\n'))
-  })
-
-  it('keeps text before a native slash-command query when inserting a markdown block', () => {
-    const nextDocument = nativeWysiwygDocumentWithInsertedSlashCommandBlock({
-      json: documentNode(paragraphNode('Insert /divider'), paragraphNode('Tail')),
-      payload: { action: 'divider' },
-      selection: { from: 8, to: 16 },
-    })
-
-    expect(tiptapJsonToMobileMarkdown(nextDocument)).toBe('Insert\n\n---\n\nTail')
-  })
-
-  it.each([
-    ['heading2', 'Insert /heading2 later', '## Insert later'],
-    ['bulletList', 'Insert /bullet later', '- Insert later'],
-    ['taskList', 'Insert /todo later', '- [ ] Insert later'],
-    ['quote', 'Insert /quote later', '> Insert later'],
-  ] as const)('replaces a native slash-command query with a desktop %s block transform', (
-    action,
-    text,
-    expectedMarkdown,
-  ) => {
-    const nextDocument = nativeWysiwygDocumentWithInsertedSlashCommandBlock({
-      json: documentNode(paragraphNode(text)),
-      payload: { action },
-      selection: slashCommandRange(text),
-    })
-
-    expect(tiptapJsonToMobileMarkdown(nextDocument)).toBe(expectedMarkdown)
-  })
-
   it('inserts the wikilink at the current native editor selection', () => {
     expect(insertedWikilinkMarkdown({
       text: 'Read  today.',
@@ -303,7 +257,7 @@ describe('native WYSIWYG wikilink bridge', () => {
     })
   })
 
-  it('does not expose desktop slash-command autocomplete on mobile', () => {
+  it('does not treat slash-prefixed text as native autocomplete', () => {
     expect(nativeWysiwygInlineAutocompleteAtSelection({
       json: documentNode(paragraphNode('Insert /table')),
       selection: { from: 14, to: 14 },
@@ -413,16 +367,6 @@ function autocompleteRange(text: string, cursor: number): NativeWysiwygSelection
     json: documentNode(paragraphNode(text)),
     selection: { from: cursor, to: cursor },
   })?.range
-}
-
-function slashCommandRange(text: string): NativeWysiwygSelection {
-  const slashIndex = text.indexOf('/')
-  const endIndex = text.indexOf(' ', slashIndex)
-
-  return {
-    from: slashIndex + 1,
-    to: (endIndex === -1 ? text.length : endIndex) + 1,
-  }
 }
 
 function documentNode(...content: TiptapJsonNode[]): TiptapJsonNode {

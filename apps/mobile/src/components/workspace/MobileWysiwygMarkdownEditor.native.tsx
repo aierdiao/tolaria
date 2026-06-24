@@ -72,7 +72,6 @@ import {
 import {
   nativeWysiwygMarkdownBlockProbePayloads,
   nativeWysiwygMarkdownBlockProbePlainTextPayload,
-  nativeWysiwygMarkdownBlockProbeSlashCommandJson,
   nativeWysiwygMarkdownBlockProbeTableGrowthJson,
   nativeWysiwygMarkdownBlockStructuredCodeBlock,
   nativeWysiwygMarkdownBlockStructuredTable,
@@ -193,6 +192,7 @@ type NativeTentapEditorRefs = {
   editorRef: MutableRefObject<EditorBridge | null>
   firstEditorSerializationRef: MutableRefObject<boolean>
   hasAcceptedEditorChangeRef: MutableRefObject<boolean>
+  initialContentRetryTimerRefs: MutableRefObject<TimerHandle[]>
   inlineAutocompleteTimerRef: MutableRefObject<TimerHandle | null>
   markdownBlockProofReadyRef: MutableRefObject<boolean>
   markdownBlockRenderProofRef: MutableRefObject<boolean>
@@ -223,6 +223,8 @@ type ContentSettableEditorBridge = EditorBridge & {
 type SelectionSettableEditorBridge = EditorBridge & {
   setSelection: (from: number, to: number) => void
 }
+
+const nativeInitialContentRetryDelaysMs = [80, 240, 520] as const
 
 const mobileTenTapBridgeExtensions = [
   ...TenTapStartKit,
@@ -702,6 +704,7 @@ function useNativeTentapEditorRefs(initialDocumentContent: string): NativeTentap
   const editorRef = useRef<EditorBridge | null>(null)
   const firstEditorSerializationRef = useRef(true)
   const hasAcceptedEditorChangeRef = useRef(false)
+  const initialContentRetryTimerRefs = useRef<TimerHandle[]>([])
   const inlineAutocompleteTimerRef = useRef<TimerHandle | null>(null)
   const markdownBlockProofReadyRef = useRef(false)
   const markdownBlockRenderProofRef = useRef(false)
@@ -715,6 +718,7 @@ function useNativeTentapEditorRefs(initialDocumentContent: string): NativeTentap
     editorRef,
     firstEditorSerializationRef,
     hasAcceptedEditorChangeRef,
+    initialContentRetryTimerRefs,
     inlineAutocompleteTimerRef,
     markdownBlockProofReadyRef,
     markdownBlockRenderProofRef,
@@ -727,6 +731,7 @@ function useNativeTentapEditorRefs(initialDocumentContent: string): NativeTentap
     editorRef,
     firstEditorSerializationRef,
     hasAcceptedEditorChangeRef,
+    initialContentRetryTimerRefs,
     inlineAutocompleteTimerRef,
     markdownBlockProofReadyRef,
     markdownBlockRenderProofRef,
@@ -1175,7 +1180,6 @@ async function insertMarkdownBlocksIntoNativeEditor(
     nextJson = insertedJson
   }
   nextJson = nativeWysiwygMarkdownBlockProbeTableGrowthJson(nextJson)
-  nextJson = nativeWysiwygMarkdownBlockProbeSlashCommandJson(nextJson)
   editor.setContent(nextJson)
   refs.markdownBlockRenderProofRef.current = await nativeWysiwygBlockMathRenderProof(editor)
   refs.markdownBlockProofReadyRef.current = true
@@ -1440,20 +1444,64 @@ function useEditorCssInjection({
   noteWidth: MobileNote['noteWidth']
   refs: NativeTentapEditorRefs
 }) {
-  const { acceptsEditorChangesRef, editorReadyTimerRef, editorRef } = refs
+  const { editorRef } = refs
 
   return useCallback(() => {
     if (isCssInjectableEditorBridge(editorRef.current)) {
       editorRef.current.injectCSS(mobileTentapEditorCss(compact, noteWidth), 'tolaria-editor')
     }
-    if (isContentSettableEditorBridge(editorRef.current)) {
-      editorRef.current.setContent(initialContent)
-    }
-    if (editorReadyTimerRef.current) clearTimeout(editorReadyTimerRef.current)
-    editorReadyTimerRef.current = setTimeout(() => {
-      acceptsEditorChangesRef.current = true
-    }, 750)
-  }, [acceptsEditorChangesRef, compact, editorReadyTimerRef, editorRef, initialContent, noteWidth])
+    syncNativeInitialEditorContent({ initialContent, readyDelayMs: 750, refs })
+  }, [compact, editorRef, initialContent, noteWidth, refs])
+}
+
+function syncNativeInitialEditorContent({
+  initialContent,
+  readyDelayMs,
+  refs,
+}: {
+  initialContent: string
+  readyDelayMs: number
+  refs: NativeTentapEditorRefs
+}) {
+  if (refs.hasAcceptedEditorChangeRef.current) return
+
+  clearNativeInitialEditorContentTimers(refs)
+  refs.acceptsEditorChangesRef.current = false
+  setNativeInitialEditorContent(initialContent, refs)
+
+  for (const delayMs of nativeInitialContentRetryDelaysMs) {
+    const timer = setTimeout(() => {
+      if (refs.hasAcceptedEditorChangeRef.current) return
+      setNativeInitialEditorContent(initialContent, refs)
+    }, delayMs)
+    refs.initialContentRetryTimerRefs.current.push(timer)
+  }
+
+  refs.editorReadyTimerRef.current = setTimeout(() => {
+    clearNativeInitialContentRetryTimers(refs)
+    refs.acceptsEditorChangesRef.current = true
+  }, readyDelayMs)
+}
+
+function setNativeInitialEditorContent(
+  initialContent: string,
+  refs: NativeTentapEditorRefs,
+) {
+  const editor = refs.editorRef.current
+  if (!isContentSettableEditorBridge(editor)) return
+
+  editor.setContent(initialContent)
+}
+
+function clearNativeInitialEditorContentTimers(refs: NativeTentapEditorRefs) {
+  if (refs.editorReadyTimerRef.current) clearTimeout(refs.editorReadyTimerRef.current)
+  refs.editorReadyTimerRef.current = null
+  clearNativeInitialContentRetryTimers(refs)
+}
+
+function clearNativeInitialContentRetryTimers(refs: NativeTentapEditorRefs) {
+  for (const timer of refs.initialContentRetryTimerRefs.current) clearTimeout(timer)
+  refs.initialContentRetryTimerRefs.current = []
 }
 
 function useEditorBridgeRef(
@@ -1532,8 +1580,6 @@ function useSyncInitialEditorContent({
 }) {
   const syncedContentRef = useRef<{ content: string; noteId: string } | null>(null)
   const {
-    acceptsEditorChangesRef,
-    editorReadyTimerRef,
     editorRef,
     firstEditorSerializationRef,
     hasAcceptedEditorChangeRef,
@@ -1549,22 +1595,16 @@ function useSyncInitialEditorContent({
     if (hasAcceptedEditorChangeRef.current) return
 
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
-    if (editorReadyTimerRef.current) clearTimeout(editorReadyTimerRef.current)
-    acceptsEditorChangesRef.current = false
     firstEditorSerializationRef.current = true
-    editor.setContent(initialContent)
+    syncNativeInitialEditorContent({ initialContent, readyDelayMs: 750, refs })
     syncedContentRef.current = { content: initialContent, noteId }
-    editorReadyTimerRef.current = setTimeout(() => {
-      acceptsEditorChangesRef.current = true
-    }, 250)
   }, [
-    acceptsEditorChangesRef,
-    editorReadyTimerRef,
     editorRef,
     firstEditorSerializationRef,
     hasAcceptedEditorChangeRef,
     initialContent,
     noteId,
+    refs,
     saveTimerRef,
   ])
 }
@@ -1574,7 +1614,7 @@ function useFlushOnUnmount(
   flushEditorDocument: () => void,
 ) {
   useEffect(() => () => {
-    if (refs.editorReadyTimerRef.current) clearTimeout(refs.editorReadyTimerRef.current)
+    clearNativeInitialEditorContentTimers(refs)
     if (refs.inlineAutocompleteTimerRef.current) clearTimeout(refs.inlineAutocompleteTimerRef.current)
     if (refs.saveTimerRef.current) clearTimeout(refs.saveTimerRef.current)
     if (refs.hasAcceptedEditorChangeRef.current) flushEditorDocument()

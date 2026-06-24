@@ -2,9 +2,9 @@ import { describe, expect, it } from 'vitest'
 import { initialMobileEditorStateFromMode } from './mobileEditorMode'
 
 describe('mobile editor mode URL state', () => {
-  it('keeps the default route in read mode', () => {
+  it('opens the default route in editable WYSIWYG mode', () => {
     expect(initialMobileEditorStateFromMode(null)).toEqual({
-      initialEditorEditing: false,
+      initialEditorEditing: true,
       initialEditorEditingMode: 'wysiwyg',
     })
   })

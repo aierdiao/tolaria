@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest'
 import {
-  nativeWysiwygDocumentWithInsertedSlashCommandBlock,
   nativeWysiwygDocumentWithInsertedPlainText,
   nativeWysiwygDocumentWithInsertedWikilink,
 } from '../components/workspace/MobileWysiwygWikilinkBridgeModel'
@@ -13,8 +12,6 @@ import {
   nativeWysiwygPersonMentionInsertProbeContent,
   nativeWysiwygPersonMentionInsertProbePayload,
   nativeWysiwygPersonMentionInsertProbeSelection,
-  nativeWysiwygSlashCommandInsertProbePayload,
-  nativeWysiwygSlashCommandInsertProbeSelection,
   nativeWysiwygWikilinkInsertLogLine,
   nativeWysiwygWikilinkInsertProbeEnabled,
   nativeWysiwygWikilinkInsertProbePayload,
@@ -35,7 +32,6 @@ describe('native WYSIWYG wikilink insert probe', () => {
       target: 'People/Luca',
     })
     expect(nativeWysiwygEmojiInsertProbePayload()).toEqual({ text: rocketEmoji })
-    expect(nativeWysiwygSlashCommandInsertProbePayload()).toEqual({ action: 'table' })
     expect(nativeWysiwygPersonMentionInsertProbeContent()).toMatchObject({
       content: [{
         content: [{ text: 'Ask @Lu', type: 'text' }],
@@ -43,41 +39,30 @@ describe('native WYSIWYG wikilink insert probe', () => {
       }, {
         content: [{ text: 'Ship :rock', type: 'text' }],
         type: 'paragraph',
-      }, {
-        content: [{ text: 'Insert /table', type: 'text' }],
-        type: 'paragraph',
       }],
       type: 'doc',
     })
     expect(nativeWysiwygPersonMentionInsertProbeSelection()).toEqual({ from: 5, to: 8 })
     expect(nativeWysiwygEmojiInsertProbeSelection()).toEqual({ from: 15, to: 20 })
-    expect(nativeWysiwygSlashCommandInsertProbeSelection()).toEqual({ from: 29, to: 35 })
   })
 
   it('builds a passing proof when inserted links save as desktop markdown', () => {
     expect(nativeWysiwygWikilinkInsertProof({
-      content: `# Note\n\nAsk [[People/Luca|Luca]] about [[AI Ops Guide]].\n\nShip ${rocketEmoji}\n\n| Column | Value |\n| --- | --- |\n| Item | Detail |`,
+      content: `# Note\n\nAsk [[People/Luca|Luca]] about [[AI Ops Guide]].\n\nShip ${rocketEmoji}`,
       noteId: 'note.md',
     })).toMatchObject({
       insertedEmojiSaved: true,
       insertedEmojiSourceRemoved: true,
       insertedPersonMentionSaved: true,
       insertedPersonMentionSourceRemoved: true,
-      insertedSlashCommandBlockSaved: true,
-      insertedSlashCommandSourceRemoved: true,
       insertedWikilinkSaved: true,
       noteId: 'note.md',
     })
   })
 
   it('builds a passing proof from the native probe insertion order', () => {
-    const slashCommandJson = expectProbeJson(nativeWysiwygDocumentWithInsertedSlashCommandBlock({
-      json: nativeWysiwygPersonMentionInsertProbeContent(),
-      payload: nativeWysiwygSlashCommandInsertProbePayload(),
-      selection: nativeWysiwygSlashCommandInsertProbeSelection(),
-    }))
     const emojiJson = expectProbeJson(nativeWysiwygDocumentWithInsertedPlainText({
-      json: slashCommandJson,
+      json: nativeWysiwygPersonMentionInsertProbeContent(),
       payload: nativeWysiwygEmojiInsertProbePayload(),
       selection: nativeWysiwygEmojiInsertProbeSelection(),
     }))
@@ -100,7 +85,7 @@ describe('native WYSIWYG wikilink insert probe', () => {
 
   it('parses and asserts simulator log proofs', () => {
     const proof = nativeWysiwygWikilinkInsertProof({
-      content: `# Note\n\nAsk [[People/Luca|Luca]] [[AI Ops Guide]]\n\nShip ${rocketEmoji}\n\n| Column | Value |\n| --- | --- |\n| Item | Detail |`,
+      content: `# Note\n\nAsk [[People/Luca|Luca]] [[AI Ops Guide]]\n\nShip ${rocketEmoji}`,
       noteId: 'note.md',
     })
 
@@ -123,13 +108,10 @@ describe('native WYSIWYG wikilink insert probe', () => {
     }, {
       id: 'editor.wysiwyg.wikilinkInsert.emojiSaved',
       message: 'Native WYSIWYG emoji insertion saves as plain markdown emoji text',
-    }, {
-      id: 'editor.wysiwyg.wikilinkInsert.slashCommandBlockSaved',
-      message: 'Native WYSIWYG slash-command insertion saves the selected block as desktop markdown',
     }])
     expect(assertNativeWysiwygWikilinkInsertProofs([
       nativeWysiwygWikilinkInsertProof({
-        content: '# Note\n\nAsk @Lu [[AI Ops Guide]]\n\nShip :rock\n\nInsert /table',
+        content: '# Note\n\nAsk @Lu [[AI Ops Guide]]\n\nShip :rock',
         noteId: 'note.md',
       }),
     ])).toEqual([{
@@ -144,12 +126,6 @@ describe('native WYSIWYG wikilink insert probe', () => {
     }, {
       id: 'editor.wysiwyg.wikilinkInsert.emojiReplacement',
       message: 'Native WYSIWYG emoji insertion replaces the typed shortcode query',
-    }, {
-      id: 'editor.wysiwyg.wikilinkInsert.slashCommandBlockSaved',
-      message: 'Native WYSIWYG slash-command insertion saves the selected block as desktop markdown',
-    }, {
-      id: 'editor.wysiwyg.wikilinkInsert.slashCommandReplacement',
-      message: 'Native WYSIWYG slash-command insertion replaces the typed slash query',
     }])
   })
 

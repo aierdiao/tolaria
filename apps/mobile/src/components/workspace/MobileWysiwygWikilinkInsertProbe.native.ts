@@ -1,9 +1,7 @@
 import type { EditorBridge } from '@10play/tentap-editor'
 import {
-  nativeWysiwygDocumentWithInsertedSlashCommandBlock,
   nativeWysiwygDocumentWithInsertedPlainText,
   nativeWysiwygDocumentWithInsertedWikilink,
-  type NativeWysiwygMarkdownBlockPayload,
   type NativeWysiwygPlainTextPayload,
   type NativeWysiwygSelection,
   type NativeWysiwygWikilinkPayload,
@@ -15,8 +13,6 @@ import {
   nativeWysiwygPersonMentionInsertProbeContent,
   nativeWysiwygPersonMentionInsertProbePayload,
   nativeWysiwygPersonMentionInsertProbeSelection,
-  nativeWysiwygSlashCommandInsertProbePayload,
-  nativeWysiwygSlashCommandInsertProbeSelection,
   nativeWysiwygWikilinkInsertProbePayload,
   nativeWysiwygWikilinkInsertProof,
 } from '../../qa/nativeWysiwygWikilinkInsertProbe'
@@ -32,21 +28,12 @@ type NativeWysiwygWikilinkProbeStep =
     selection: NativeWysiwygSelection
   }
   | {
-    kind: 'slashCommand'
-    payload: NativeWysiwygMarkdownBlockPayload
-    selection: NativeWysiwygSelection
-  }
-  | {
     kind: 'wikilink'
     payload: NativeWysiwygWikilinkPayload
     selection?: NativeWysiwygSelection
   }
 
 const nativeWysiwygWikilinkProbeSteps: NativeWysiwygWikilinkProbeStep[] = [{
-  kind: 'slashCommand',
-  payload: nativeWysiwygSlashCommandInsertProbePayload(),
-  selection: nativeWysiwygSlashCommandInsertProbeSelection(),
-}, {
   kind: 'plainText',
   payload: nativeWysiwygEmojiInsertProbePayload(),
   selection: nativeWysiwygEmojiInsertProbeSelection(),
@@ -90,9 +77,6 @@ function nativeWysiwygWikilinkProbeStepDocument(
   if (step.kind === 'plainText') {
     return nativeWysiwygDocumentWithInsertedPlainText({ json, payload: step.payload, selection: step.selection })
   }
-  if (step.kind === 'slashCommand') {
-    return nativeWysiwygDocumentWithInsertedSlashCommandBlock({ json, payload: step.payload, selection: step.selection })
-  }
 
   return nativeWysiwygDocumentWithInsertedWikilink({ json, payload: step.payload, selection: step.selection })
 }
@@ -104,8 +88,6 @@ function nativeWysiwygWikilinkInsertProofPassed(content: string): boolean {
     && proof.insertedPersonMentionSourceRemoved
     && proof.insertedEmojiSaved
     && proof.insertedEmojiSourceRemoved
-    && proof.insertedSlashCommandBlockSaved
-    && proof.insertedSlashCommandSourceRemoved
 }
 
 function isProbeEditorBridge(editor: EditorBridge | null): editor is NativeWysiwygProbeEditorBridge {

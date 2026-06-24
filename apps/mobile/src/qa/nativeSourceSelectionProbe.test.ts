@@ -34,7 +34,6 @@ describe('native source selection probe', () => {
       ...nativeSourceSelectionProof(),
       emojiAutocompletePreserved: false,
       personReplacementPreserved: false,
-      slashAutocompletePreserved: false,
       wikilinkReplacementPreserved: false,
     }
 
@@ -42,7 +41,6 @@ describe('native source selection probe', () => {
       'editor.source.selection.wikilinkReplacement',
       'editor.source.selection.personReplacement',
       'editor.source.selection.emojiAutocomplete',
-      'editor.source.selection.slashAutocomplete',
     ])
   })
 })

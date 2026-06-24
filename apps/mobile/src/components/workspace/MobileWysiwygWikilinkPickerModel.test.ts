@@ -42,12 +42,6 @@ describe('native WYSIWYG wikilink picker model', () => {
     expect(mobileWysiwygEmojiPayloadForEntry(firstSuggestion)).toEqual({ text: '🚀' })
   })
 
-  it('does not expose slash-command suggestions in the mobile picker surface', () => {
-    expect(mobileWysiwygWikilinkPickerSuggestions([
-      note({ title: 'Table planning' }),
-    ], 'table', 'slashCommand')).toEqual([])
-  })
-
   it('builds the native insertion payload with the note title as label and canonical path target', () => {
     expect(mobileWysiwygWikilinkPayloadForNote(note({
       path: 'Tolaria/Mobile UI/How I Run an Open Source Project.md',

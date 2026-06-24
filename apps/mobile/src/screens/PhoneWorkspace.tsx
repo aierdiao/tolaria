@@ -187,7 +187,7 @@ function PhoneWorkspaceChrome(props: PhoneWorkspaceChromeProps) {
 
 function phoneWorkspaceEditorOptions(props: PhoneWorkspaceProps): PhoneWorkspaceEditorOptions {
   return {
-    initialEditorEditing: props.initialEditorEditing ?? false,
+    initialEditorEditing: props.initialEditorEditing ?? true,
     initialEditorEditingMode: props.initialEditorEditingMode ?? 'wysiwyg',
     layoutProbe: props.layoutProbe ?? false,
     sourceIdleSave: props.sourceIdleSave ?? true,

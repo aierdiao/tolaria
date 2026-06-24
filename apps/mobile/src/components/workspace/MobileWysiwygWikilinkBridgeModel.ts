@@ -11,10 +11,8 @@ import {
 import type { TiptapJsonNode } from '../../workspace/mobileDocumentContent'
 import {
   mobileMarkdownSourceBlockFormat,
-  mobileMarkdownSourceBlockActions,
   mobileMarkdownSourceBlockLines,
 } from '../../workspace/mobileMarkdownSourceBlocks'
-import type { MobileMarkdownFormatAction } from '../../workspace/mobileMarkdownFormatting'
 import type { NativeWysiwygMarkdownBlockAction } from './MobileWysiwygFormatCommands'
 
 type NativeWysiwygWikilinkTextNode = {
@@ -45,7 +43,7 @@ export type NativeWysiwygSelection = {
   from: number
   to: number
 }
-export type NativeWysiwygInlineAutocompleteKind = 'emoji' | 'personMention' | 'slashCommand' | 'wikilink'
+export type NativeWysiwygInlineAutocompleteKind = 'emoji' | 'personMention' | 'wikilink'
 export type NativeWysiwygInlineAutocomplete = {
   kind: NativeWysiwygInlineAutocompleteKind
   query: string
@@ -59,24 +57,6 @@ export type NativeWysiwygMarkdownBlockPayload = {
 export type NativeWysiwygPlainTextPayload = {
   text: string
 }
-export type NativeWysiwygSlashCommandAction =
-  | NativeWysiwygMarkdownBlockAction
-  | Extract<MobileMarkdownFormatAction,
-    | 'bulletList'
-    | 'heading1'
-    | 'heading2'
-    | 'heading3'
-    | 'heading4'
-    | 'heading5'
-    | 'heading6'
-    | 'orderedList'
-    | 'quote'
-    | 'taskList'
-  >
-export type NativeWysiwygSlashCommandPayload = {
-  action: NativeWysiwygSlashCommandAction
-}
-
 export function nativeWysiwygWikilinkContent(
   payload: NativeWysiwygWikilinkPayload,
 ): NativeWysiwygWikilinkTextNode[] | null {
@@ -148,22 +128,6 @@ export function nativeWysiwygDocumentWithInsertedMarkdownBlock({
   return insertBlockAfterSelection(json, nativeWysiwygMarkdownBlockNode(payload.action), selection).node
 }
 
-export function nativeWysiwygDocumentWithInsertedSlashCommandBlock({
-  json,
-  payload,
-  selection,
-}: {
-  json: unknown
-  payload: NativeWysiwygSlashCommandPayload
-  selection?: NativeWysiwygSelection
-}): TiptapJsonNode | null {
-  if (!isTiptapDocument(json)) return null
-
-  if (!selection) return insertBlockAfterSelection(json, nativeWysiwygSlashCommandBlockNode(payload.action)).node
-
-  return insertSlashCommandBlockAtSelection(json, payload.action, normalizedSelection(selection))
-}
-
 export function nativeWysiwygDocumentWithInsertedPlainText({
   json,
   payload,
@@ -223,11 +187,6 @@ function nativeWysiwygMarkdownBlockNode(action: NativeWysiwygMarkdownBlockAction
   if (action === 'mathBlock') return nativeWysiwygMathBlockNode()
   if (action === 'table') return nativeWysiwygTableNode()
   return nativeWysiwygSourceParagraph(mobileMarkdownSourceBlockLines(action))
-}
-
-function nativeWysiwygSlashCommandBlockNode(action: NativeWysiwygSlashCommandAction): TiptapJsonNode {
-  if (isNativeWysiwygMarkdownBlockActionValue(action)) return nativeWysiwygMarkdownBlockNode(action)
-  return nativeWysiwygFormattedBlockNode(action, [])
 }
 
 function nativeWysiwygCodeBlockNode(): TiptapJsonNode {
@@ -545,174 +504,6 @@ function blockInsertionIndex(
   }
 
   return children.length
-}
-
-function insertSlashCommandBlockAtSelection(
-  node: TiptapJsonNode,
-  action: NativeWysiwygSlashCommandAction,
-  selection: NativeWysiwygSelection,
-): TiptapJsonNode {
-  const children = node.content ?? []
-  const result = slashCommandBlockChildren(children, action, selection)
-  return result.inserted
-    ? { ...node, content: result.children }
-    : insertBlockAfterSelection(node, nativeWysiwygSlashCommandBlockNode(action), selection).node
-}
-
-function slashCommandBlockChildren(
-  children: TiptapJsonNode[],
-  action: NativeWysiwygSlashCommandAction,
-  selection: NativeWysiwygSelection,
-): { children: TiptapJsonNode[]; inserted: boolean } {
-  const nextChildren: TiptapJsonNode[] = []
-  let childStart = 0
-  let inserted = false
-
-  for (const child of children) {
-    const childEnd = childStart + tiptapNodeSize(child)
-    if (inserted) {
-      nextChildren.push(cloneNode(child))
-    } else if (slashCommandSelectionTargetsChild(child, selection, childStart, childEnd)) {
-      nextChildren.push(...slashCommandReplacementBlocks(child, action, selection, childStart + 1))
-      inserted = true
-    } else {
-      nextChildren.push(cloneNode(child))
-    }
-    childStart = childEnd
-  }
-
-  return { children: nextChildren, inserted }
-}
-
-function slashCommandSelectionTargetsChild(
-  child: TiptapJsonNode,
-  selection: NativeWysiwygSelection,
-  childStart: number,
-  childEnd: number,
-): boolean {
-  if (!isInlineContainer(child)) return false
-  if (selection.from < childStart) return false
-  return selection.to <= childEnd
-}
-
-function slashCommandReplacementBlocks(
-  node: TiptapJsonNode,
-  action: NativeWysiwygSlashCommandAction,
-  selection: NativeWysiwygSelection,
-  contentStart: number,
-): TiptapJsonNode[] {
-  const before = inlineNodesBefore(node.content ?? [], selection.from, contentStart)
-  const after = inlineNodesAfter(node.content ?? [], [], selection.to, contentStart)
-  const remainingContent = isNativeWysiwygMarkdownBlockActionValue(action)
-    ? inlineContentWithoutTrailingWhitespace([...before, ...after])
-    : inlineContentAroundRemovedSlashQuery(before, after)
-
-  if (!isNativeWysiwygMarkdownBlockActionValue(action)) {
-    return [nativeWysiwygFormattedBlockNode(action, remainingContent)]
-  }
-
-  const prefixBlock = inlineContentHasMeaningfulText(remainingContent)
-    ? [{ ...node, content: remainingContent }]
-    : []
-
-  return [...prefixBlock, nativeWysiwygMarkdownBlockNode(action)]
-}
-
-function nativeWysiwygFormattedBlockNode(
-  action: Exclude<NativeWysiwygSlashCommandAction, NativeWysiwygMarkdownBlockAction>,
-  content: TiptapJsonNode[],
-): TiptapJsonNode {
-  if (action.startsWith('heading')) {
-    return {
-      attrs: { level: Number(action.replace('heading', '')) },
-      content: cloneInlineContent(content),
-      type: 'heading',
-    }
-  }
-  if (action === 'bulletList') return nativeWysiwygListBlock('bulletList', 'listItem', content)
-  if (action === 'orderedList') return nativeWysiwygListBlock('orderedList', 'listItem', content)
-  if (action === 'taskList') return nativeWysiwygListBlock('taskList', 'taskItem', content)
-  return {
-    content: [nativeWysiwygParagraphNode(content)],
-    type: 'blockquote',
-  }
-}
-
-function nativeWysiwygListBlock(
-  listType: 'bulletList' | 'orderedList' | 'taskList',
-  itemType: 'listItem' | 'taskItem',
-  content: TiptapJsonNode[],
-): TiptapJsonNode {
-  return {
-    content: [{
-      attrs: itemType === 'taskItem' ? { checked: false } : undefined,
-      content: [nativeWysiwygParagraphNode(content)],
-      type: itemType,
-    }],
-    type: listType,
-  }
-}
-
-function nativeWysiwygParagraphNode(content: TiptapJsonNode[]): TiptapJsonNode {
-  return {
-    content: cloneInlineContent(content),
-    type: 'paragraph',
-  }
-}
-
-function cloneInlineContent(content: TiptapJsonNode[]): TiptapJsonNode[] | undefined {
-  return content.length > 0 ? content.map(cloneNode) : undefined
-}
-
-function inlineContentAroundRemovedSlashQuery(
-  before: TiptapJsonNode[],
-  after: TiptapJsonNode[],
-): TiptapJsonNode[] {
-  const trimmedBefore = trimTrailingInlineWhitespace(before)
-  const trimmedAfter = trimLeadingInlineWhitespace(after)
-  if (inlineContentHasMeaningfulText(trimmedBefore) && inlineContentHasMeaningfulText(trimmedAfter)) {
-    return [...trimmedBefore, { text: ' ', type: 'text' }, ...trimmedAfter]
-  }
-  return [...trimmedBefore, ...trimmedAfter]
-}
-
-function trimTrailingInlineWhitespace(nodes: TiptapJsonNode[]): TiptapJsonNode[] {
-  const lastNode = nodes.at(-1)
-  if (typeof lastNode?.text !== 'string') return nodes.map(cloneNode)
-
-  const trimmedText = lastNode.text.replace(/\s+$/u, '')
-  const prefix = nodes.slice(0, -1).map(cloneNode)
-  return trimmedText ? [...prefix, textNodeWithText(lastNode, trimmedText)] : prefix
-}
-
-function trimLeadingInlineWhitespace(nodes: TiptapJsonNode[]): TiptapJsonNode[] {
-  const firstNode = nodes[0]
-  if (typeof firstNode?.text !== 'string') return nodes.map(cloneNode)
-
-  const trimmedText = firstNode.text.replace(/^\s+/u, '')
-  const suffix = nodes.slice(1).map(cloneNode)
-  return trimmedText ? [textNodeWithText(firstNode, trimmedText), ...suffix] : suffix
-}
-
-function isNativeWysiwygMarkdownBlockActionValue(
-  action: NativeWysiwygSlashCommandAction,
-): action is NativeWysiwygMarkdownBlockAction {
-  return mobileMarkdownSourceBlockActions.includes(action as NativeWysiwygMarkdownBlockAction)
-}
-
-function inlineContentWithoutTrailingWhitespace(nodes: TiptapJsonNode[]): TiptapJsonNode[] {
-  const lastNode = nodes.at(-1)
-  if (typeof lastNode?.text !== 'string') return nodes
-
-  const trimmedText = lastNode.text.replace(/\s+$/u, '')
-  const prefix = nodes.slice(0, -1)
-  return trimmedText ? [...prefix, textNodeWithText(lastNode, trimmedText)] : prefix
-}
-
-function inlineContentHasMeaningfulText(nodes: TiptapJsonNode[]): boolean {
-  return nodes.some((node) => (
-    typeof node.text === 'string' ? node.text.trim().length > 0 : true
-  ))
 }
 
 function appendWikilinkToNodeType(

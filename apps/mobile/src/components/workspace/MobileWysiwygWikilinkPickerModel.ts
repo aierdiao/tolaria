@@ -19,7 +19,6 @@ export function mobileWysiwygWikilinkPickerSuggestions(
   kind: NativeWysiwygInlineAutocompleteKind = 'wikilink',
 ): MobileNote[] {
   if (kind === 'emoji') return []
-  if (kind === 'slashCommand') return []
   return kind === 'personMention'
     ? mobilePersonMentionAutocompleteSuggestions(notes, query)
     : mobileWikilinkAutocompleteSuggestions(notes, query)

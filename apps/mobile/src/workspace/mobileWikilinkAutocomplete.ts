@@ -14,7 +14,6 @@ type WikilinkQuery = string
 type WikilinkTarget = string
 type PersonMentionQuery = string
 type EmojiShortcodeQuery = string
-type SlashCommandQuery = string
 type MobileWikilinkSuggestionNote = MobileNote & { path: string }
 type InlineQueryOptions = {
   invalidQuery: (query: string) => boolean
@@ -50,12 +49,6 @@ const emojiShortcodeQueryOptions: InlineQueryOptions = {
   replacement: (emoji) => emoji,
   trigger: ':',
   validBoundary: hasInlineShortcutBoundary,
-}
-const slashCommandQueryOptions: InlineQueryOptions = {
-  invalidQuery: (query) => query.includes('/') || /\s/u.test(query),
-  replacement: (command) => command,
-  trigger: '/',
-  validBoundary: hasSlashCommandBoundary,
 }
 
 export function activeMobileWikilinkQuery(
@@ -128,19 +121,6 @@ export function replaceActiveMobileEmojiShortcodeQuery(
   return replaceActiveMobileInlineQuery(text, cursor, emoji, emojiShortcodeQueryOptions)
 }
 
-export type MobileSlashCommandAutocompleteMatch = {
-  cursor: CursorOffset
-  query: SlashCommandQuery
-  start: CursorOffset
-}
-
-export function activeMobileSlashCommandQuery(
-  text: MarkdownContent,
-  cursor: CursorOffset,
-): MobileSlashCommandAutocompleteMatch | null {
-  return activeMobileInlineQuery(text, cursor, slashCommandQueryOptions)
-}
-
 export function mobilePersonMentionAutocompleteSuggestions(
   notes: MobileNote[],
   query: PersonMentionQuery,
@@ -188,13 +168,6 @@ function hasInlineShortcutBoundary(text: string, triggerIndex: number): boolean 
 
   const previous = text.at(triggerIndex - 1)
   return /[\s([{:>,-]/u.test(previous ?? '')
-}
-
-function hasSlashCommandBoundary(text: string, triggerIndex: number): boolean {
-  if (triggerIndex === 0) return true
-
-  const previous = text.at(triggerIndex - 1)
-  return /\s/u.test(previous ?? '')
 }
 
 function mobilePersonMentionMatchesQuery(note: MobileNote, normalizedQuery: string): boolean {

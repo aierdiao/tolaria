@@ -26,8 +26,6 @@ export type NativeWysiwygMarkdownBlockProof = {
   mermaidSaved: boolean
   noteId: NoteId
   plainTextSaved: boolean
-  slashHeadingSaved: boolean
-  slashTaskListSaved: boolean
   tableGrowthSaved: boolean
   tableSaved: boolean
   tableStructured: boolean
@@ -64,8 +62,6 @@ const expectedDivider = '---'
 const expectedCodeBlock = '```text\ncode\n```'
 const expectedMathBlock = '$$\n\\sqrt{a^2 + b^2}\n$$'
 const expectedPlainText = 'Plain  \nClipboard'
-const expectedSlashHeading = '## Insert later'
-const expectedSlashTaskList = '- [ ] Ship later'
 const expectedMermaid = [
   '```mermaid',
   'flowchart TD',
@@ -84,8 +80,6 @@ const proofFieldTypes = {
   mermaidSaved: 'boolean',
   noteId: 'string',
   plainTextSaved: 'boolean',
-  slashHeadingSaved: 'boolean',
-  slashTaskListSaved: 'boolean',
   tableGrowthSaved: 'boolean',
   tableSaved: 'boolean',
   tableStructured: 'boolean',
@@ -128,8 +122,6 @@ export function nativeWysiwygMarkdownBlockProof({
     mermaidSaved: normalizedContent.includes(expectedMermaid),
     noteId,
     plainTextSaved: normalizedContent.includes(expectedPlainText),
-    slashHeadingSaved: markdownBlocks(normalizedContent).includes(expectedSlashHeading),
-    slashTaskListSaved: markdownBlocks(normalizedContent).includes(expectedSlashTaskList),
     tableGrowthSaved: hasTableWithAddedRowAndColumn(normalizedContent),
     tableSaved: hasInsertedTable(normalizedContent),
     tableStructured,
@@ -204,16 +196,6 @@ export function assertNativeWysiwygMarkdownBlockProofs(
       'Native WYSIWYG Mermaid insertion saves as desktop fenced-diagram markdown',
     ),
     proofFailure(
-      latest.slashHeadingSaved,
-      'editor.wysiwyg.markdownBlocks.slashHeading',
-      'Native WYSIWYG heading slash-command transforms save as desktop heading markdown',
-    ),
-    proofFailure(
-      latest.slashTaskListSaved,
-      'editor.wysiwyg.markdownBlocks.slashTaskList',
-      'Native WYSIWYG task-list slash-command transforms save as desktop task-list markdown',
-    ),
-    proofFailure(
       latest.tableSaved,
       'editor.wysiwyg.markdownBlocks.table',
       'Native WYSIWYG table insertion saves as desktop markdown table source lines',
@@ -261,19 +243,6 @@ export function nativeWysiwygMarkdownBlockProbeTableGrowthJson(json: unknown): u
   return growFirstProbeTable(json, state)
 }
 
-export function nativeWysiwygMarkdownBlockProbeSlashCommandJson(json: unknown): unknown {
-  if (!isTiptapJsonNode(json)) return json
-
-  const slashBlocks = slashCommandProbeDocuments()
-    .flatMap((document) => tiptapChildNodes(document).map(cloneTiptapJsonNode))
-  if (slashBlocks.length === 0) return json
-
-  return cloneTiptapJsonNodeWithContent(json, [
-    ...tiptapChildNodes(json).map(cloneTiptapJsonNode),
-    ...slashBlocks,
-  ])
-}
-
 function parseProofLine(line: ProbeLine): NativeWysiwygMarkdownBlockProof | null {
   const prefixIndex = line.indexOf(nativeWysiwygMarkdownBlockLogPrefix)
   if (prefixIndex === -1) return null
@@ -300,8 +269,6 @@ function parsedProof(value: unknown): NativeWysiwygMarkdownBlockProof | null {
     mermaidSaved: value.mermaidSaved,
     noteId: value.noteId,
     plainTextSaved: value.plainTextSaved,
-    slashHeadingSaved: value.slashHeadingSaved,
-    slashTaskListSaved: value.slashTaskListSaved,
     tableGrowthSaved: value.tableGrowthSaved,
     tableSaved: value.tableSaved,
     tableStructured: value.tableStructured,
@@ -343,40 +310,6 @@ function tableNodeWithAddedRowAndColumn(table: TiptapJsonNode): TiptapJsonNode {
 
   grownRows.push(blankTableRow(columnCount))
   return cloneTiptapJsonNodeWithContent(table, grownRows)
-}
-
-function slashCommandProbeDocuments(): TiptapJsonNode[] {
-  return [
-    documentNode(headingNode(2, textNodes('Insert', ' ', 'later'))),
-    documentNode(taskListNode(textNodes('Ship', ' ', 'later'))),
-  ]
-}
-
-function documentNode(...content: TiptapJsonNode[]): TiptapJsonNode {
-  return { content, type: 'doc' }
-}
-
-function headingNode(level: number, content: TiptapJsonNode[]): TiptapJsonNode {
-  return {
-    attrs: { level },
-    content,
-    type: 'heading',
-  }
-}
-
-function taskListNode(content: TiptapJsonNode[]): TiptapJsonNode {
-  return {
-    content: [{
-      attrs: { checked: false },
-      content: [{ content, type: 'paragraph' }],
-      type: 'taskItem',
-    }],
-    type: 'taskList',
-  }
-}
-
-function textNodes(...parts: string[]): TiptapJsonNode[] {
-  return parts.map((text) => ({ text, type: 'text' }))
 }
 
 function tableRowWithAddedCell(row: TiptapJsonNode, columnCount: number): TiptapJsonNode {
