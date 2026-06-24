@@ -15,6 +15,7 @@ import {
 type PhoneWorkspaceTransitionProps = {
   children: ReactNode
   dragX?: NativeAnimated.Value
+  gestureHandoffActive?: boolean
   preview?: ReactNode
   previousState: PhoneWorkspaceState
   state: PhoneWorkspaceState
@@ -24,13 +25,14 @@ type PhoneWorkspaceTransitionProps = {
 export function PhoneWorkspaceTransition({
   children,
   dragX,
+  gestureHandoffActive = false,
   previousState,
   preview,
   state,
   swipeHandlers,
 }: PhoneWorkspaceTransitionProps) {
   const direction = phoneWorkspaceTransitionDirection(previousState, state)
-  const dragStyle = dragX ? { transform: [{ translateX: dragX }] } : null
+  const dragStyle = dragX && !gestureHandoffActive ? { transform: [{ translateX: dragX }] } : null
 
   return (
     <View
@@ -41,7 +43,7 @@ export function PhoneWorkspaceTransition({
       {preview ? <View pointerEvents="none" style={styles.previewLayer}>{preview}</View> : null}
       <NativeAnimated.View style={[styles.stage, dragStyle]}>
         <Reanimated.View
-          entering={enteringTransition(direction)}
+          entering={gestureHandoffActive ? undefined : enteringTransition(direction)}
           key={state}
           style={styles.stage}
         >
