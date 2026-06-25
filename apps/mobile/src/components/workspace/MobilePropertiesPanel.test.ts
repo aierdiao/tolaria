@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  mobileInspectorPlaceholderActionLabel,
   mobileInspectorPlaceholderRowLayoutContract,
   mobileInspectorReferenceRowLayoutContract,
   mobileRelationshipValueMetricSegments,
@@ -28,6 +29,11 @@ describe('mobileRelationshipValueMetricSegments', () => {
       minHeight: desktopPropertyParity.rowMinHeight,
       paddingHorizontal: desktopPropertyParity.rowPaddingHorizontal,
     })
+  })
+
+  it('uses property-specific copy for property placeholder rows', () => {
+    expect(mobileInspectorPlaceholderActionLabel('property')).toBe('Add property')
+    expect(mobileInspectorPlaceholderActionLabel('relationship')).toBe('Add')
   })
 
   it('keeps first relationship row metric ids stable for native layout gates', () => {

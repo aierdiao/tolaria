@@ -23,6 +23,7 @@ import { MobileTypeIcon } from './MobileWorkspaceIcons'
 import { chipTone, noteTypeColor, noteTypeSoftColor, statusTone, tagTone } from './mobileWorkspaceTone'
 import { MobileFrontmatterStateNotice } from './MobileFrontmatterStateNotice'
 import {
+  mobileInspectorPlaceholderActionLabel,
   mobileInspectorPlaceholderRowLayoutContract,
   mobileInspectorReferenceRowLayoutContract,
   mobileRelationshipValueMetricSegments,
@@ -494,21 +495,21 @@ function PlaceholderPropertyRow({
 
   return (
     <MobilePropertyRow
+      accessibilityLabel={slot.label}
       label={slot.label}
       layoutProbe={layoutProbe}
       layoutProbeId={`properties.placeholder.${testIdSegment(slot.key)}`}
       testID={testID}
+      onPress={onPress}
       value={(
-        <Pressable
-          accessibilityLabel={slot.label}
-          accessibilityRole="button"
-          style={({ pressed }) => [propertyStyles.placeholderAddValue, pressed ? propertyStyles.editableValuePressed : null]}
+        <View
+          pointerEvents="none"
+          style={propertyStyles.placeholderAddValue}
           testID={`${testID}-add`}
-          onPress={onPress}
         >
           <Plus color={mobileColors.textFaint} size={14} />
-          <Text numberOfLines={1} style={propertyStyles.placeholderValue}>{mobileText('inspector.relationship.add')}</Text>
-        </Pressable>
+          <Text numberOfLines={1} style={propertyStyles.placeholderValue}>{mobileInspectorPlaceholderActionLabel('property')}</Text>
+        </View>
       )}
     />
   )
@@ -562,7 +563,14 @@ function PropertyActionRow({
   const metricId = layoutProbeId ?? testID
 
   return (
-    <View {...propertyProbe(layoutProbe, metricId, 'row')} style={actionStyles.row}>
+    <Pressable
+      {...propertyProbe(layoutProbe, metricId, 'row')}
+      accessibilityLabel={label}
+      accessibilityRole="button"
+      style={({ pressed }) => [actionStyles.row, pressed ? actionStyles.rowPressed : null]}
+      testID={testID}
+      onPress={onPress}
+    >
       <View {...propertyProbe(layoutProbe, metricId, 'label')} pointerEvents="none" style={actionStyles.label}>
         <View style={actionStyles.iconSlot}>
           <Plus color={mobileColors.textFaint} size={14} />
@@ -570,14 +578,7 @@ function PropertyActionRow({
         <Text numberOfLines={1} style={actionStyles.text}>{visibleLabel}</Text>
       </View>
       <View {...propertyProbe(layoutProbe, metricId, 'value')} pointerEvents="none" style={actionStyles.value} />
-      <Pressable
-        accessibilityLabel={label}
-        accessibilityRole="button"
-        style={({ pressed }) => [actionStyles.pressLayer, pressed ? actionStyles.rowPressed : null]}
-        testID={testID}
-        onPress={onPress}
-      />
-    </View>
+    </Pressable>
   )
 }
 
@@ -613,7 +614,7 @@ function PlaceholderRelationshipSection({
             <Plus color={mobileColors.textFaint} size={14} />
           </View>
           <Text numberOfLines={1} style={[actionStyles.text, propertyStyles.placeholderButtonText]}>
-            {mobileText('inspector.relationship.add')}
+            {mobileInspectorPlaceholderActionLabel('relationship')}
           </Text>
         </View>
       </Pressable>
@@ -1121,10 +1122,6 @@ const actionStyles = StyleSheet.create({
     gap: mobileSpace.xs,
     marginRight: mobileSpace.sm,
     zIndex: 1,
-  },
-  pressLayer: {
-    ...StyleSheet.absoluteFillObject,
-    borderRadius: desktopPropertyParity.actionRowRadius,
   },
   row: {
     height: desktopPropertyParity.rowMinHeight,

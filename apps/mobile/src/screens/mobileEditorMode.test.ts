@@ -20,6 +20,13 @@ describe('mobile editor mode URL state', () => {
     })
   })
 
+  it('opens a read-only rendered editor for read-mode QA routes', () => {
+    expect(initialMobileEditorStateFromMode('read')).toEqual({
+      initialEditorEditing: false,
+      initialEditorEditingMode: 'wysiwyg',
+    })
+  })
+
   it('opens the native TenTap editor for wysiwyg-mode QA routes', () => {
     expect(initialMobileEditorStateFromMode('wysiwyg')).toEqual({
       initialEditorEditing: true,

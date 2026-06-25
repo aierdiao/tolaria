@@ -1,5 +1,8 @@
 import type { MobileRelationship } from '../../workspace/mobileWorkspaceModel'
 import { desktopPropertyParity, desktopRelationshipParity } from '../../ui/desktopParity'
+import { mobileText } from '../../i18n/mobileText'
+
+export type MobileInspectorPlaceholderActionKind = 'property' | 'relationship'
 
 export const mobileInspectorReferenceRowLayoutContract = {
   iconSize: desktopRelationshipParity.iconSize,
@@ -16,6 +19,12 @@ export const mobileInspectorPlaceholderRowLayoutContract = {
   minHeight: desktopPropertyParity.rowMinHeight,
   paddingHorizontal: desktopPropertyParity.rowPaddingHorizontal,
 } as const
+
+export function mobileInspectorPlaceholderActionLabel(kind: MobileInspectorPlaceholderActionKind): string {
+  return kind === 'property'
+    ? mobileText('inspector.properties.addProperty')
+    : mobileText('inspector.relationship.add')
+}
 
 export function mobileRelationshipValueMetricSegments(
   values: MobileRelationship['values'],

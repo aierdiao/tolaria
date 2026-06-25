@@ -4,6 +4,10 @@ export type InitialMobileEditorState = {
 }
 
 export function initialMobileEditorStateFromMode(mode: string | null): InitialMobileEditorState {
+  if (mode === 'read') {
+    return { initialEditorEditing: false, initialEditorEditingMode: 'wysiwyg' }
+  }
+
   if (mode === 'raw' || mode === 'source') {
     return { initialEditorEditing: true, initialEditorEditingMode: 'source' }
   }
