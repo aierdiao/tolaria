@@ -396,9 +396,10 @@ Formula cells can reference another sheet note with Tolaria's cross-sheet syntax
 ```txt
 =[[newsletter-revenue]].B5
 =ROUND([[business-plan]].$E$12, 2)
+=[[device]].power.watts
 ```
 
-Cross-sheet references resolve another sheet note by wikilink target, then read a single A1-style cell. Circular references and very deep chains are treated as unresolved.
+Cross-sheet cell references resolve another sheet note by wikilink target, then read a single A1-style cell. Frontmatter references resolve one note by wikilink target, then read a scalar property path after the dot. Missing, ambiguous, circular, very deep, or non-scalar references are treated as unresolved and surface as spreadsheet errors.
 
 ## Guidance For Agents And Scripts
 
@@ -408,7 +409,7 @@ When editing a sheet note programmatically:
 - keep `_display: sheet` when the file should display as a spreadsheet
 - keep spreadsheet presentation state under `_sheet`
 - parse and serialize the body as CSV, not by splitting on every comma manually
-- preserve formulas as formulas, including `[[sheet]].A1` references
+- preserve formulas as formulas, including `[[sheet]].A1` and `[[note]].property.path` references
 - avoid converting formulas to their displayed values
 - quote CSV cells when they contain commas, quotes, or line breaks
 - do not add workbook tabs inside one note; create another note with `_display: sheet` instead
@@ -449,7 +450,7 @@ Use parentheses when a model depends on precedence:
 =(B2+B3-B4)/B5
 ```
 
-## Tolaria Cross-Sheet References
+## Tolaria Note References
 
 Tolaria supports wikilink cell references for values that live in another sheet note:
 
@@ -470,7 +471,19 @@ Absolute markers follow spreadsheet copy behavior:
 | `[[revenue]].B$5` | row fixed, column can shift |
 | `[[revenue]].$B5` | column fixed, row can shift |
 
-Cross-sheet references currently resolve single cells. Keep range formulas inside one sheet note until cross-note ranges are explicitly supported.
+Cross-sheet cell references currently resolve single cells. Keep range formulas inside one sheet note until cross-note ranges are explicitly supported.
+
+Formulas can also read scalar frontmatter properties from a specific note:
+
+```txt
+=[[device.md]].power.watts
+=[[project-alpha]].status
+=[[book-notes/the-design-of-everyday-things.md]].rating
+```
+
+The target resolves like a wikilink, and the dot path reads nested frontmatter keys. Numbers, booleans, and strings become formula literals. Missing notes, ambiguous note targets, missing properties, arrays, maps, and other non-scalar values resolve to `#N/A`.
+
+A first segment that looks like an A1 cell address, such as `B2`, is treated as a cross-sheet cell reference. Use property names that do not collide with A1 notation for frontmatter formulas.
 
 ## Autocomplete Functions
 

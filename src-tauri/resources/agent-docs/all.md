@@ -3,6 +3,15 @@
 Source: index.md
 URL: /
 
+---
+layout: page
+sidebar: false
+aside: false
+landing: true
+title: Tolaria
+description: A second brain for the AI era. Free forever.
+---
+
 <LandingHome />
 
 ---
@@ -551,7 +560,7 @@ Project,Owner,Status
 
 The cell still behaves like a spreadsheet cell, but the value remains a vault link that Tolaria can understand.
 
-## Cross-Sheet Formulas
+## Note Reference Formulas
 
 Tolaria adds a sheet-note reference syntax on top of IronCalc formulas:
 
@@ -561,7 +570,7 @@ Tolaria adds a sheet-note reference syntax on top of IronCalc formulas:
 =[[refactoring-business-plan]].$C$18
 ```
 
-The target before the dot is a normal Tolaria wikilink target. The part after the dot is an A1-style cell address.
+The target before the dot is a normal Tolaria wikilink target. For another sheet note, the part after the dot is an A1-style cell address.
 
 Relative and absolute references work like spreadsheet references when copied:
 
@@ -573,6 +582,15 @@ Relative and absolute references work like spreadsheet references when copied:
 This is not the same as an IronCalc workbook tab reference. It is Tolaria-specific syntax for referencing another sheet note in the vault.
 
 Current cross-sheet formulas resolve single cells. Ranges across sheet notes are not a stable file-format feature yet, so prefer composing them from explicit cell references or keeping range formulas inside the same sheet note.
+
+Sheet formulas can also read scalar frontmatter properties from a note:
+
+```txt
+=[[device]].power.watts
+=[[project-alpha]].status
+```
+
+This keeps sheet models connected to ordinary Tolaria metadata without requiring a saved view or query. Unresolved, ambiguous, or non-scalar property references show spreadsheet errors.
 
 ## Storage
 
@@ -652,6 +670,8 @@ _order: 10
 
 # Project
 ```
+
+Type templates can live in the Type document's `template` frontmatter field. When a hand-edited Type body contains template-like structure after its own `# TypeName` heading, Tolaria also uses that body content as the new-note template. Plain descriptive body text stays documentation-only.
 
 ## What Types Control
 
@@ -912,6 +932,8 @@ A type should represent a recurring category, not a one-off label. If you only n
 ## Templates
 
 Type documents can include a Markdown template for new notes of that type. Keep templates small and useful: a heading, a few expected fields, and the first checklist are usually enough.
+
+You can store the template in the Type document's `template` frontmatter field. When hand-editing the Type document body, content after the Type note's own `# TypeName` heading is also used as the new-note template if it looks like template structure such as field labels, secondary headings, or checklist starters. Plain descriptive body text is ignored.
 
 Type documents can also define fields for new notes. Empty properties and relationships become placeholders in new notes of that type. Properties with values become defaults for new notes of that type.
 
@@ -1196,7 +1218,7 @@ When the cell is not being edited, Tolaria renders the wikilink like other note 
 
 Command-click a wikilink in a sheet cell to open the linked note.
 
-## Reference Another Sheet Note
+## Reference Another Note
 
 Formulas can read a cell from another sheet note with Tolaria's wikilink cell syntax:
 
@@ -1218,6 +1240,16 @@ Use absolute markers when copying formulas:
 | `[[revenue]].$B5` | column fixed, row can shift |
 
 Cross-sheet references currently resolve single cells. Keep range formulas inside one sheet note.
+
+Formulas can read scalar frontmatter properties from a note with dot notation:
+
+```txt
+=[[device]].power.watts
+=[[project-alpha]].status
+=[[book-notes/the-design-of-everyday-things.md]].rating
+```
+
+Numbers, booleans, and text properties can be used in formulas. Missing or ambiguous note targets, missing properties, and non-scalar values such as lists or nested objects show as spreadsheet errors.
 
 ## Work With The Raw File
 
@@ -1788,9 +1820,10 @@ Formula cells can reference another sheet note with Tolaria's cross-sheet syntax
 ```txt
 =[[newsletter-revenue]].B5
 =ROUND([[business-plan]].$E$12, 2)
+=[[device]].power.watts
 ```
 
-Cross-sheet references resolve another sheet note by wikilink target, then read a single A1-style cell. Circular references and very deep chains are treated as unresolved.
+Cross-sheet cell references resolve another sheet note by wikilink target, then read a single A1-style cell. Frontmatter references resolve one note by wikilink target, then read a scalar property path after the dot. Missing, ambiguous, circular, very deep, or non-scalar references are treated as unresolved and surface as spreadsheet errors.
 
 ## Guidance For Agents And Scripts
 
@@ -1800,7 +1833,7 @@ When editing a sheet note programmatically:
 - keep `_display: sheet` when the file should display as a spreadsheet
 - keep spreadsheet presentation state under `_sheet`
 - parse and serialize the body as CSV, not by splitting on every comma manually
-- preserve formulas as formulas, including `[[sheet]].A1` references
+- preserve formulas as formulas, including `[[sheet]].A1` and `[[note]].property.path` references
 - avoid converting formulas to their displayed values
 - quote CSV cells when they contain commas, quotes, or line breaks
 - do not add workbook tabs inside one note; create another note with `_display: sheet` instead
@@ -1841,7 +1874,7 @@ Use parentheses when a model depends on precedence:
 =(B2+B3-B4)/B5
 ```
 
-## Tolaria Cross-Sheet References
+## Tolaria Note References
 
 Tolaria supports wikilink cell references for values that live in another sheet note:
 
@@ -1862,7 +1895,19 @@ Absolute markers follow spreadsheet copy behavior:
 | `[[revenue]].B$5` | row fixed, column can shift |
 | `[[revenue]].$B5` | column fixed, row can shift |
 
-Cross-sheet references currently resolve single cells. Keep range formulas inside one sheet note until cross-note ranges are explicitly supported.
+Cross-sheet cell references currently resolve single cells. Keep range formulas inside one sheet note until cross-note ranges are explicitly supported.
+
+Formulas can also read scalar frontmatter properties from a specific note:
+
+```txt
+=[[device.md]].power.watts
+=[[project-alpha]].status
+=[[book-notes/the-design-of-everyday-things.md]].rating
+```
+
+The target resolves like a wikilink, and the dot path reads nested frontmatter keys. Numbers, booleans, and strings become formula literals. Missing notes, ambiguous note targets, missing properties, arrays, maps, and other non-scalar values resolve to `#N/A`.
+
+A first segment that looks like an A1 cell address, such as `B2`, is treated as a cross-sheet cell reference. Use property names that do not collide with A1 notation for frontmatter formulas.
 
 ## Autocomplete Functions
 

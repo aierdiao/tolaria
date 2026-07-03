@@ -160,7 +160,7 @@
       "One Note, One Sheet",
       "Editing",
       "Wikilinks In Cells",
-      "Cross-Sheet Formulas",
+      "Note Reference Formulas",
       "Storage",
       "Formulas"
     ]
@@ -330,7 +330,7 @@
       "Select And Edit Ranges",
       "Format Cells",
       "Add Wikilinks",
-      "Reference Another Sheet Note",
+      "Reference Another Note",
       "Work With The Raw File"
     ]
   },
@@ -459,7 +459,7 @@
     "section": "reference",
     "headings": [
       "Basic Syntax",
-      "Tolaria Cross-Sheet References",
+      "Tolaria Note References",
       "Autocomplete Functions",
       "Logical",
       "Math and trigonometry",
