@@ -39,6 +39,19 @@ function isExternalOpenCanceledByUser(error: unknown): boolean {
     message.includes('operation was cancelled by the user')
 }
 
+function normalizeWindowsShellPath(path: AbsoluteFilePath): AbsoluteFilePath {
+  if (path.startsWith('\\\\?\\UNC\\')) {
+    return `\\\\${path.slice('\\\\?\\UNC\\'.length)}`.replaceAll('/', '\\')
+  }
+  if (path.startsWith('\\\\?\\')) {
+    return path.slice('\\\\?\\'.length).replaceAll('/', '\\')
+  }
+  if (/^[A-Za-z]:[\\/]/.test(path)) {
+    return path.replaceAll('/', '\\')
+  }
+  return path
+}
+
 export function normalizeExternalUrl(value: ExternalUrlCandidate): string | null {
   const trimmed = value.trim()
   if (!trimmed) return null
@@ -99,7 +112,7 @@ export async function openLocalFile(absolutePath: AbsoluteFilePath, vaultPath?: 
 export async function revealLocalPath(absolutePath: AbsoluteFilePath): Promise<void> {
   if (isTauri()) {
     const { revealItemInDir } = await import('@tauri-apps/plugin-opener')
-    await revealItemInDir(absolutePath)
+    await revealItemInDir(normalizeWindowsShellPath(absolutePath))
   }
 }
 

@@ -104,6 +104,22 @@ describe('local file actions', () => {
     expect(revealItemInDir).toHaveBeenCalledWith('/vault/notes/project.md')
   })
 
+  it('reveals Windows verbatim drive paths through a shell-friendly path', async () => {
+    vi.stubGlobal('isTauri', true)
+
+    await revealLocalPath(String.raw`\\?\D:\DEV\sakuhinn/untitled-note-1783102524.md`)
+
+    expect(revealItemInDir).toHaveBeenCalledWith(String.raw`D:\DEV\sakuhinn\untitled-note-1783102524.md`)
+  })
+
+  it('reveals Windows verbatim UNC paths through a shell-friendly path', async () => {
+    vi.stubGlobal('isTauri', true)
+
+    await revealLocalPath(String.raw`\\?\UNC\Kolanas\nas\vault/note.md`)
+
+    expect(revealItemInDir).toHaveBeenCalledWith(String.raw`\\Kolanas\nas\vault\note.md`)
+  })
+
   it('copies local paths to the clipboard', async () => {
     const writeText = vi.fn().mockResolvedValue(undefined)
     setClipboard(writeText)
