@@ -9,6 +9,7 @@ mod getting_started;
 mod ignored;
 mod image;
 mod migration;
+mod note_assets;
 mod parsing;
 pub(crate) mod path_identity;
 mod rename;
