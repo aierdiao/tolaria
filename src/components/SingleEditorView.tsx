@@ -1199,7 +1199,7 @@ export function SingleEditorView({ editor, entries, onNavigateWikilink, onChange
   })
   const handleEditorChange = useCompositionAwareEditorChange({ containerRef, onChange })
   const onImageUrl = useInsertImageCallback(editor)
-  const { isDragOver } = useImageDrop({ containerRef, onImageImportError, onImageUrl, vaultPath })
+  const { isDragOver } = useImageDrop({ containerRef, onImageImportError, onImageUrl, vaultPath, notePath: sourceEntry?.path })
   const lightbox = useImageLightbox({ containerRef })
   const {
     clearCopyTarget,

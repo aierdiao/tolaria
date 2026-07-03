@@ -501,6 +501,29 @@ describe('SettingsPanel', () => {
     expect(trackEventMock).toHaveBeenCalledWith('date_display_format_changed', { format: 'iso' })
   })
 
+  it('defaults the attachment location to the vault attachments folder', () => {
+    render(
+      <SettingsPanel open={true} settings={emptySettings} onSave={onSave} onClose={onClose} />
+    )
+
+    expect(screen.getByTestId('settings-attachment-location')).toHaveAttribute('data-value', 'attachments')
+  })
+
+  it('saves the attachment location preference and tracks the change', () => {
+    render(
+      <SettingsPanel open={true} settings={emptySettings} onSave={onSave} onClose={onClose} />
+    )
+
+    fireEvent.pointerDown(screen.getByTestId('settings-attachment-location'), { button: 0, pointerType: 'mouse' })
+    fireEvent.click(screen.getByRole('option', { name: 'assets folder next to the note' }))
+    fireEvent.click(screen.getByTestId('settings-save'))
+
+    expect(onSave).toHaveBeenCalledWith(expect.objectContaining({
+      attachment_location: 'note-assets',
+    }))
+    expect(trackEventMock).toHaveBeenCalledWith('attachment_location_changed', { location: 'note-assets' })
+  })
+
   it('keeps the language selector keyboard accessible', () => {
     render(
       <SettingsPanel open={true} settings={emptySettings} onSave={onSave} onClose={onClose} />

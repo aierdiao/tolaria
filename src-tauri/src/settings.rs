@@ -16,6 +16,7 @@ const SUPPORTED_DEFAULT_AI_AGENTS: &[&str] = &[
 ];
 pub const DEFAULT_HIDE_GITIGNORED_FILES: bool = true;
 const SUPPORTED_NOTE_WIDTH_MODES: &[&str] = &["normal", "wide"];
+const SUPPORTED_ATTACHMENT_LOCATIONS: &[&str] = &["attachments", "note-assets", "per-note-assets"];
 const SUPPORTED_DATE_DISPLAY_FORMATS: &[&str] = &["us", "european", "friendly", "iso"];
 const SUPPORTED_UI_LANGUAGE_ALIASES: &[(&str, &str)] = &[
     ("en", "en"),
@@ -117,10 +118,45 @@ pub struct Settings {
     pub ai_model_providers: Option<Vec<AiModelProvider>>,
     pub ai_workspace_conversations: Option<Vec<AiWorkspaceConversationSetting>>,
     pub hide_gitignored_files: Option<bool>,
+    pub attachment_location: Option<String>,
     pub all_notes_show_pdfs: Option<bool>,
     pub all_notes_show_images: Option<bool>,
     pub all_notes_show_unsupported: Option<bool>,
     pub multi_workspace_enabled: Option<bool>,
+}
+
+/// Where newly pasted or dropped images are saved.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum AttachmentLocation {
+    /// Vault-root `attachments/` folder (default, legacy behavior).
+    VaultAttachments,
+    /// Shared `assets/` folder next to the note the image is inserted into.
+    NoteAssets,
+    /// Per-note `<note name>.assets/` folder next to the note.
+    PerNoteAssets,
+}
+
+pub fn normalize_attachment_location(value: Option<&str>) -> Option<String> {
+    match value.map(|candidate| candidate.trim().to_ascii_lowercase()) {
+        Some(location) if SUPPORTED_ATTACHMENT_LOCATIONS.contains(&location.as_str()) => {
+            Some(location)
+        }
+        _ => None,
+    }
+}
+
+pub fn attachment_location_from_settings(settings: &Settings) -> AttachmentLocation {
+    match settings.attachment_location.as_deref() {
+        Some("note-assets") => AttachmentLocation::NoteAssets,
+        Some("per-note-assets") => AttachmentLocation::PerNoteAssets,
+        _ => AttachmentLocation::VaultAttachments,
+    }
+}
+
+pub fn attachment_location() -> AttachmentLocation {
+    get_settings()
+        .map(|settings| attachment_location_from_settings(&settings))
+        .unwrap_or(AttachmentLocation::VaultAttachments)
 }
 
 fn normalize_optional_string(value: Option<String>) -> Option<String> {
@@ -247,6 +283,7 @@ fn normalize_settings(settings: Settings) -> Settings {
             settings.ai_workspace_conversations,
         ),
         hide_gitignored_files: settings.hide_gitignored_files,
+        attachment_location: normalize_attachment_location(settings.attachment_location.as_deref()),
         all_notes_show_pdfs: settings.all_notes_show_pdfs,
         all_notes_show_images: settings.all_notes_show_images,
         all_notes_show_unsupported: settings.all_notes_show_unsupported,
@@ -469,6 +506,7 @@ mod tests {
             ai_model_providers: None,
             ai_workspace_conversations: None,
             hide_gitignored_files: Some(false),
+            attachment_location: Some("note-assets".to_string()),
             multi_workspace_enabled: Some(true),
             all_notes_show_pdfs: Some(true),
             all_notes_show_images: Some(true),
@@ -622,6 +660,53 @@ mod tests {
             ..Default::default()
         });
         assert!(loaded.release_channel.is_none());
+    }
+
+    #[test]
+    fn test_attachment_location_note_assets_is_preserved() {
+        let loaded = save_and_reload(Settings {
+            attachment_location: Some(" Note-Assets ".to_string()),
+            ..Default::default()
+        });
+        assert_eq!(loaded.attachment_location.as_deref(), Some("note-assets"));
+        assert_eq!(
+            attachment_location_from_settings(&loaded),
+            AttachmentLocation::NoteAssets
+        );
+    }
+
+    #[test]
+    fn test_invalid_attachment_location_is_filtered() {
+        let loaded = save_and_reload(Settings {
+            attachment_location: Some("desktop".to_string()),
+            ..Default::default()
+        });
+        assert!(loaded.attachment_location.is_none());
+        assert_eq!(
+            attachment_location_from_settings(&loaded),
+            AttachmentLocation::VaultAttachments
+        );
+    }
+
+    #[test]
+    fn test_attachment_location_per_note_assets_is_preserved() {
+        let loaded = save_and_reload(Settings {
+            attachment_location: Some("per-note-assets".to_string()),
+            ..Default::default()
+        });
+        assert_eq!(loaded.attachment_location.as_deref(), Some("per-note-assets"));
+        assert_eq!(
+            attachment_location_from_settings(&loaded),
+            AttachmentLocation::PerNoteAssets
+        );
+    }
+
+    #[test]
+    fn test_missing_attachment_location_defaults_to_vault_attachments() {
+        assert_eq!(
+            attachment_location_from_settings(&Settings::default()),
+            AttachmentLocation::VaultAttachments
+        );
     }
 
     #[test]

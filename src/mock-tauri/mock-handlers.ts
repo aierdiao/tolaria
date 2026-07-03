@@ -147,10 +147,23 @@ let mockSettings: Settings = {
   ai_model_providers: null,
   ai_workspace_conversations: null,
   hide_gitignored_files: null,
+  attachment_location: null,
   all_notes_show_pdfs: null,
   all_notes_show_images: null,
   all_notes_show_unsupported: null,
   multi_workspace_enabled: null,
+}
+
+/** Mirror of the Rust attachment location logic for browser mode. */
+function mockAttachmentDir(vault: string, notePath?: string | null): string {
+  const location = mockSettings.attachment_location
+  if (notePath && (location === 'note-assets' || location === 'per-note-assets')) {
+    const noteDir = notePath.split('/').slice(0, -1).join('/') || vault
+    if (location === 'note-assets') return `${noteDir}/assets`
+    const stem = (notePath.split('/').pop() ?? '').replace(/\.md$/i, '')
+    if (stem) return `${noteDir}/${stem}.assets`
+  }
+  return `${vault}/attachments`
 }
 
 const DEFAULT_MOCK_VAULT_PATH = '/Users/mock/demo-vault-v2'
@@ -579,14 +592,14 @@ export const mockHandlers: Record<string, (args: any) => any> = {
     syncWindowContent()
     return null
   },
-  save_image: (args: { vault_path?: string; filename: string; data: string }) => {
+  save_image: (args: { vault_path?: string; filename: string; data: string; note_path?: string | null }) => {
     const vault = args.vault_path ?? '/Users/luca/Laputa'
-    return `${vault}/attachments/${Date.now()}-${args.filename}`
+    return `${mockAttachmentDir(vault, args.note_path)}/${Date.now()}-${args.filename}`
   },
-  copy_image_to_vault: (args: { vault_path?: string; source_path: string }) => {
+  copy_image_to_vault: (args: { vault_path?: string; source_path: string; note_path?: string | null }) => {
     const vault = args.vault_path ?? '/Users/luca/Laputa'
     const filename = args.source_path.split('/').pop() ?? 'image.png'
-    return `${vault}/attachments/${Date.now()}-${filename}`
+    return `${mockAttachmentDir(vault, args.note_path)}/${Date.now()}-${filename}`
   },
   get_settings: () => ({ ...mockSettings }),
   save_settings: (args: { settings: Settings }) => {
@@ -619,6 +632,7 @@ export const mockHandlers: Record<string, (args: any) => any> = {
       ai_model_providers: s.ai_model_providers ?? null,
       ai_workspace_conversations: s.ai_workspace_conversations ?? null,
       hide_gitignored_files: s.hide_gitignored_files ?? null,
+      attachment_location: s.attachment_location ?? null,
       all_notes_show_pdfs: s.all_notes_show_pdfs ?? null,
       all_notes_show_images: s.all_notes_show_images ?? null,
       all_notes_show_unsupported: s.all_notes_show_unsupported ?? null,

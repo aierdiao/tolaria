@@ -302,6 +302,10 @@ files:
     settings.noteWidth.defaultDescription: 2b5fb6d7dfa2b1da1e47bcac30f58e8d
     settings.noteWidth.normal: 960b44c579bc2f6818d2daaf9e4c16f0
     settings.noteWidth.wide: e7c770a61dbdf81ca922ae0260e327c1
+    settings.attachmentLocation.label: 00e51e7df6eac26e17dc4a5c4219fb22
+    settings.attachmentLocation.description: 520b9ab712b75082f261dfd77dd8d81e
+    settings.attachmentLocation.attachments: 7b0b4876ecd124097d1a451c4694c762
+    settings.attachmentLocation.noteAssets: 67ecbce93bf168adcf97a9dd671700eb
     settings.sidebarTypePluralization.label: 1e5bd615b1abbf39129ef241f5cf2249
     settings.sidebarTypePluralization.description: 8d7bb0649fd7e637552429ea91298de8
     settings.vaultContent.hideGitignored: 2c07ee6c8bfe746d356f44275d42f90e

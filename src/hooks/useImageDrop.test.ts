@@ -101,8 +101,31 @@ describe('uploadImageFile', () => {
       vaultPath: '/vault',
       filename: 'test.png',
       data: expect.any(String),
+      notePath: null,
     })
     expect(url).toBe('asset://localhost/vault/attachments/123-test.png')
+
+    tauriMode = false
+  })
+
+  it('passes the note path to save_image when provided', async () => {
+    tauriMode = true
+
+    const { invoke, convertFileSrc } = await import('@tauri-apps/api/core')
+    vi.mocked(invoke).mockClear()
+    vi.mocked(invoke).mockResolvedValue('/vault/posts/assets/123-test.png')
+    vi.mocked(convertFileSrc).mockReturnValue('asset://localhost/vault/posts/assets/123-test.png')
+
+    const blob = new Blob([new Uint8Array([0x89, 0x50])], { type: 'image/png' })
+    const file = new File([blob], 'test.png', { type: 'image/png' })
+
+    await uploadImageFile(file, '/vault', '/vault/posts/note.md')
+    expect(invoke).toHaveBeenCalledWith('save_image', {
+      vaultPath: '/vault',
+      filename: 'test.png',
+      data: expect.any(String),
+      notePath: '/vault/posts/note.md',
+    })
 
     tauriMode = false
   })
@@ -368,8 +391,37 @@ describe('useImageDrop — Tauri native drag-drop', () => {
     expect(invoke).toHaveBeenCalledWith('copy_image_to_vault', {
       vaultPath: '/vault',
       sourcePath: '/tmp/photo.png',
+      notePath: null,
     })
     expect(invoke).toHaveBeenCalledTimes(1)
+  })
+
+  it('passes the note path to copy_image_to_vault when provided', async () => {
+    const onImageUrl = vi.fn()
+    const { invoke, convertFileSrc } = await import('@tauri-apps/api/core')
+    vi.mocked(invoke).mockClear()
+    vi.mocked(convertFileSrc).mockClear()
+    vi.mocked(invoke).mockResolvedValue('/vault/posts/assets/123-photo.png')
+    vi.mocked(convertFileSrc).mockReturnValue('asset://localhost/vault/posts/assets/123-photo.png')
+    renderImageDropTauri({ onImageUrl, vaultPath: '/vault', notePath: '/vault/posts/note.md' })
+
+    await waitForNativeDropListeners()
+
+    act(() => {
+      emitNativeDropEvent({
+        type: 'drop',
+        paths: ['/tmp/photo.png'],
+        position: { x: 100, y: 100 },
+      } satisfies NativeDropPayload)
+    })
+
+    await waitFor(() => {
+      expect(invoke).toHaveBeenCalledWith('copy_image_to_vault', {
+        vaultPath: '/vault',
+        sourcePath: '/tmp/photo.png',
+        notePath: '/vault/posts/note.md',
+      })
+    })
   })
 
   it('reports unsupported HEIC native drops without copying them into the vault', async () => {
@@ -423,6 +475,7 @@ describe('useImageDrop — Tauri native drag-drop', () => {
         expect(invoke).toHaveBeenCalledWith('copy_image_to_vault', {
           vaultPath: '/vault',
           sourcePath: '/tmp/photo.png',
+          notePath: null,
         })
       })
       await new Promise((resolve) => setTimeout(resolve, 0))

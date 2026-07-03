@@ -1,4 +1,4 @@
-import type { Settings, NoteWidthMode } from '../types'
+import type { AttachmentLocation, Settings, NoteWidthMode } from '../types'
 import { trackEvent } from '../lib/telemetry'
 import {
   trackAiFeaturesEnabledChanged,
@@ -20,6 +20,7 @@ import { DEFAULT_NOTE_WIDTH_MODE, normalizeNoteWidthMode } from '../utils/noteWi
 export interface SettingsPreferenceDraft {
   analytics: boolean
   aiFeaturesEnabled: boolean
+  attachmentLocation: AttachmentLocation
   automaticUpdateChecksEnabled: boolean
   dateDisplayFormat: DateDisplayFormat
   defaultNoteWidth: NoteWidthMode
@@ -72,6 +73,11 @@ export function trackSettingsPreferenceChanges(settings: Settings, draft: Settin
     normalizeNoteWidthMode(settings.note_width_mode) ?? DEFAULT_NOTE_WIDTH_MODE,
     draft.defaultNoteWidth,
     trackDefaultNoteWidthChanged,
+  )
+  trackPreferenceChange(
+    settings.attachment_location ?? 'attachments',
+    draft.attachmentLocation,
+    (location) => trackEvent('attachment_location_changed', { location }),
   )
   trackPreferenceChange(
     settings.sidebar_type_pluralization_enabled ?? true,

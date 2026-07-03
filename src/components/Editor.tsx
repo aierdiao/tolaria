@@ -277,7 +277,7 @@ function useEditorSetup({
     domAttributes: RICH_EDITOR_BIDI_DOM_ATTRIBUTES,
     uploadFile: async (file: File) => {
       try {
-        return await uploadImageFile(file, vaultPathRef.current)
+        return await uploadImageFile(file, vaultPathRef.current, activeTabPathRef.current ?? undefined)
       } catch (error) {
         return handleEditorImageUploadFailure(file, error, onImageImportErrorRef.current)
       }
