@@ -48,6 +48,27 @@ fn test_scan_vault_folders_keeps_default_vault_folders_visible() {
 }
 
 #[test]
+fn test_scan_vault_folders_hides_per_note_assets_dirs() {
+    let dir = TempDir::new().unwrap();
+    std::fs::create_dir_all(dir.path().join("posts/真是漫长的一年啊.assets")).unwrap();
+    std::fs::create_dir_all(dir.path().join("posts/test.assets")).unwrap();
+    std::fs::create_dir_all(dir.path().join("posts/assets")).unwrap();
+    std::fs::create_dir_all(dir.path().join(".assets")).unwrap();
+
+    let folders = scan_vault_folders(dir.path()).unwrap();
+    let posts = folders.iter().find(|folder| folder.name == "posts").unwrap();
+    let child_names: Vec<&str> = posts
+        .children
+        .iter()
+        .map(|folder| folder.name.as_str())
+        .collect();
+
+    // Shared assets/ stays visible; <note>.assets pairs are hidden from the tree.
+    assert_eq!(child_names, vec!["assets"]);
+    assert!(!folders.iter().any(|folder| folder.name == ".assets"));
+}
+
+#[test]
 fn test_scan_vault_folders_flat_vault() {
     let dir = TempDir::new().unwrap();
     create_test_file(dir.path(), "note.md", "# Note\n");
