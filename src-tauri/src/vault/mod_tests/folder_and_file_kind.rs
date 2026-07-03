@@ -7,7 +7,11 @@ fn test_scan_vault_folders_returns_tree() {
     std::fs::create_dir_all(dir.path().join("projects/laputa")).unwrap();
     std::fs::create_dir_all(dir.path().join("areas")).unwrap();
 
-    let folders = scan_vault_folders(dir.path()).unwrap();
+    let folders = scan_vault_folders_with_attachment_location(
+        dir.path(),
+        crate::settings::AttachmentLocation::VaultAttachments,
+    )
+    .unwrap();
     let names: Vec<&str> = folders.iter().map(|folder| folder.name.as_str()).collect();
     assert!(names.contains(&"projects"));
     assert!(names.contains(&"areas"));
@@ -28,7 +32,11 @@ fn test_scan_vault_folders_excludes_hidden() {
     std::fs::create_dir_all(dir.path().join(".laputa")).unwrap();
     std::fs::create_dir_all(dir.path().join("visible")).unwrap();
 
-    let folders = scan_vault_folders(dir.path()).unwrap();
+    let folders = scan_vault_folders_with_attachment_location(
+        dir.path(),
+        crate::settings::AttachmentLocation::VaultAttachments,
+    )
+    .unwrap();
     assert_eq!(folders.len(), 1);
     assert_eq!(folders[0].name, "visible");
 }
@@ -41,7 +49,11 @@ fn test_scan_vault_folders_keeps_default_vault_folders_visible() {
     std::fs::create_dir_all(dir.path().join("views")).unwrap();
     std::fs::create_dir_all(dir.path().join("projects")).unwrap();
 
-    let folders = scan_vault_folders(dir.path()).unwrap();
+    let folders = scan_vault_folders_with_attachment_location(
+        dir.path(),
+        crate::settings::AttachmentLocation::VaultAttachments,
+    )
+    .unwrap();
     let names: Vec<&str> = folders.iter().map(|folder| folder.name.as_str()).collect();
 
     assert_eq!(names, vec!["attachments", "projects", "views"]);
@@ -66,6 +78,39 @@ fn test_scan_vault_folders_hides_per_note_assets_dirs() {
     // Shared assets/ stays visible; <note>.assets pairs are hidden from the tree.
     assert_eq!(child_names, vec!["assets"]);
     assert!(!folders.iter().any(|folder| folder.name == ".assets"));
+}
+
+#[test]
+fn test_scan_vault_folders_hides_empty_root_attachments_in_per_note_assets_mode() {
+    let dir = TempDir::new().unwrap();
+    std::fs::create_dir_all(dir.path().join("attachments")).unwrap();
+    std::fs::create_dir_all(dir.path().join("posts/attachments")).unwrap();
+
+    let folders = scan_vault_folders_with_attachment_location(
+        dir.path(),
+        crate::settings::AttachmentLocation::PerNoteAssets,
+    )
+    .unwrap();
+    let names: Vec<&str> = folders.iter().map(|folder| folder.name.as_str()).collect();
+
+    assert_eq!(names, vec!["posts"]);
+    assert_eq!(folders[0].children[0].name, "attachments");
+}
+
+#[test]
+fn test_scan_vault_folders_keeps_non_empty_root_attachments_in_per_note_assets_mode() {
+    let dir = TempDir::new().unwrap();
+    std::fs::create_dir_all(dir.path().join("attachments")).unwrap();
+    create_test_file(dir.path(), "attachments/old-image.png", "image bytes");
+
+    let folders = scan_vault_folders_with_attachment_location(
+        dir.path(),
+        crate::settings::AttachmentLocation::PerNoteAssets,
+    )
+    .unwrap();
+    let names: Vec<&str> = folders.iter().map(|folder| folder.name.as_str()).collect();
+
+    assert_eq!(names, vec!["attachments"]);
 }
 
 #[test]

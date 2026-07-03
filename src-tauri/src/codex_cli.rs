@@ -677,7 +677,7 @@ mod tests {
             "Codex MCP command should use Tolaria's resolved Node path, got {command_override}"
         );
         assert!(
-            command_override.contains('/'),
+            command_override.contains('/') || command_override.contains('\\'),
             "Codex MCP command should be an absolute Node path, got {command_override}"
         );
         assert!(args.iter().any(|arg| arg.contains(r#"WS_UI_PORT="9711""#)));
@@ -1033,7 +1033,9 @@ printf '%s\n' '{"type":"item.completed","item":{"id":"msg_1","type":"agent_messa
     fn first_existing_path_skips_empty_and_missing_lines() {
         let dir = tempfile::tempdir().unwrap();
         let missing = dir.path().join("missing-codex");
-        let codex = dir.path().join("codex");
+        let codex = dir
+            .path()
+            .join(if cfg!(windows) { "codex.cmd" } else { "codex" });
         std::fs::write(&codex, "#!/bin/sh\n").unwrap();
 
         let stdout = format!("\n{}\n{}\n", missing.display(), codex.display());

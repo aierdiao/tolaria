@@ -72,7 +72,10 @@ mod tests {
     fn expand_tilde_with_subpath() {
         let home = dirs::home_dir().unwrap();
         let result = expand_tilde("~/Documents/vault");
-        assert_eq!(result, format!("{}/Documents/vault", home.display()));
+        assert_eq!(
+            result,
+            home.join("Documents/vault").to_string_lossy()
+        );
     }
 
     #[test]
