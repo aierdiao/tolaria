@@ -301,7 +301,7 @@
   "settings.noteWidth.normal": "正常",
   "settings.noteWidth.wide": "宽",
   "settings.attachmentLocation.label": "图片附件位置",
-  "settings.attachmentLocation.description": "选择新粘贴或拖入的图片的保存位置。现有附件不会被移动。",
+  "settings.attachmentLocation.description": "选择新粘贴或拖入图片的保存位置。现有附件不会被移动；配对的 .assets 文件夹会跟随 Tolaria 内的笔记改名。",
   "settings.attachmentLocation.attachments": "Vault 根目录 attachments 文件夹",
   "settings.attachmentLocation.noteAssets": "笔记旁的 assets 文件夹",
   "settings.attachmentLocation.perNoteAssets": "笔记同名的 .assets 文件夹",

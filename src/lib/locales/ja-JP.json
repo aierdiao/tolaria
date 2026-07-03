@@ -301,7 +301,7 @@
   "settings.noteWidth.normal": "通常",
   "settings.noteWidth.wide": "ワイド",
   "settings.attachmentLocation.label": "画像添付ファイルの保存場所",
-  "settings.attachmentLocation.description": "新しく貼り付けまたはドロップした画像の保存先を選択してください。既存の添付ファイルは移動されません。",
+  "settings.attachmentLocation.description": "新しく貼り付けまたはドロップした画像の保存先を選択します。既存の添付ファイルは移動されません。対応する .assets フォルダは、Tolaria 内でのノート名変更に追従します。",
   "settings.attachmentLocation.attachments": "Vault ルートの attachments フォルダ",
   "settings.attachmentLocation.noteAssets": "ノートの隣の assets フォルダ",
   "settings.attachmentLocation.perNoteAssets": "ノートと同名の .assets フォルダ",

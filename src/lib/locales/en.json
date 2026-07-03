@@ -301,7 +301,7 @@
   "settings.noteWidth.normal": "Normal",
   "settings.noteWidth.wide": "Wide",
   "settings.attachmentLocation.label": "Image attachment location",
-  "settings.attachmentLocation.description": "Choose where newly pasted or dropped images are saved. Existing attachments are not moved.",
+  "settings.attachmentLocation.description": "Choose where newly pasted or dropped images are saved. Existing attachments are not moved; paired .assets folders follow note renames inside Tolaria.",
   "settings.attachmentLocation.attachments": "Vault attachments folder",
   "settings.attachmentLocation.noteAssets": "assets folder next to the note",
   "settings.attachmentLocation.perNoteAssets": "note-name.assets folder next to the note",

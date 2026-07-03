@@ -277,9 +277,11 @@ fn assets_dir_for_note(
 /// the default vault `attachments/` folder.
 ///
 /// Only consulted when the attachment location setting targets the note. The
-/// note path is treated as a hint: it must validate as an existing file inside
+/// note path is treated as a hint: it must validate as a writable path inside
 /// the vault, otherwise we fall back to the default vault `attachments/`
-/// folder (returning `None`) so the paste never fails.
+/// folder (returning `None`) so the paste never fails. Writable validation lets
+/// brand-new untitled notes save into their paired assets folder before the
+/// markdown file has been flushed to disk.
 fn attachment_override_dir(
     location: crate::settings::AttachmentLocation,
     requested_root: &str,
@@ -298,7 +300,7 @@ fn attachment_override_dir(
     let assets_dir = with_note_path(
         note_path,
         Some(Path::new(requested_root)),
-        ValidatedPathMode::Existing,
+        ValidatedPathMode::Writable,
         |validated_path| Ok(assets_dir_for_note(location, validated_path)),
     );
     match assets_dir {
@@ -451,16 +453,19 @@ mod tests {
     }
 
     #[test]
-    fn attachment_override_dir_falls_back_for_missing_note_file() {
+    fn attachment_override_dir_uses_per_note_assets_for_missing_but_writable_note_file() {
         let dir = TempDir::new().unwrap();
-        let unsaved_note = note_path(&dir, "untitled.md");
+        let unsaved_note = note_path(&dir, "untitled-note-1783095975.md");
 
         let result = attachment_override_dir(
             crate::settings::AttachmentLocation::PerNoteAssets,
             dir.path().to_str().unwrap(),
             Some(unsaved_note.as_path()),
         );
-        assert!(result.is_none());
+        assert_eq!(
+            result,
+            Some(dir.path().join("untitled-note-1783095975.assets"))
+        );
     }
 
     #[test]

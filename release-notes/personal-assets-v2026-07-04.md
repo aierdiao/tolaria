@@ -14,6 +14,9 @@ This is a personal fork build focused on Markdown writing workflows with flat no
   - Existing target folders are never overwritten or merged.
 - Hid per-note `*.assets` folders from the sidebar folder tree.
   - This is display-only. Files remain on disk, in Git, and available to image previews.
+- Improved new-note behavior for per-note assets.
+  - New untitled notes now use their temporary note filename for the initial `.assets` folder instead of falling back to vault `attachments/`.
+  - When Tolaria later renames the note from its H1/title, the paired `.assets` folder follows through the existing rename migration.
 - Added localized settings text across all locale catalogs, with polished English, Simplified Chinese, and Japanese copy.
 
 ## Validation
@@ -23,7 +26,7 @@ This is a personal fork build focused on Markdown writing workflows with flat no
 - Tauri release build produced the Windows application executable.
 - NSIS installer was produced successfully:
   - `Tolaria_0.1.0_x64-setup.exe`
-  - SHA256: `B907A5D4C95F8EDF8B9648E24E1BFA718A3E16206A0611D7E8EA39F03A149AF6`
+  - SHA256: `0ACAC8770D0D6D19AC639614B01588EC301862DA9C7F2FC929DE86B9ED675B93`
 
 ## Known Notes
 
