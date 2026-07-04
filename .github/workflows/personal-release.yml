@@ -334,6 +334,7 @@ jobs:
           python3 <<'PY'
           import os
           import re
+          import textwrap
           from pathlib import Path
 
           title = os.environ["TITLE"]
@@ -345,21 +346,21 @@ jobs:
           else:
               text = f"# {title}\n\nPersonal unsigned multi-platform build.\n"
 
-          text = text.rstrip() + """
+          text = text.rstrip() + textwrap.dedent("""
 
-## Unsigned multi-platform build
+          ## Unsigned multi-platform build
 
-This release was built by the personal unsigned release workflow. It is intended for my own fork and does not require Apple notarization, Windows Authenticode signing, or Tauri updater signing.
+          This release was built by the personal unsigned release workflow. It is intended for my own fork and does not require Apple notarization, Windows Authenticode signing, or Tauri updater signing.
 
-Included assets:
+          Included assets:
 
-- macOS Apple Silicon DMG
-- macOS Intel DMG
-- Linux AppImage / deb / rpm
-- Windows x64 NSIS installer
+          - macOS Apple Silicon DMG
+          - macOS Intel DMG
+          - Linux AppImage / deb / rpm
+          - Windows x64 NSIS installer
 
-Because these packages are unsigned, macOS and Windows may show additional security prompts when opening the app for the first time.
-"""
+          Because these packages are unsigned, macOS and Windows may show additional security prompts when opening the app for the first time.
+          """)
           Path("release_notes.md").write_text(text + "\n", encoding="utf-8")
           PY
 
