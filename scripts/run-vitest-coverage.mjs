@@ -31,7 +31,8 @@ const maxAttempts = 2
 // is something node can actually load as a module.
 const packageManagerExec = process.env.npm_execpath
 const isJsExecpath = packageManagerExec && /\.[mc]?js$/i.test(packageManagerExec)
-const command = isJsExecpath ? process.execPath : 'pnpm'
+const packageManagerCommand = 'pnpm'
+const command = isJsExecpath ? process.execPath : packageManagerCommand
 const baseCommandArgs = isJsExecpath
   ? [packageManagerExec, 'exec', 'vitest', 'run', '--coverage']
   : ['exec', 'vitest', 'run', '--coverage']
@@ -111,6 +112,7 @@ async function runCoverageAttempt(attempt) {
         ...process.env,
         VITEST_COVERAGE_DIR: runCoverageDir,
       },
+      shell: process.platform === 'win32' && command === packageManagerCommand,
       stdio: ['inherit', 'pipe', 'pipe'],
     })
 
@@ -149,6 +151,7 @@ async function clearVitestCache() {
     const child = spawn(command, clearCacheCommandArgs, {
       cwd: rootDir,
       env: process.env,
+      shell: process.platform === 'win32' && command === packageManagerCommand,
       stdio: 'inherit',
     })
 

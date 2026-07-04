@@ -29,6 +29,7 @@ const thresholds = {
   branches: metricThreshold('BRANCHES'),
   statements: metricThreshold('STATEMENTS'),
 }
+const packageManagerCommand = 'pnpm'
 
 function positiveInteger(value, name) {
   if (/^[1-9][0-9]*$/.test(value)) {
@@ -59,7 +60,7 @@ function shardCoverageDir(shardIndex) {
 }
 
 async function clearVitestCache() {
-  const exitCode = await spawnCommand('clear-cache', 'pnpm', ['exec', 'vitest', '--clearCache'], process.env)
+  const exitCode = await spawnCommand('clear-cache', packageManagerCommand, ['exec', 'vitest', '--clearCache'], process.env)
   if (exitCode !== 0) {
     throw new Error(`Vitest cache clear failed with exit code ${exitCode}`)
   }
@@ -88,6 +89,7 @@ function spawnCommand(name, command, args, env) {
     const child = spawn(command, args, {
       cwd: rootDir,
       env,
+      shell: process.platform === 'win32' && command === packageManagerCommand,
       stdio: ['inherit', 'pipe', 'pipe'],
     })
 
