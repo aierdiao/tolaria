@@ -274,10 +274,6 @@ function NoteListLayoutHeader({
   toggleSearch,
   setSearch,
   handleSearchKeyDown,
-  onCheckAssets,
-  canCheckAssets,
-  isCheckingAssets,
-  assetAuditMessage,
 }: Pick<
   NoteListLayoutProps,
   | 'title'
@@ -303,10 +299,6 @@ function NoteListLayoutHeader({
   | 'toggleSearch'
   | 'setSearch'
   | 'handleSearchKeyDown'
-  | 'onCheckAssets'
-  | 'canCheckAssets'
-  | 'isCheckingAssets'
-  | 'assetAuditMessage'
 >) {
   return (
     <NoteListHeader
@@ -333,10 +325,6 @@ function NoteListLayoutHeader({
       onToggleSearch={toggleSearch}
       onSearchChange={setSearch}
       onSearchKeyDown={handleSearchKeyDown}
-      onCheckAssets={onCheckAssets}
-      canCheckAssets={canCheckAssets}
-      isCheckingAssets={isCheckingAssets}
-      assetAuditMessage={assetAuditMessage}
     />
   )
 }

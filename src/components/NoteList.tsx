@@ -6,6 +6,8 @@ import { useMultiSelectKeyboard } from './note-list/useMultiSelectKeyboard'
 import { translate } from '../lib/i18n'
 import { auditPerNoteAssets, type PerNoteAssetAuditResult } from '../utils/perNoteAssetAudit'
 import { runGetNoteContentCommand } from '../hooks/noteContentCache'
+import type { VaultEntry } from '../types'
+import type { NoteAssetAuditStatus } from './NoteItem'
 
 type NoteListInnerProps = NoteListProps & {
   onBulkOrganize?: (paths: string[]) => void
@@ -13,66 +15,81 @@ type NoteListInnerProps = NoteListProps & {
 }
 
 function NoteListInner({ onBulkOrganize, multiSelectionCommandRef, ...props }: NoteListInnerProps) {
-  const [assetAudit, setAssetAudit] = useState<{
-    notePath: string
+  const [assetAudits, setAssetAudits] = useState<Record<string, {
     result: PerNoteAssetAuditResult
     error?: string
-  } | null>(null)
-  const [isCheckingAssets, setIsCheckingAssets] = useState(false)
+  }>>({})
+  const [checkingAssetNotePath, setCheckingAssetNotePath] = useState<string | null>(null)
 
-  const handleCheckAssets = useCallback(async () => {
-    if (!props.selectedNote || isCheckingAssets) return
+  const handleCheckAssets = useCallback(async (note: VaultEntry) => {
+    if (checkingAssetNotePath || note.fileKind === 'binary') return
 
-    setIsCheckingAssets(true)
+    setCheckingAssetNotePath(note.path)
     try {
-      const content = await runGetNoteContentCommand(props.selectedNote.path, props.selectedNote.workspace?.path)
+      const content = await runGetNoteContentCommand(note.path, note.workspace?.path)
       const result = auditPerNoteAssets({
         entries: props.entries,
-        note: props.selectedNote,
+        note,
         content,
       })
-      setAssetAudit({ notePath: props.selectedNote.path, result })
+      setAssetAudits((current) => ({ ...current, [note.path]: { result } }))
     } catch (error) {
-      setAssetAudit({
-        notePath: props.selectedNote.path,
-        result: {
-          assetDirPath: '',
-          checkedAssetPaths: [],
-          referencedAssetPaths: [],
-          unusedAssetPaths: [],
+      setAssetAudits((current) => ({
+        ...current,
+        [note.path]: {
+          result: {
+            assetDirPath: '',
+            checkedAssetPaths: [],
+            referencedAssetPaths: [],
+            unusedAssetPaths: [],
+          },
+          error: error instanceof Error ? error.message : String(error),
         },
-        error: error instanceof Error ? error.message : String(error),
-      })
+      }))
     } finally {
-      setIsCheckingAssets(false)
+      setCheckingAssetNotePath(null)
     }
-  }, [isCheckingAssets, props.entries, props.selectedNote])
+  }, [checkingAssetNotePath, props.entries])
 
-  const assetReferenceStatuses = useMemo(() => {
-    if (!assetAudit) return undefined
-    return Object.fromEntries(assetAudit.result.unusedAssetPaths.map((path) => [path, 'unused' as const]))
-  }, [assetAudit])
-
-  const assetAuditMessage = useMemo(() => {
-    if (!assetAudit) return null
+  const assetAuditStatuses = useMemo<Record<string, NoteAssetAuditStatus>>(() => {
     const locale = props.locale ?? 'en'
-    if (assetAudit.error) {
-      return translate(locale, 'noteList.assetAudit.failed', { error: assetAudit.error })
+    const statuses: Record<string, NoteAssetAuditStatus> = {}
+    if (checkingAssetNotePath) {
+      statuses[checkingAssetNotePath] = {
+        state: 'checking',
+        title: translate(locale, 'noteList.assetAudit.action'),
+      }
     }
-    const checked = assetAudit.result.checkedAssetPaths.length
-    const unused = assetAudit.result.unusedAssetPaths.length
-    if (checked === 0) return translate(locale, 'noteList.assetAudit.noImages')
-    if (unused === 0) return translate(locale, 'noteList.assetAudit.allReferenced', { count: checked })
-    return translate(locale, 'noteList.assetAudit.unusedFound', { unused, count: checked })
-  }, [assetAudit, props.locale])
+    for (const [notePath, audit] of Object.entries(assetAudits)) {
+      if (notePath === checkingAssetNotePath) continue
+      if (audit.error) {
+        statuses[notePath] = {
+          state: 'error',
+          title: translate(locale, 'noteList.assetAudit.failed', { error: audit.error }),
+        }
+        continue
+      }
+      const checked = audit.result.checkedAssetPaths.length
+      const unused = audit.result.unusedAssetPaths.length
+      if (checked === 0) {
+        statuses[notePath] = { state: 'ok', title: translate(locale, 'noteList.assetAudit.noImages') }
+      } else if (unused === 0) {
+        statuses[notePath] = { state: 'ok', title: translate(locale, 'noteList.assetAudit.allReferenced', { count: checked }) }
+      } else {
+        statuses[notePath] = {
+          state: 'unused',
+          count: unused,
+          title: translate(locale, 'noteList.assetAudit.unusedFound', { unused, count: checked }),
+        }
+      }
+    }
+    return statuses
+  }, [assetAudits, checkingAssetNotePath, props.locale])
 
   const model = useNoteListModel({
     ...props,
-    assetReferenceStatuses,
+    assetAuditStatuses,
     onCheckAssets: handleCheckAssets,
-    canCheckAssets: !!props.selectedNote && props.selectedNote.fileKind !== 'binary',
-    isCheckingAssets,
-    assetAuditMessage,
   })
 
   const handleBulkOrganize = useCallback(() => {
