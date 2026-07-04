@@ -734,9 +734,13 @@ function useEditorPersistence({
   const handleContentChange = useCallback((path: string, content: string) => {
     const currentPath = resolveCurrentPath(path)
     if (!canWritePathToVault(currentPath, persistenceScope)) return
-    refreshPendingUntitledRename(currentPath, content)
+    // Content may come from an editor instance still holding the pre-rename
+    // document; realign its paired-assets references before buffering, or
+    // autosave restores the stale `<old>.assets/` links the backend migrated.
+    const alignedContent = rewriteAssetsDirReferences(content, path, currentPath)
+    refreshPendingUntitledRename(currentPath, alignedContent)
     trackUnsaved?.(currentPath)
-    handleContentChangeRaw(currentPath, content)
+    handleContentChangeRaw(currentPath, alignedContent)
   }, [handleContentChangeRaw, persistenceScope, refreshPendingUntitledRename, resolveCurrentPath, trackUnsaved])
 
   const savePendingForPath = useCallback((path: string) => {
