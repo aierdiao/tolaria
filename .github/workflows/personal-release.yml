@@ -4,18 +4,12 @@ on:
   push:
     tags:
       - "personal-assets-v*"
-  workflow_dispatch:
-    inputs:
-      tag:
-        description: "Release tag, for example personal-assets-v2026.7.4.6"
-        required: true
-        type: string
 
 permissions:
   contents: write
 
 concurrency:
-  group: personal-release-${{ github.ref_name || inputs.tag }}
+  group: personal-release-${{ github.ref_name }}
   cancel-in-progress: true
 
 env:
@@ -33,12 +27,10 @@ jobs:
     steps:
       - id: version
         shell: bash
-        env:
-          INPUT_TAG: ${{ inputs.tag }}
         run: |
           set -euo pipefail
 
-          TAG="${INPUT_TAG:-${GITHUB_REF_NAME}}"
+          TAG="${GITHUB_REF_NAME}"
           if [[ ! "$TAG" =~ ^personal-assets-v([0-9]{4})\.([0-9]{1,2})\.([0-9]{1,2})(\.([0-9]+))?$ ]]; then
             echo "::error::Tag must look like personal-assets-v2026.7.4.6, got ${TAG}"
             exit 1
