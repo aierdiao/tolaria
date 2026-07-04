@@ -172,7 +172,7 @@ function NoteAssetAuditButton({
   return (
     <button
       type="button"
-      className="absolute right-3 top-2.5 z-10 flex h-5 min-w-5 items-center justify-center rounded border-0 bg-transparent p-0 text-muted-foreground hover:text-foreground"
+      className="absolute right-8 top-2.5 z-10 flex h-5 min-w-5 items-center justify-center rounded border-0 bg-transparent p-0 text-muted-foreground hover:text-foreground"
       title={title}
       aria-label={title}
       data-testid="note-asset-audit-button"
@@ -242,6 +242,7 @@ function InteractiveNoteDetails({
   allEntries,
   typeEntryMap,
   onClickNote,
+  hasAuditButton = false,
 }: {
   entry: VaultEntry
   noteStatus: NoteStatus
@@ -250,6 +251,7 @@ function InteractiveNoteDetails({
   allEntries: VaultEntry[]
   typeEntryMap: Record<string, VaultEntry>
   onClickNote: NoteItemProps['onClickNote']
+  hasAuditButton?: boolean
 }) {
   return (
     <>
@@ -258,6 +260,7 @@ function InteractiveNoteDetails({
         isBinary={false}
         isSelected={isSelected}
         noteStatus={noteStatus}
+        hasAuditButton={hasAuditButton}
       />
       <NoteSnippet snippet={entry.snippet} />
       <NotePropertySection
@@ -312,18 +315,19 @@ function StandardNoteContent({
   const te = typeEntryMap[entry.isA ?? '']
   const TypeIcon = resolveNoteTypeIcon(entry, te?.icon)
   const previewKind = filePreviewKind(entry) ?? undefined
+  const hasAuditButton = !isBinary && !isUnavailableBinary && !!onCheckAssets
 
   return (
     <>
       <NoteTypeIndicator TypeIcon={TypeIcon} typeColor={typeColor} filePreviewKind={previewKind} />
-      {!isBinary && !isUnavailableBinary ? (
+      {hasAuditButton ? (
         <NoteAssetAuditButton
           status={assetAuditStatus}
-          onCheck={onCheckAssets ? (event) => {
+          onCheck={(event) => {
             event.preventDefault()
             event.stopPropagation()
-            onCheckAssets(entry)
-          } : undefined}
+            onCheckAssets?.(entry)
+          }}
         />
       ) : null}
       <div className="space-y-2" data-testid="note-content-stack">
@@ -343,6 +347,7 @@ function StandardNoteContent({
             allEntries={allEntries}
             typeEntryMap={typeEntryMap}
             onClickNote={onClickNote}
+            hasAuditButton={hasAuditButton}
           />
         )}
       </div>
@@ -355,15 +360,17 @@ function NoteTitleRow({
   isBinary,
   isSelected,
   noteStatus,
+  hasAuditButton = false,
 }: {
   entry: VaultEntry
   isBinary: boolean
   isSelected: boolean
   noteStatus: NoteStatus
+  hasAuditButton?: boolean
 }) {
   return (
     <div
-      className={cn('truncate pr-5 text-[13px]', isBinary ? 'text-muted-foreground' : 'text-foreground', isSelected && !isBinary ? 'font-semibold' : 'font-medium')}
+      className={cn('truncate text-[13px]', hasAuditButton ? 'pr-10' : 'pr-5', isBinary ? 'text-muted-foreground' : 'text-foreground', isSelected && !isBinary ? 'font-semibold' : 'font-medium')}
       data-testid="note-title-row"
     >
       {hasStatusDot(noteStatus) && !isBinary && <StatusDot noteStatus={noteStatus} />}
