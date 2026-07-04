@@ -1,0 +1,428 @@
+name: Personal unsigned release
+
+on:
+  push:
+    tags:
+      - "personal-assets-v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag, for example personal-assets-v2026.7.4.6"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: personal-release-${{ github.ref_name || inputs.tag }}
+  cancel-in-progress: true
+
+env:
+  NODE_OPTIONS: --max-old-space-size=4096
+  RUST_TARGET_CACHE_VERSION: personal-v2026-07-04
+
+jobs:
+  version:
+    name: Compute personal version
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.version.outputs.tag }}
+      version: ${{ steps.version.outputs.version }}
+      title: ${{ steps.version.outputs.title }}
+    steps:
+      - id: version
+        shell: bash
+        env:
+          INPUT_TAG: ${{ inputs.tag }}
+        run: |
+          set -euo pipefail
+
+          TAG="${INPUT_TAG:-${GITHUB_REF_NAME}}"
+          if [[ ! "$TAG" =~ ^personal-assets-v([0-9]{4})\.([0-9]{1,2})\.([0-9]{1,2})(\.([0-9]+))?$ ]]; then
+            echo "::error::Tag must look like personal-assets-v2026.7.4.6, got ${TAG}"
+            exit 1
+          fi
+
+          YEAR="${BASH_REMATCH[1]}"
+          MONTH="${BASH_REMATCH[2]}"
+          DAY="${BASH_REMATCH[3]}"
+          SEQUENCE="${BASH_REMATCH[5]:-0}"
+
+          if [[ "$SEQUENCE" == "0" ]]; then
+            VERSION="${YEAR}.${MONTH}.${DAY}"
+            DISPLAY_VERSION="${YEAR}.${MONTH}.${DAY}"
+          else
+            VERSION="${YEAR}.${MONTH}.${DAY}-personal.${SEQUENCE}"
+            DISPLAY_VERSION="${YEAR}.${MONTH}.${DAY}.${SEQUENCE}"
+          fi
+
+          {
+            echo "tag=${TAG}"
+            echo "version=${VERSION}"
+            echo "title=Tolaria Personal Assets v${DISPLAY_VERSION}"
+          } >> "$GITHUB_OUTPUT"
+
+          echo "### Personal release: v${DISPLAY_VERSION} (\`${VERSION}\`)" >> "$GITHUB_STEP_SUMMARY"
+
+  build-macos:
+    name: Build macOS (${{ matrix.arch }})
+    needs: version
+    runs-on: macos-15
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: silicon
+            target: aarch64-apple-darwin
+          - arch: intel
+            target: x86_64-apple-darwin
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@f40ffcd9367d9f12939873eb1018b921a783ffaa
+        with:
+          version: 10
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "pnpm"
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
+        with:
+          bun-version: latest
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Cache Rust dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            src-tauri/target
+          key: ${{ runner.os }}-personal-cargo-${{ matrix.target }}-${{ env.RUST_TARGET_CACHE_VERSION }}-${{ hashFiles('src-tauri/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-personal-cargo-${{ matrix.target }}-${{ env.RUST_TARGET_CACHE_VERSION }}-
+
+      - name: Install frontend dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Prepare unsigned personal Tauri config
+        shell: bash
+        env:
+          PERSONAL_VERSION: ${{ needs.version.outputs.version }}
+        run: |
+          node <<'NODE'
+          const fs = require("node:fs");
+          const version = process.env.PERSONAL_VERSION;
+          const config = JSON.parse(fs.readFileSync("src-tauri/tauri.conf.json", "utf8"));
+          config.version = version;
+          config.bundle.createUpdaterArtifacts = false;
+          if (config.plugins?.updater) {
+            delete config.plugins.updater.pubkey;
+          }
+          fs.writeFileSync("src-tauri/tauri.personal-release.json", `${JSON.stringify(config, null, 2)}\n`);
+          const cargoPath = "src-tauri/Cargo.toml";
+          const cargo = fs.readFileSync(cargoPath, "utf8").replace(/^version = ".*"$/m, `version = "${version}"`);
+          fs.writeFileSync(cargoPath, cargo);
+          NODE
+
+      - name: Clear cached bundle artifacts
+        run: rm -rf "src-tauri/target/${{ matrix.target }}/release/bundle"
+
+      - name: Build unsigned macOS DMG
+        run: pnpm tauri build --target ${{ matrix.target }} --bundles dmg --config src-tauri/tauri.personal-release.json
+
+      - name: Upload macOS DMG
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-${{ matrix.arch }}-dmg
+          path: src-tauri/target/${{ matrix.target }}/release/bundle/dmg/*.dmg
+          if-no-files-found: error
+          retention-days: 7
+
+  build-linux:
+    name: Build Linux x64
+    needs: version
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Tauri Linux system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libsoup-3.0-dev \
+            libxdo-dev \
+            libssl-dev \
+            libayatana-appindicator3-dev \
+            fcitx5-frontend-gtk3 \
+            libfuse2 \
+            librsvg2-dev \
+            curl \
+            wget \
+            patchelf \
+            build-essential \
+            file \
+            cpio \
+            rpm
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@f40ffcd9367d9f12939873eb1018b921a783ffaa
+        with:
+          version: 10
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "pnpm"
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8
+        with:
+          targets: x86_64-unknown-linux-gnu
+
+      - name: Cache Rust dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            src-tauri/target
+          key: ${{ runner.os }}-personal-cargo-x86_64-unknown-linux-gnu-${{ env.RUST_TARGET_CACHE_VERSION }}-${{ hashFiles('src-tauri/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-personal-cargo-x86_64-unknown-linux-gnu-${{ env.RUST_TARGET_CACHE_VERSION }}-
+
+      - name: Install frontend dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Prepare unsigned personal Tauri config
+        shell: bash
+        env:
+          PERSONAL_VERSION: ${{ needs.version.outputs.version }}
+        run: |
+          node <<'NODE'
+          const fs = require("node:fs");
+          const version = process.env.PERSONAL_VERSION;
+          const config = JSON.parse(fs.readFileSync("src-tauri/tauri.conf.json", "utf8"));
+          config.version = version;
+          config.bundle.createUpdaterArtifacts = false;
+          if (config.plugins?.updater) {
+            delete config.plugins.updater.pubkey;
+          }
+          fs.writeFileSync("src-tauri/tauri.personal-release.json", `${JSON.stringify(config, null, 2)}\n`);
+          const cargoPath = "src-tauri/Cargo.toml";
+          const cargo = fs.readFileSync(cargoPath, "utf8").replace(/^version = ".*"$/m, `version = "${version}"`);
+          fs.writeFileSync(cargoPath, cargo);
+          NODE
+
+      - name: Clear cached bundle artifacts
+        run: rm -rf src-tauri/target/x86_64-unknown-linux-gnu/release/bundle
+
+      - name: Build unsigned Linux bundles
+        env:
+          APPIMAGE_EXTRACT_AND_RUN: 1
+        run: pnpm tauri build --target x86_64-unknown-linux-gnu --bundles deb,rpm,appimage --config src-tauri/tauri.personal-release.json
+
+      - name: Upload Linux bundles
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-x86_64-bundles
+          path: |
+            src-tauri/target/x86_64-unknown-linux-gnu/release/bundle/deb/*.deb
+            src-tauri/target/x86_64-unknown-linux-gnu/release/bundle/rpm/*.rpm
+            src-tauri/target/x86_64-unknown-linux-gnu/release/bundle/appimage/*.AppImage
+          if-no-files-found: error
+          retention-days: 7
+
+  build-windows:
+    name: Build Windows x64
+    needs: version
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@f40ffcd9367d9f12939873eb1018b921a783ffaa
+        with:
+          version: 10
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "pnpm"
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8
+        with:
+          targets: x86_64-pc-windows-msvc
+
+      - name: Cache Rust dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            src-tauri/target
+          key: ${{ runner.os }}-personal-cargo-x86_64-pc-windows-msvc-${{ env.RUST_TARGET_CACHE_VERSION }}-${{ hashFiles('src-tauri/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-personal-cargo-x86_64-pc-windows-msvc-${{ env.RUST_TARGET_CACHE_VERSION }}-
+
+      - name: Install frontend dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Prepare unsigned personal Tauri config
+        shell: bash
+        env:
+          PERSONAL_VERSION: ${{ needs.version.outputs.version }}
+        run: |
+          node <<'NODE'
+          const fs = require("node:fs");
+          const version = process.env.PERSONAL_VERSION;
+          const config = JSON.parse(fs.readFileSync("src-tauri/tauri.conf.json", "utf8"));
+          config.version = version;
+          config.bundle.createUpdaterArtifacts = false;
+          if (config.plugins?.updater) {
+            delete config.plugins.updater.pubkey;
+          }
+          fs.writeFileSync("src-tauri/tauri.personal-release.json", `${JSON.stringify(config, null, 2)}\n`);
+          const cargoPath = "src-tauri/Cargo.toml";
+          const cargo = fs.readFileSync(cargoPath, "utf8").replace(/^version = ".*"$/m, `version = "${version}"`);
+          fs.writeFileSync(cargoPath, cargo);
+          NODE
+
+      - name: Clear cached bundle artifacts
+        shell: pwsh
+        run: Remove-Item -Recurse -Force -ErrorAction SilentlyContinue "src-tauri/target/x86_64-pc-windows-msvc/release/bundle"
+
+      - name: Build unsigned Windows NSIS
+        shell: pwsh
+        run: pnpm tauri build --target x86_64-pc-windows-msvc --bundles nsis --config src-tauri/tauri.personal-release.json
+
+      - name: Upload Windows NSIS
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-x86_64-nsis
+          path: src-tauri/target/x86_64-pc-windows-msvc/release/bundle/nsis/*-setup.exe
+          if-no-files-found: error
+          retention-days: 7
+
+  release:
+    name: Publish personal release
+    needs: [version, build-macos, build-linux, build-windows]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Generate release notes
+        shell: bash
+        env:
+          TAG: ${{ needs.version.outputs.tag }}
+          TITLE: ${{ needs.version.outputs.title }}
+        run: |
+          set -euo pipefail
+          python3 <<'PY'
+          import os
+          import re
+          from pathlib import Path
+
+          title = os.environ["TITLE"]
+          source = Path("release-notes/personal-assets-v2026-07-04.md")
+          text = source.read_text(encoding="utf-8") if source.exists() else ""
+          if text:
+              text = re.sub(r"^# Tolaria Personal Assets v[^\n]+", f"# {title}", text)
+              text = re.sub(r"\n## Asset\n.*\Z", "", text, flags=re.S)
+          else:
+              text = f"# {title}\n\nPersonal unsigned multi-platform build.\n"
+
+          text = text.rstrip() + """
+
+## Unsigned multi-platform build
+
+This release was built by the personal unsigned release workflow. It is intended for my own fork and does not require Apple notarization, Windows Authenticode signing, or Tauri updater signing.
+
+Included assets:
+
+- macOS Apple Silicon DMG
+- macOS Intel DMG
+- Linux AppImage / deb / rpm
+- Windows x64 NSIS installer
+
+Because these packages are unsigned, macOS and Windows may show additional security prompts when opening the app for the first time.
+"""
+          Path("release_notes.md").write_text(text + "\n", encoding="utf-8")
+          PY
+
+      - name: Normalize macOS asset names
+        shell: bash
+        env:
+          VERSION: ${{ needs.version.outputs.version }}
+        run: |
+          set -euo pipefail
+
+          normalize_dmg() {
+            local artifact_dir="$1"
+            local output_name="$2"
+            local source_file
+            source_file=$(find "$artifact_dir" -type f -name "*.dmg" -print -quit)
+            if [ -z "$source_file" ]; then
+              echo "::error::Missing DMG in ${artifact_dir}"
+              exit 1
+            fi
+            mv "$source_file" "artifacts/${output_name}"
+          }
+
+          normalize_dmg "artifacts/macos-silicon-dmg" "Tolaria_${VERSION}_macOS_Silicon.dmg"
+          normalize_dmg "artifacts/macos-intel-dmg" "Tolaria_${VERSION}_macOS_Intel.dmg"
+
+      - name: Publish GitHub release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.version.outputs.tag }}
+          TITLE: ${{ needs.version.outputs.title }}
+        run: |
+          set -euo pipefail
+
+          mapfile -d '' FILES < <(
+            find artifacts -type f \( \
+              -name "*.dmg" -o \
+              -name "*.AppImage" -o \
+              -name "*.deb" -o \
+              -name "*.rpm" -o \
+              -name "*-setup.exe" \
+            \) -print0 | sort -z
+          )
+
+          if [ "${#FILES[@]}" -eq 0 ]; then
+            echo "::error::No release assets found."
+            exit 1
+          fi
+
+          printf "Assets:\n"
+          printf -- "- %s\n" "${FILES[@]}"
+
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release edit "$TAG" --title "$TITLE" --notes-file release_notes.md
+            gh release upload "$TAG" "${FILES[@]}" --clobber
+          else
+            gh release create "$TAG" --title "$TITLE" --notes-file release_notes.md "${FILES[@]}"
+          fi
