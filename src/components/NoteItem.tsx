@@ -4,7 +4,7 @@ import { cn } from '@/lib/utils'
 import {
   Wrench, Flask, Target, ArrowsClockwise, CircleNotch, CheckCircle,
   Users, CalendarBlank, Tag, FileText, StackSimple,
-  File, FileDashed, FilePdf, ImageSquare, SpeakerHigh, Video, WarningCircle,
+  File, FileDashed, FilePdf, FolderOpen, ImageSquare, MagnifyingGlass, SpeakerHigh, Video, WarningCircle,
 } from '@phosphor-icons/react'
 import { getTypeColor, getTypeLightColor } from '../utils/typeColors'
 import { resolveIcon } from '../utils/iconRegistry'
@@ -17,6 +17,7 @@ import { ChangeNoteContent } from './note-item/ChangeNoteContent'
 import { workspaceForEntry } from '../utils/workspaces'
 import { WorkspaceInitialsBadge } from './WorkspaceInitialsBadge'
 import { useDateDisplayFormat } from '../hooks/useAppPreferences'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 
 const TYPE_ICON_MAP: Record<string, ComponentType<SVGAttributes<SVGSVGElement>>> = {
   Project: Wrench,
@@ -129,14 +130,35 @@ function NoteTypeIndicator({
   filePreviewKind?: FilePreviewKind
 }) {
   return (
-    <TypeIcon
-      width={14}
-      height={14}
-      className="absolute right-3 top-2.5"
-      style={{ color: typeColor }}
-      data-testid="type-icon"
-      data-file-preview-kind={filePreviewKind}
-    />
+    <span className="absolute right-3 top-2.5 flex h-5 min-w-5 items-center justify-center">
+      <TypeIcon
+        width={14}
+        height={14}
+        style={{ color: typeColor }}
+        data-testid="type-icon"
+        data-file-preview-kind={filePreviewKind}
+      />
+    </span>
+  )
+}
+
+function NoteAssetAuditMarker({ status }: { status?: NoteAssetAuditStatus }) {
+  if (status?.state !== 'unused' && status?.state !== 'error') return null
+
+  return (
+    <span
+      className="absolute right-8 top-2.5 z-10 flex h-5 min-w-5 items-center justify-center"
+      title={status.title}
+      aria-label={status.title}
+      data-testid="note-asset-audit-marker"
+    >
+      <WarningCircle
+        width={15}
+        height={15}
+        weight="fill"
+        style={{ color: 'var(--accent-orange)' }}
+      />
+    </span>
   )
 }
 
@@ -144,18 +166,46 @@ export type NoteAssetAuditStatus = {
   state: 'checking' | 'ok' | 'unused' | 'error'
   title: string
   count?: number
+  assetDirPath?: string
+  assetDirRootPath?: string
+  unusedAssets?: Array<{ path: string; filename: string }>
 }
 
-function NoteAssetAuditButton({
-  status,
+const NOTE_AUDIT_BUTTON_CLASS_NAME = 'absolute top-2.5 z-10 flex h-5 min-w-5 items-center justify-center rounded border-0 bg-transparent p-0 text-muted-foreground hover:text-foreground disabled:cursor-default disabled:opacity-60'
+
+function NoteAssetAuditCheckButton({
+  disabled,
   onCheck,
 }: {
-  status?: NoteAssetAuditStatus
+  disabled?: boolean
   onCheck?: (event: ReactMouseEvent) => void
 }) {
   if (!onCheck) return null
 
-  const title = status?.title ?? 'Check image references'
+  return (
+    <button
+      type="button"
+      className={cn(NOTE_AUDIT_BUTTON_CLASS_NAME, 'right-[52px]')}
+      title="Check image references"
+      aria-label="Check image references"
+      data-testid="note-asset-audit-check-button"
+      disabled={disabled}
+      onClick={onCheck}
+    >
+      <MagnifyingGlass width={15} height={15} />
+    </button>
+  )
+}
+
+function NoteAssetAuditStatusButton({
+  status,
+  onOpenAssetFolder,
+}: {
+  status?: NoteAssetAuditStatus
+  onOpenAssetFolder?: (path: string, rootPath?: string) => void
+}) {
+  if (!status) return null
+
   const color = status?.state === 'unused' || status?.state === 'error'
     ? 'var(--accent-orange)'
     : status?.state === 'ok'
@@ -167,16 +217,18 @@ function NoteAssetAuditButton({
       ? CheckCircle
       : status?.state === 'unused' || status?.state === 'error'
         ? WarningCircle
-        : ImageSquare
+        : MagnifyingGlass
 
-  return (
+  const button = (
     <button
       type="button"
-      className="absolute right-8 top-2.5 z-10 flex h-5 min-w-5 items-center justify-center rounded border-0 bg-transparent p-0 text-muted-foreground hover:text-foreground"
-      title={title}
-      aria-label={title}
-      data-testid="note-asset-audit-button"
-      onClick={onCheck}
+      className={cn(NOTE_AUDIT_BUTTON_CLASS_NAME, 'right-8')}
+      title={status.title}
+      aria-label={status.title}
+      data-testid="note-asset-audit-status-button"
+      onClick={(event) => {
+        event.stopPropagation()
+      }}
     >
       <Icon
         width={15}
@@ -191,6 +243,54 @@ function NoteAssetAuditButton({
         </span>
       ) : null}
     </button>
+  )
+
+  if (status?.state !== 'unused' || !status.unusedAssets?.length) return button
+
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        {button}
+      </PopoverTrigger>
+      <PopoverContent
+        align="end"
+        side="left"
+        sideOffset={8}
+        className="w-72 overflow-hidden p-0"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className="border-b border-[var(--border)] px-3 py-2 text-[12px] font-medium text-foreground">
+          未引用图片 {status.count ?? status.unusedAssets.length}
+        </div>
+        {status.assetDirPath ? (
+          <button
+            type="button"
+            className="flex w-full items-center gap-2 border-b border-[var(--border)] px-3 py-2 text-left text-[12px] font-medium text-foreground hover:bg-muted"
+            title={status.assetDirPath}
+            onPointerDown={(event) => {
+              event.preventDefault()
+              event.stopPropagation()
+              onOpenAssetFolder?.(status.assetDirPath!, status.assetDirRootPath)
+            }}
+          >
+            <FolderOpen width={14} height={14} className="shrink-0 text-muted-foreground" />
+            <span className="min-w-0 flex-1 truncate">打开附件文件夹</span>
+          </button>
+        ) : null}
+        <div className="max-h-64 overflow-auto py-1">
+          {status.unusedAssets.map((asset) => (
+            <div
+              key={asset.path}
+              className="flex w-full items-center gap-2 px-3 py-2 text-left text-[12px] text-foreground"
+              title={asset.path}
+            >
+              <ImageSquare width={14} height={14} className="shrink-0 text-muted-foreground" />
+              <span className="min-w-0 flex-1 truncate">{asset.filename}</span>
+            </div>
+          ))}
+        </div>
+      </PopoverContent>
+    </Popover>
   )
 }
 
@@ -298,6 +398,7 @@ function StandardNoteContent({
   onClickNote,
   assetAuditStatus,
   onCheckAssets,
+  onOpenAssetFolder,
 }: {
   entry: VaultEntry
   isBinary: boolean
@@ -311,6 +412,7 @@ function StandardNoteContent({
   onClickNote: NoteItemProps['onClickNote']
   assetAuditStatus?: NoteAssetAuditStatus
   onCheckAssets?: NoteItemProps['onCheckAssets']
+  onOpenAssetFolder?: NoteItemProps['onOpenAssetFolder']
 }) {
   const te = typeEntryMap[entry.isA ?? '']
   const TypeIcon = resolveNoteTypeIcon(entry, te?.icon)
@@ -320,14 +422,21 @@ function StandardNoteContent({
   return (
     <>
       <NoteTypeIndicator TypeIcon={TypeIcon} typeColor={typeColor} filePreviewKind={previewKind} />
+      {isBinary ? <NoteAssetAuditMarker status={assetAuditStatus} /> : null}
       {hasAuditButton ? (
-        <NoteAssetAuditButton
-          status={assetAuditStatus}
+        <NoteAssetAuditCheckButton
+          disabled={assetAuditStatus?.state === 'checking'}
           onCheck={(event) => {
             event.preventDefault()
             event.stopPropagation()
             onCheckAssets?.(entry)
           }}
+        />
+      ) : null}
+      {hasAuditButton ? (
+        <NoteAssetAuditStatusButton
+          status={assetAuditStatus}
+          onOpenAssetFolder={onOpenAssetFolder}
         />
       ) : null}
       <div className="space-y-2" data-testid="note-content-stack">
@@ -370,7 +479,7 @@ function NoteTitleRow({
 }) {
   return (
     <div
-      className={cn('truncate text-[13px]', hasAuditButton ? 'pr-10' : 'pr-5', isBinary ? 'text-muted-foreground' : 'text-foreground', isSelected && !isBinary ? 'font-semibold' : 'font-medium')}
+      className={cn('truncate text-[13px]', hasAuditButton ? 'pr-20' : 'pr-5', isBinary ? 'text-muted-foreground' : 'text-foreground', isSelected && !isBinary ? 'font-semibold' : 'font-medium')}
       data-testid="note-title-row"
     >
       {hasStatusDot(noteStatus) && !isBinary && <StatusDot noteStatus={noteStatus} />}
@@ -436,6 +545,7 @@ type NoteItemProps = {
   displayPropsOverride?: string[] | null
   assetAuditStatus?: NoteAssetAuditStatus
   onCheckAssets?: (entry: VaultEntry) => void
+  onOpenAssetFolder?: (path: string, rootPath?: string) => void
   onClickNote: (entry: VaultEntry, e: ReactMouseEvent) => void
   onPrefetch?: (entry: VaultEntry) => void
   onContextMenu?: (entry: VaultEntry, e: ReactMouseEvent) => void
@@ -583,6 +693,7 @@ function NoteItemContent({
   onClickNote,
   assetAuditStatus,
   onCheckAssets,
+  onOpenAssetFolder,
 }: {
   entry: VaultEntry
   isBinary: boolean
@@ -597,6 +708,7 @@ function NoteItemContent({
   onClickNote: NoteItemProps['onClickNote']
   assetAuditStatus?: NoteAssetAuditStatus
   onCheckAssets?: NoteItemProps['onCheckAssets']
+  onOpenAssetFolder?: NoteItemProps['onOpenAssetFolder']
 }) {
   if (changeStatus) {
     return (
@@ -623,11 +735,12 @@ function NoteItemContent({
       onClickNote={onClickNote}
       assetAuditStatus={assetAuditStatus}
       onCheckAssets={onCheckAssets}
+      onOpenAssetFolder={onOpenAssetFolder}
     />
   )
 }
 
-export function NoteItem({ entry, isSelected, isMultiSelected = false, isHighlighted = false, noteStatus = 'clean', changeStatus, typeEntryMap, allEntries, displayPropsOverride, assetAuditStatus, onCheckAssets, onClickNote, onPrefetch, onContextMenu }: NoteItemProps) {
+export function NoteItem({ entry, isSelected, isMultiSelected = false, isHighlighted = false, noteStatus = 'clean', changeStatus, typeEntryMap, allEntries, displayPropsOverride, assetAuditStatus, onCheckAssets, onOpenAssetFolder, onClickNote, onPrefetch, onContextMenu }: NoteItemProps) {
   const isBinary = entry.fileKind === 'binary'
   const previewKind = filePreviewKind(entry)
   const isPreviewableFile = previewKind !== null
@@ -673,6 +786,7 @@ export function NoteItem({ entry, isSelected, isMultiSelected = false, isHighlig
         onClickNote={onClickNote}
         assetAuditStatus={assetAuditStatus}
         onCheckAssets={onCheckAssets}
+        onOpenAssetFolder={onOpenAssetFolder}
       />
     </NoteItemRow>
   )

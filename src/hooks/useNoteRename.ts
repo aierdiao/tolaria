@@ -389,10 +389,8 @@ function renameErrorMessage(err: unknown): string {
     : err instanceof Error
       ? err.message.trim()
       : ''
-  if (message === 'A note with that name already exists' || message === 'Invalid filename') {
-    return message
-  }
-  return 'Failed to rename note'
+  if (!message) return 'Failed to rename note'
+  return `Failed to rename note: ${message}`
 }
 
 function moveNoteErrorMessage(err: unknown): string {

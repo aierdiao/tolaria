@@ -327,7 +327,8 @@ function useUntitledRenameExecutor({
           loadModifiedFiles,
         })
         return result.new_path
-      } catch {
+      } catch (error) {
+        console.error('Auto-rename of untitled note failed:', path, error)
         return path
       } finally {
         inFlightUntitledRenameRef.current.delete(path)
