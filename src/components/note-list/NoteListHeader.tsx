@@ -1,4 +1,4 @@
-import { CircleNotch as Loader2, MagnifyingGlass, Plus, SidebarSimple, X } from '@phosphor-icons/react'
+import { CircleNotch as Loader2, ImageSquare, MagnifyingGlass, Plus, SidebarSimple, X } from '@phosphor-icons/react'
 import type { VaultEntry } from '../../types'
 import type { SortOption, SortDirection } from '../../utils/noteListHelpers'
 import { translate, type AppLocale, type TranslationKey } from '../../lib/i18n'
@@ -57,6 +57,10 @@ interface NoteListHeaderProps {
   onSearchChange: (value: string) => void
   onSearchKeyDown: (event: React.KeyboardEvent<HTMLInputElement>) => void
   onGitRepositoryChange?: (path: string) => void
+  onCheckAssets?: () => void
+  canCheckAssets?: boolean
+  isCheckingAssets?: boolean
+  assetAuditMessage?: string | null
 }
 
 function dispatchExpandSidebarFromHeader() {
@@ -160,6 +164,16 @@ function RepositorySelectorRow({
   )
 }
 
+function AssetAuditMessageRow({ message }: { message?: string | null }) {
+  if (!message) return null
+
+  return (
+    <div className="border-b border-border px-4 py-2 text-[12px] text-muted-foreground" data-testid="asset-audit-message">
+      {message}
+    </div>
+  )
+}
+
 function HeaderActions({
   isEntityView,
   listSort,
@@ -170,6 +184,9 @@ function HeaderActions({
   onSortChange,
   onCreateNote,
   onToggleSearch,
+  onCheckAssets,
+  canCheckAssets = false,
+  isCheckingAssets = false,
 }: Pick<
   NoteListHeaderProps,
   | 'isEntityView'
@@ -181,6 +198,9 @@ function HeaderActions({
   | 'onSortChange'
   | 'onCreateNote'
   | 'onToggleSearch'
+  | 'onCheckAssets'
+  | 'canCheckAssets'
+  | 'isCheckingAssets'
 > & {
   locale: AppLocale
 }) {
@@ -189,6 +209,19 @@ function HeaderActions({
       {!isEntityView && <SortDropdown groupLabel="__list__" current={listSort} direction={listDirection} customProperties={customProperties} locale={locale} onChange={onSortChange} />}
       <Button type="button" variant="ghost" size="icon-xs" className={NOTE_LIST_ACTION_BUTTON_CLASSNAME} onClick={onToggleSearch} title={translate(locale, 'noteList.searchAction')} aria-label={translate(locale, 'noteList.searchAction')}>
         <MagnifyingGlass size={16} />
+      </Button>
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon-xs"
+        className={NOTE_LIST_ACTION_BUTTON_CLASSNAME}
+        onClick={onCheckAssets}
+        disabled={!canCheckAssets || isCheckingAssets}
+        title={translate(locale, 'noteList.assetAudit.action')}
+        aria-label={translate(locale, 'noteList.assetAudit.action')}
+        data-testid="check-note-assets-button"
+      >
+        {isCheckingAssets ? <Loader2 size={16} className="animate-spin" /> : <ImageSquare size={16} />}
       </Button>
       {propertyPicker && (
         <ListPropertiesPopover
@@ -299,6 +332,10 @@ export function NoteListHeader({
   onSearchChange,
   onSearchKeyDown,
   onGitRepositoryChange,
+  onCheckAssets,
+  canCheckAssets,
+  isCheckingAssets,
+  assetAuditMessage,
 }: NoteListHeaderProps) {
   const { dragRegionRef } = useDragRegion<HTMLDivElement>()
   const collapsedSidebarPadding = sidebarCollapsed && isMac()
@@ -325,6 +362,9 @@ export function NoteListHeader({
           onSortChange={onSortChange}
           onCreateNote={onCreateNote}
           onToggleSearch={onToggleSearch}
+          onCheckAssets={onCheckAssets}
+          canCheckAssets={canCheckAssets}
+          isCheckingAssets={isCheckingAssets}
         />
       </div>
       <RepositorySelectorRow
@@ -334,6 +374,7 @@ export function NoteListHeader({
         locale={locale}
         onGitRepositoryChange={onGitRepositoryChange}
       />
+      <AssetAuditMessageRow message={assetAuditMessage} />
       <SearchRow
         searchVisible={searchVisible}
         search={search}

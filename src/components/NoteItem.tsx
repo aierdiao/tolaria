@@ -4,7 +4,7 @@ import { cn } from '@/lib/utils'
 import {
   Wrench, Flask, Target, ArrowsClockwise,
   Users, CalendarBlank, Tag, FileText, StackSimple,
-  File, FileDashed, FilePdf, ImageSquare, SpeakerHigh, Video,
+  File, FileDashed, FilePdf, ImageSquare, SpeakerHigh, Video, WarningCircle,
 } from '@phosphor-icons/react'
 import { getTypeColor, getTypeLightColor } from '../utils/typeColors'
 import { resolveIcon } from '../utils/iconRegistry'
@@ -17,6 +17,7 @@ import { ChangeNoteContent } from './note-item/ChangeNoteContent'
 import { workspaceForEntry } from '../utils/workspaces'
 import { WorkspaceInitialsBadge } from './WorkspaceInitialsBadge'
 import { useDateDisplayFormat } from '../hooks/useAppPreferences'
+import type { AssetReferenceStatus } from '../utils/perNoteAssetAudit'
 
 const TYPE_ICON_MAP: Record<string, ComponentType<SVGAttributes<SVGSVGElement>>> = {
   Project: Wrench,
@@ -123,11 +124,33 @@ function NoteTypeIndicator({
   TypeIcon,
   typeColor,
   filePreviewKind,
+  assetReferenceStatus,
+  assetReferenceTitle,
 }: {
   TypeIcon: ComponentType<SVGAttributes<SVGSVGElement>>
   typeColor: string
   filePreviewKind?: FilePreviewKind
+  assetReferenceStatus?: AssetReferenceStatus
+  assetReferenceTitle?: string
 }) {
+  if (assetReferenceStatus === 'unused') {
+    return (
+      <span
+        className="absolute right-3 top-2.5"
+        data-testid="unused-asset-indicator"
+        title={assetReferenceTitle}
+      >
+        <WarningCircle
+          width={15}
+          height={15}
+          weight="fill"
+          style={{ color: 'var(--accent-orange)' }}
+          aria-hidden="true"
+        />
+      </span>
+    )
+  }
+
   return (
     <TypeIcon
       width={14}
@@ -239,6 +262,8 @@ function StandardNoteContent({
   allEntries,
   typeEntryMap,
   onClickNote,
+  assetReferenceStatus,
+  assetReferenceTitle,
 }: {
   entry: VaultEntry
   isBinary: boolean
@@ -250,6 +275,8 @@ function StandardNoteContent({
   allEntries: VaultEntry[]
   typeEntryMap: Record<string, VaultEntry>
   onClickNote: NoteItemProps['onClickNote']
+  assetReferenceStatus?: AssetReferenceStatus
+  assetReferenceTitle?: string
 }) {
   const te = typeEntryMap[entry.isA ?? '']
   const TypeIcon = resolveNoteTypeIcon(entry, te?.icon)
@@ -257,7 +284,7 @@ function StandardNoteContent({
 
   return (
     <>
-      <NoteTypeIndicator TypeIcon={TypeIcon} typeColor={typeColor} filePreviewKind={previewKind} />
+      <NoteTypeIndicator TypeIcon={TypeIcon} typeColor={typeColor} filePreviewKind={previewKind} assetReferenceStatus={assetReferenceStatus} assetReferenceTitle={assetReferenceTitle} />
       <div className="space-y-2" data-testid="note-content-stack">
         {isBinary ? (
           <NoteTitleRow
@@ -359,6 +386,8 @@ type NoteItemProps = {
   typeEntryMap: Record<string, VaultEntry>
   allEntries?: VaultEntry[]
   displayPropsOverride?: string[] | null
+  assetReferenceStatus?: AssetReferenceStatus
+  assetReferenceTitle?: string
   onClickNote: (entry: VaultEntry, e: ReactMouseEvent) => void
   onPrefetch?: (entry: VaultEntry) => void
   onContextMenu?: (entry: VaultEntry, e: ReactMouseEvent) => void
@@ -504,6 +533,8 @@ function NoteItemContent({
   allEntries,
   typeEntryMap,
   onClickNote,
+  assetReferenceStatus,
+  assetReferenceTitle,
 }: {
   entry: VaultEntry
   isBinary: boolean
@@ -516,6 +547,8 @@ function NoteItemContent({
   allEntries: VaultEntry[]
   typeEntryMap: Record<string, VaultEntry>
   onClickNote: NoteItemProps['onClickNote']
+  assetReferenceStatus?: AssetReferenceStatus
+  assetReferenceTitle?: string
 }) {
   if (changeStatus) {
     return (
@@ -540,11 +573,13 @@ function NoteItemContent({
       allEntries={allEntries}
       typeEntryMap={typeEntryMap}
       onClickNote={onClickNote}
+      assetReferenceStatus={assetReferenceStatus}
+      assetReferenceTitle={assetReferenceTitle}
     />
   )
 }
 
-export function NoteItem({ entry, isSelected, isMultiSelected = false, isHighlighted = false, noteStatus = 'clean', changeStatus, typeEntryMap, allEntries, displayPropsOverride, onClickNote, onPrefetch, onContextMenu }: NoteItemProps) {
+export function NoteItem({ entry, isSelected, isMultiSelected = false, isHighlighted = false, noteStatus = 'clean', changeStatus, typeEntryMap, allEntries, displayPropsOverride, assetReferenceStatus, assetReferenceTitle, onClickNote, onPrefetch, onContextMenu }: NoteItemProps) {
   const isBinary = entry.fileKind === 'binary'
   const previewKind = filePreviewKind(entry)
   const isPreviewableFile = previewKind !== null
@@ -588,6 +623,8 @@ export function NoteItem({ entry, isSelected, isMultiSelected = false, isHighlig
         allEntries={allEntries ?? [entry]}
         typeEntryMap={typeEntryMap}
         onClickNote={onClickNote}
+        assetReferenceStatus={assetReferenceStatus}
+        assetReferenceTitle={assetReferenceTitle}
       />
     </NoteItemRow>
   )

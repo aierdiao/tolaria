@@ -35,6 +35,8 @@ import { useChangesContextMenu } from './NoteListChangesMenu'
 import { useNoteListContextMenu } from './NoteListContextMenu'
 import { addNoteListSearchToggleListener, dispatchNoteListSearchAvailability } from '../../utils/noteListSearchEvents'
 import { useDateDisplayFormat } from '../../hooks/useAppPreferences'
+import type { AssetReferenceStatus } from '../../utils/perNoteAssetAudit'
+import { translate } from '../../lib/i18n'
 
 type EntitySelection = Extract<SidebarSelection, { kind: 'entity' }>
 const LIKELY_NEXT_PRELOAD_LIMIT = 6
@@ -468,6 +470,8 @@ interface UseRenderItemParams {
   noteListContextMenu?: ((entry: VaultEntry, event: React.MouseEvent) => void) | undefined
   multiSelect: MultiSelectState
   noteListKeyboard: { highlightedPath: string | null }
+  assetReferenceStatuses?: Record<string, AssetReferenceStatus>
+  locale: AppLocale
 }
 
 function useRenderItem({
@@ -484,8 +488,11 @@ function useRenderItem({
   noteListContextMenu,
   multiSelect,
   noteListKeyboard,
+  assetReferenceStatuses,
+  locale,
 }: UseRenderItemParams) {
   const contextMenuHandler = isChangesView && onDiscardFile ? changesContextMenu : noteListContextMenu
+  const unusedAssetTitle = translate(locale, 'noteList.assetAudit.unusedTooltip')
 
   return useCallback((entry: VaultEntry, options?: { forceSelected?: boolean }) => (
     isDeletedNoteEntry(entry) ? (
@@ -500,6 +507,8 @@ function useRenderItem({
         typeEntryMap={typeEntryMap}
         allEntries={entries}
         displayPropsOverride={displayPropsOverride}
+        assetReferenceStatus={assetReferenceStatuses?.[entry.path]}
+        assetReferenceTitle={unusedAssetTitle}
         onClickNote={handleClickNote}
         onContextMenu={contextMenuHandler}
       />
@@ -515,6 +524,8 @@ function useRenderItem({
         typeEntryMap={typeEntryMap}
         allEntries={entries}
         displayPropsOverride={displayPropsOverride}
+        assetReferenceStatus={assetReferenceStatuses?.[entry.path]}
+        assetReferenceTitle={unusedAssetTitle}
         onClickNote={handleClickNote}
         onPrefetch={prefetchNoteContent}
         onContextMenu={contextMenuHandler}
@@ -530,6 +541,8 @@ function useRenderItem({
     noteListKeyboard.highlightedPath,
     resolvedGetNoteStatus,
     selectedNotePath,
+    assetReferenceStatuses,
+    unusedAssetTitle,
     typeEntryMap,
   ])
 }
@@ -579,6 +592,11 @@ export interface NoteListProps {
   visibleNotesRef?: React.MutableRefObject<VaultEntry[]>
   allNotesFileVisibility?: AllNotesFileVisibility
   locale?: AppLocale
+  assetReferenceStatuses?: Record<string, AssetReferenceStatus>
+  onCheckAssets?: () => void
+  canCheckAssets?: boolean
+  isCheckingAssets?: boolean
+  assetAuditMessage?: string | null
 }
 
 function buildNoteListLayoutModel(params: {
@@ -590,6 +608,10 @@ function buildNoteListLayoutModel(params: {
   gitRepositories?: GitRepositoryOption[]
   selectedGitRepositoryPath?: string
   onGitRepositoryChange?: (path: string) => void
+  onCheckAssets?: () => void
+  canCheckAssets?: boolean
+  isCheckingAssets?: boolean
+  assetAuditMessage?: string | null
   noteListFilter: NoteListFilter
   filterCounts: ReturnType<typeof useFilterCounts>
   onNoteListFilterChange: (filter: NoteListFilter) => void
@@ -646,6 +668,10 @@ function buildNoteListLayoutModel(params: {
     gitRepositories: params.gitRepositories ?? [],
     selectedGitRepositoryPath: params.selectedGitRepositoryPath ?? '',
     onGitRepositoryChange: params.onGitRepositoryChange,
+    onCheckAssets: params.onCheckAssets,
+    canCheckAssets: params.canCheckAssets,
+    isCheckingAssets: params.isCheckingAssets,
+    assetAuditMessage: params.assetAuditMessage,
     isInboxView: params.selection.kind === 'filter' && params.selection.filter === 'inbox',
     modifiedFilesError: params.modifiedFilesError,
     searched: params.content.searched,
@@ -711,6 +737,11 @@ export function useNoteListModel({
   visibleNotesRef,
   allNotesFileVisibility,
   locale = 'en',
+  assetReferenceStatuses,
+  onCheckAssets,
+  canCheckAssets,
+  isCheckingAssets,
+  assetAuditMessage,
 }: NoteListProps) {
   const selectedNotePath = selectedNote?.path ?? null
   const { modifiedPathSet, modifiedSuffixes, resolvedGetNoteStatus } = useModifiedFilesState(modifiedFiles, getNoteStatus)
@@ -782,6 +813,8 @@ export function useNoteListModel({
     noteListContextMenu: interaction.noteListContextMenu.handleNoteContextMenu,
     multiSelect: interaction.multiSelect,
     noteListKeyboard: interaction.noteListKeyboard,
+    assetReferenceStatuses,
+    locale,
   })
   const handleSearchKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
     if (event.key !== 'Escape') return
@@ -819,6 +852,10 @@ export function useNoteListModel({
     gitRepositories,
     selectedGitRepositoryPath,
     onGitRepositoryChange,
+    onCheckAssets,
+    canCheckAssets,
+    isCheckingAssets,
+    assetAuditMessage,
     noteListFilter,
     filterCounts,
     onNoteListFilterChange,
