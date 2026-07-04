@@ -1,5 +1,66 @@
 ![Latest stable](https://img.shields.io/github/v/release/refactoringhq/tolaria?display_name=tag) [![CI](https://github.com/refactoringhq/tolaria/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/refactoringhq/tolaria/actions/workflows/ci.yml) [![Codecov](https://codecov.io/gh/refactoringhq/tolaria/graph/badge.svg?branch=main)](https://codecov.io/gh/refactoringhq/tolaria) [![CodeScene Hotspot Code Health](https://codescene.io/projects/76865/status-badges/hotspot-code-health)](https://codescene.io/projects/76865)
 
+# Tolaria Personal Assets
+
+First of all, thank you to the Tolaria team and contributors for building such a great open-source app.
+
+I use Tolaria not only as a knowledge base, but also as my main writing environment. I write articles in it, organize source material, keep long-term archives of my work, and back everything up with Git.
+
+Since I am not sure whether this workflow is useful to other people, I implemented it first in a personal fork.
+
+This fork mainly adds two features.
+
+## 1. Optional per-article asset folders for writing workflows
+
+In the original Tolaria workflow, pasted or dropped images are saved into a shared attachments folder. This is simple and works well for many knowledge-base use cases.
+
+For long-form writing, however, especially when a vault contains many articles and many images over time, keeping every image in one shared folder can make it harder to organize, locate, review, and clean up assets.
+
+This fork adds a new attachment-location option in Settings: **"Per-note asset folder"**.
+
+When **"Per-note asset folder"** is enabled, an article can have its own paired asset folder, for example:
+
+```text
+my-article.md
+my-article.assets/
+  image-1.png
+  image-2.png
+```
+
+This keeps an article and its images close together, which works better for:
+
+- long-term blog archives
+- portfolio writing
+- article backups across platforms
+- future migration to a static site or GitHub repository
+- manually checking which images belong to a specific article
+
+When a note is renamed or moved inside Tolaria, its paired `.assets` folder is moved along with it where possible, so the relationship between the article and its assets stays stable.
+
+## 2. Per-article unused image checks
+
+In the original workflow, images are saved into the attachments folder, but over time it can become difficult to tell which images are still used by an article and which ones were only temporary writing materials.
+
+This fork adds a per-article image reference check.
+
+For the current article, Tolaria can now check its paired asset folder and tell whether:
+
+- images are referenced by the article
+- images are not used by the current article
+- the current check result is still valid
+
+If unused images are found, the UI shows a warning state and lets me jump to the paired asset folder to review them.
+
+The goal is not to automatically delete files for the user. Instead, the goal is to make cleanup clearer and safer: check first, then let the user decide what to delete.
+
+## Current status
+
+This is a personal fork and does not represent the official Tolaria design direction.
+
+If Tolaria later implements a similar workflow officially, and the official implementation fits this use case better, I will prefer the official version. Until then, I will maintain this fork as my stable writing and blog-archive version.
+
+---
+
 # 💧 Tolaria
 
 Tolaria is a desktop app for macOS, Windows, and Linux for managing **markdown knowledge bases**. People use it for a variety of use cases:
