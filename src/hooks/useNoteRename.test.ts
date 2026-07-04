@@ -254,7 +254,7 @@ describe('useNoteRename hook', () => {
       await result.current.handleRenameNote('/vault/old.md', 'New', '/vault', vi.fn())
     })
 
-    expect(setToastMessage).toHaveBeenCalledWith('Failed to rename note')
+    expect(setToastMessage).toHaveBeenCalledWith('Failed to rename note: fail')
   })
 
   it('switches active tab when renamed note is active', async () => {
@@ -428,7 +428,7 @@ describe('useNoteRename hook', () => {
       await result.current.handleRenameFilename('/vault/old-name.md', 'manual-name', '/vault', vi.fn())
     })
 
-    expect(setToastMessage).toHaveBeenCalledWith('A note with that name already exists')
+    expect(setToastMessage).toHaveBeenCalledWith('Failed to rename note: A note with that name already exists')
   })
 
   it('handleMoveNoteToFolder moves the note and keeps its title intact', async () => {
