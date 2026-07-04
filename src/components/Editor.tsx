@@ -123,7 +123,7 @@ interface EditorProps {
   onContentChange?: (path: string, content: string) => void
   onSave?: () => void
   /** Called when the user explicitly renames the filename from the breadcrumb. */
-  onRenameFilename?: (path: string, newFilenameStem: string) => void
+  onRenameFilename?: (path: string, newFilenameStem: string, options?: { allowUnique?: boolean }) => void
   noteWidth?: NoteWidthMode
   onToggleNoteWidth?: () => void
   canGoBack?: boolean
@@ -548,7 +548,7 @@ function EditorLayout({
   findRequest?: RawEditorFindRequest | null
   rawLatestContentRef: React.MutableRefObject<string | null>
   sheetFlushRef: React.MutableRefObject<((path: string) => void) | null>
-  onRenameFilename?: (path: string, newFilenameStem: string) => void
+  onRenameFilename?: (path: string, newFilenameStem: string, options?: { allowUnique?: boolean }) => void
   noteWidth?: NoteWidthMode
   onToggleNoteWidth?: () => void
   isConflicted?: boolean

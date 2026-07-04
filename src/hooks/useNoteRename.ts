@@ -33,6 +33,7 @@ interface FilenameRenameRequest {
   path: string
   newFilenameStem: string
   vaultPath: string
+  allowUnique?: boolean
 }
 
 interface FolderMoveRequest {
@@ -182,12 +183,20 @@ export async function performFilenameRename({
   path,
   newFilenameStem,
   vaultPath,
+  allowUnique = false,
 }: FilenameRenameRequest): Promise<RenameResult> {
-  return performSingleValueNoteCommand({
-    descriptor: FILENAME_RENAME_COMMAND,
+  return invokeNoteCommand({
+    command: FILENAME_RENAME_COMMAND.command,
     path,
-    value: newFilenameStem,
     vaultPath,
+    tauriExtra: {
+      [FILENAME_RENAME_COMMAND.tauriKey]: newFilenameStem,
+      allowUnique,
+    },
+    mockExtra: {
+      [FILENAME_RENAME_COMMAND.mockKey]: newFilenameStem,
+      allow_unique: allowUnique,
+    },
   })
 }
 
@@ -572,12 +581,17 @@ export function useNoteRename(config: NoteRenameConfig, tabDeps: RenameTabDeps) 
     })
   }, [entries, tabsRef, applyRenameResult, setToastMessage])
 
-  const handleRenameFilename = useCallback(async (path: string, newFilenameStem: string, vaultPath: string, onEntryRenamed: (oldPath: string, newEntry: Partial<VaultEntry> & { path: string }, newContent: string) => void) => {
+  const handleRenameFilename = useCallback(async (path: string, newFilenameStem: string, vaultPath: string, onEntryRenamed: (oldPath: string, newEntry: Partial<VaultEntry> & { path: string }, newContent: string) => void, options?: { allowUnique?: boolean }) => {
     const entry = findRenameEntry(entries, tabsRef.current, path)
     const renameVaultPath = resolveRenameVaultPath(entry, vaultPath)
     await runRenameAction({
       path,
-      perform: () => performFilenameRename({ path, newFilenameStem, vaultPath: renameVaultPath }),
+      perform: () => performFilenameRename({
+        path,
+        newFilenameStem,
+        vaultPath: renameVaultPath,
+        allowUnique: options?.allowUnique,
+      }),
       applyRenameResult,
       buildEntry: (currentEntry, newPath) => buildFilenameRenamedEntry(currentEntry ?? ({} as VaultEntry), newPath),
       onEntryRenamed,

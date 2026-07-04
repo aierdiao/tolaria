@@ -467,7 +467,7 @@ interface AppSaveDeps {
   tabs: TabState[]
   activeTabPath: string | null
   handleRenameNote: (path: string, newTitle: string, vaultPath: string, onEntryRenamed: (oldPath: string, newEntry: Partial<VaultEntry> & { path: string }, newContent: string) => void) => Promise<void>
-  handleRenameFilename: (path: string, newFilenameStem: string, vaultPath: string, onEntryRenamed: (oldPath: string, newEntry: Partial<VaultEntry> & { path: string }, newContent: string) => void) => Promise<void>
+  handleRenameFilename: (path: string, newFilenameStem: string, vaultPath: string, onEntryRenamed: (oldPath: string, newEntry: Partial<VaultEntry> & { path: string }, newContent: string) => void, options?: { allowUnique?: boolean }) => Promise<void>
   replaceEntry: (oldPath: string, newEntry: Partial<VaultEntry> & { path: string }, newContent: string) => void
   resolvedPath: string
   writableVaultPaths?: readonly string[]
@@ -619,7 +619,7 @@ function useRenameHandlers({
   replaceRenamedEntry: (oldPath: string, newEntry: Partial<VaultEntry> & { path: string }, newContent: string) => void
   loadModifiedFiles: AppSaveDeps['loadModifiedFiles']
 }) {
-  const handleFilenameRename = useCallback(async (path: string, newFilenameStem: string) => {
+  const handleFilenameRename = useCallback(async (path: string, newFilenameStem: string, options?: { allowUnique?: boolean }) => {
     const currentPath = await preparePathForManualRename({
       path,
       resolveCurrentPath,
@@ -628,7 +628,7 @@ function useRenameHandlers({
       cancelPendingUntitledRename,
     })
     const renameVaultPath = vaultPathForTabPath(tabsRef.current, currentPath, resolvedPath)
-    await handleRenameFilename(currentPath, newFilenameStem, renameVaultPath, replaceRenamedEntry).then(loadModifiedFiles)
+    await handleRenameFilename(currentPath, newFilenameStem, renameVaultPath, replaceRenamedEntry, options).then(loadModifiedFiles)
   }, [resolveCurrentPath, resolvePathBeforeSave, savePendingForPath, cancelPendingUntitledRename, tabsRef, resolvedPath, handleRenameFilename, replaceRenamedEntry, loadModifiedFiles])
 
   const handleTitleSync = useCallback((path: string, newTitle: string) => {

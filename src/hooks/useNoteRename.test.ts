@@ -311,6 +311,30 @@ describe('useNoteRename hook', () => {
     expect(setToastMessage).toHaveBeenCalledWith('Updated 1 note')
   })
 
+  it('passes allowUnique for title sync filename renames', async () => {
+    const entry = makeEntry({ path: '/vault/untitled-note-1.md', filename: 'untitled-note-1.md', title: 'Test' })
+    vi.mocked(mockInvoke).mockImplementation(async (cmd: string) => {
+      if (cmd === 'rename_note_filename') return { new_path: '/vault/test-2.md', updated_files: 0, failed_updates: 0 }
+      if (cmd === 'get_note_content') return '# Test\n'
+      return ''
+    })
+
+    const { result } = renderHook(() => useNoteRename(
+      { entries: [entry], setToastMessage },
+      { tabs: [], setTabs, activeTabPathRef, handleSwitchTab, updateTabContent },
+    ))
+
+    await act(async () => {
+      await result.current.handleRenameFilename('/vault/untitled-note-1.md', 'test', '/vault', vi.fn(), { allowUnique: true })
+    })
+
+    expect(mockInvoke).toHaveBeenCalledWith('rename_note_filename', expect.objectContaining({
+      old_path: '/vault/untitled-note-1.md',
+      new_filename_stem: 'test',
+      allow_unique: true,
+    }))
+  })
+
   it('handleRenameFilename refreshes filename-derived fallback titles', async () => {
     const entry = makeEntry({
       path: '/vault/plan-assumptions.md',

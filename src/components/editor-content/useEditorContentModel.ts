@@ -55,7 +55,7 @@ export interface EditorContentProps {
   findRequest?: RawEditorFindRequest | null
   rawLatestContentRef?: React.MutableRefObject<string | null>
   sheetFlushRef?: React.MutableRefObject<((path: string) => void) | null>
-  onRenameFilename?: (path: string, newFilenameStem: string) => void
+  onRenameFilename?: (path: string, newFilenameStem: string, options?: { allowUnique?: boolean }) => void
   noteWidth?: NoteWidthMode
   onToggleNoteWidth?: () => void
   isConflicted?: boolean

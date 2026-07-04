@@ -36,6 +36,7 @@ pub struct RenameNoteFilenameRequest<'a> {
     pub vault_path: &'a str,
     pub old_path: &'a str,
     pub new_filename_stem: &'a str,
+    pub allow_unique: bool,
 }
 
 #[derive(Clone, Copy)]
@@ -425,11 +426,15 @@ pub fn rename_note_filename(
     let parent_dir = old_file
         .parent()
         .ok_or("Cannot determine parent directory")?;
-    let new_file = parent_dir.join(&new_filename);
     let workspace = RenameWorkspace::new(vault)?;
-    let committed = workspace
-        .operation(request.old_path, old_file)
-        .rename_exact(workspace.stage_note_content(&content)?, &new_file)?;
+    let operation = workspace.operation(request.old_path, old_file);
+    let staged = workspace.stage_note_content(&content)?;
+    let committed = if request.allow_unique {
+        operation.rename_with_candidates(staged, &new_filename, parent_dir)?
+    } else {
+        let new_file = parent_dir.join(&new_filename);
+        operation.rename_exact(staged, &new_file)?
+    };
 
     super::note_assets::migrate_note_assets(old_file, committed.new_file());
     let old_path_stem = to_path_stem(old_file, vault);
@@ -741,6 +746,7 @@ mod tests {
             vault_path: vault.to_str().unwrap(),
             old_path: current_path.to_str().unwrap(),
             new_filename_stem: new_filename_stem.as_ref(),
+            allow_unique: false,
         });
 
         assert_eq!(result.unwrap_err(), expected_error.as_ref());
@@ -1222,6 +1228,7 @@ mod tests {
             vault_path: vault.to_str().unwrap(),
             old_path: old_path.to_str().unwrap(),
             new_filename_stem: "manual-name",
+            allow_unique: false,
         })
         .unwrap();
 
@@ -1248,6 +1255,41 @@ mod tests {
     }
 
     #[test]
+    fn test_rename_note_filename_can_append_suffix_for_title_sync() {
+        let dir = TempDir::new().unwrap();
+        let vault = dir.path();
+        create_test_file(vault, "posts/test.md", "# Existing\n");
+        create_test_file(
+            vault,
+            "posts/untitled-note-123.md",
+            "# Test\n\n![image](./untitled-note-123.assets/image.png)\n",
+        );
+        let assets = vault.join("posts/untitled-note-123.assets");
+        fs::create_dir_all(&assets).unwrap();
+        fs::write(assets.join("image.png"), b"img").unwrap();
+
+        let old_path = vault.join("posts/untitled-note-123.md");
+        let result = rename_note_filename(RenameNoteFilenameRequest {
+            vault_path: vault.to_str().unwrap(),
+            old_path: old_path.to_str().unwrap(),
+            new_filename_stem: "test",
+            allow_unique: true,
+        })
+        .expect("rename should choose a numbered filename");
+
+        assert!(result
+            .new_path
+            .replace('\\', "/")
+            .ends_with("posts/test-2.md"));
+        assert!(vault.join("posts/test.md").exists());
+        assert!(!old_path.exists());
+        assert!(!assets.exists());
+        assert!(vault.join("posts/test-2.assets/image.png").exists());
+        let content = fs::read_to_string(vault.join("posts/test-2.md")).unwrap();
+        assert!(content.contains("![image](./test-2.assets/image.png)"));
+    }
+
+    #[test]
     fn test_rename_note_filename_rejects_windows_invalid_names() {
         assert_rename_note_filename_error("quarterly:plan", None::<&str>, "Invalid filename");
     }
@@ -1269,6 +1311,7 @@ mod tests {
             vault_path: vault.to_str().unwrap(),
             old_path: vault.join("posts/test.md").to_str().unwrap(),
             new_filename_stem: "tokyo",
+            allow_unique: false,
         })
         .expect("rename should succeed");
 

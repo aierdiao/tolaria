@@ -66,6 +66,8 @@ pub struct RenameNoteFilenameCommandArgs {
     vault_path: String,
     old_path: String,
     new_filename_stem: String,
+    #[serde(default)]
+    allow_unique: bool,
 }
 
 #[derive(Debug, Deserialize)]
@@ -103,6 +105,7 @@ enum NoteRenameCommandArgs {
     },
     Filename {
         new_filename_stem: String,
+        allow_unique: bool,
     },
 }
 
@@ -118,11 +121,15 @@ impl NoteRenameCommandArgs {
                 new_title: &new_title,
                 old_title_hint: old_title.as_deref(),
             }),
-            Self::Filename { new_filename_stem } => {
+            Self::Filename {
+                new_filename_stem,
+                allow_unique,
+            } => {
                 vault::rename_note_filename(vault::RenameNoteFilenameRequest {
                     vault_path: note.vault_path,
                     old_path: note.note_path,
                     new_filename_stem: &new_filename_stem,
+                    allow_unique,
                 })
             }
         }
@@ -172,6 +179,7 @@ fn rename_public_note(args: PublicNoteRenameCommandArgs) -> Result<RenameResult,
             args.old_path,
             NoteRenameCommandArgs::Filename {
                 new_filename_stem: args.new_filename_stem,
+                allow_unique: args.allow_unique,
             },
         ),
     };
@@ -343,6 +351,7 @@ mod tests {
             vault_path: vault.clone(),
             old_path,
             new_filename_stem: "custom-name".to_string(),
+            allow_unique: false,
         })
         .unwrap();
         assert!(renamed.new_path.ends_with("custom-name.md"));

@@ -505,7 +505,7 @@ describe('BreadcrumbBar — filename controls', () => {
 
     fireEvent.click(screen.getByTestId('breadcrumb-sync-button'))
 
-    expect(onRenameFilename).toHaveBeenCalledWith(entry.path, 'fresh-title')
+    expect(onRenameFilename).toHaveBeenCalledWith(entry.path, 'fresh-title', { allowUnique: true })
   })
 
   it('clicking the sync button renames the file to the title slug', () => {
@@ -516,7 +516,7 @@ describe('BreadcrumbBar — filename controls', () => {
 
     fireEvent.click(screen.getByTestId('breadcrumb-sync-button'))
 
-    expect(onRenameFilename).toHaveBeenCalledWith(entry.path, 'fresh-title')
+    expect(onRenameFilename).toHaveBeenCalledWith(entry.path, 'fresh-title', { allowUnique: true })
   })
 
   it('lets keyboard users press Enter on the filename to start editing', () => {

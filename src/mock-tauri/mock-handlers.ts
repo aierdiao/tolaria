@@ -331,6 +331,7 @@ function handleRenameNoteFilename(args: {
   vault_path: string
   old_path: string
   new_filename_stem: string
+  allow_unique?: boolean
 }) {
   const oldEntry = MOCK_ENTRIES.find(e => e.path === args.old_path)
   const oldContent = readMockContent({ path: args.old_path })
@@ -347,9 +348,14 @@ function handleRenameNoteFilename(args: {
   }
 
   const parentDir = args.old_path.replace(/\/[^/]+$/, '')
-  const newPath = `${parentDir}/${newFilename}`
+  let newPath = `${parentDir}/${newFilename}`
   if (newPath !== args.old_path && Object.hasOwn(MOCK_CONTENT, newPath)) {
-    throw new Error('A note with that name already exists')
+    if (!args.allow_unique) {
+      throw new Error('A note with that name already exists')
+    }
+    for (let attempt = 2; Object.hasOwn(MOCK_CONTENT, newPath); attempt += 1) {
+      newPath = `${parentDir}/${normalizedStem}-${attempt}.md`
+    }
   }
 
   deleteMockContent({ path: args.old_path })
