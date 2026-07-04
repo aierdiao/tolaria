@@ -2,9 +2,9 @@ import type { ComponentType, CSSProperties, MouseEvent as ReactMouseEvent, Mouse
 import type { VaultEntry, NoteStatus } from '../types'
 import { cn } from '@/lib/utils'
 import {
-  Wrench, Flask, Target, ArrowsClockwise, CircleNotch, CheckCircle,
+  Wrench, Flask, Target, ArrowsClockwise, CircleNotch,
   Users, CalendarBlank, Tag, FileText, StackSimple,
-  File, FileDashed, FilePdf, FolderOpen, ImageSquare, MagnifyingGlass, SpeakerHigh, Video, WarningCircle,
+  File, FileDashed, FilePdf, FolderOpen, ImageSquare, ListChecks, SpeakerHigh, Video, WarningCircle,
 } from '@phosphor-icons/react'
 import { getTypeColor, getTypeLightColor } from '../utils/typeColors'
 import { resolveIcon } from '../utils/iconRegistry'
@@ -120,48 +120,6 @@ function noteItemClassName(state: NoteItemVisualState) {
   return cn(NOTE_ITEM_BASE_CLASS_NAME, NOTE_ITEM_ROW_CLASS_NAMES[resolveNoteItemRowState(state)])
 }
 
-function NoteTypeIndicator({
-  TypeIcon,
-  typeColor,
-  filePreviewKind,
-}: {
-  TypeIcon: ComponentType<SVGAttributes<SVGSVGElement>>
-  typeColor: string
-  filePreviewKind?: FilePreviewKind
-}) {
-  return (
-    <span className="absolute right-3 top-2.5 flex h-5 min-w-5 items-center justify-center">
-      <TypeIcon
-        width={14}
-        height={14}
-        style={{ color: typeColor }}
-        data-testid="type-icon"
-        data-file-preview-kind={filePreviewKind}
-      />
-    </span>
-  )
-}
-
-function NoteAssetAuditMarker({ status }: { status?: NoteAssetAuditStatus }) {
-  if (status?.state !== 'unused' && status?.state !== 'error') return null
-
-  return (
-    <span
-      className="absolute right-8 top-2.5 z-10 flex h-5 min-w-5 items-center justify-center"
-      title={status.title}
-      aria-label={status.title}
-      data-testid="note-asset-audit-marker"
-    >
-      <WarningCircle
-        width={15}
-        height={15}
-        weight="fill"
-        style={{ color: 'var(--accent-orange)' }}
-      />
-    </span>
-  )
-}
-
 export type NoteAssetAuditStatus = {
   state: 'checking' | 'ok' | 'unused' | 'error'
   title: string
@@ -171,58 +129,53 @@ export type NoteAssetAuditStatus = {
   unusedAssets?: Array<{ path: string; filename: string }>
 }
 
-const NOTE_AUDIT_BUTTON_CLASS_NAME = 'absolute top-2.5 z-10 flex h-5 min-w-5 items-center justify-center rounded border-0 bg-transparent p-0 text-muted-foreground hover:text-foreground disabled:cursor-default disabled:opacity-60'
+const NOTE_ITEM_ACTION_BUTTON_CLASS_NAME = 'flex h-5 w-5 shrink-0 items-center justify-center rounded border-0 bg-transparent p-0 text-muted-foreground hover:text-foreground disabled:cursor-default disabled:opacity-60'
 
 function NoteAssetAuditCheckButton({
   disabled,
+  status,
   onCheck,
 }: {
   disabled?: boolean
+  status?: NoteAssetAuditStatus
   onCheck?: (event: ReactMouseEvent) => void
 }) {
   if (!onCheck) return null
+  const isChecking = status?.state === 'checking'
+  const color = status?.state === 'ok' && !isChecking ? 'var(--accent-green)' : undefined
 
   return (
     <button
       type="button"
-      className={cn(NOTE_AUDIT_BUTTON_CLASS_NAME, 'right-[52px]')}
-      title="Check image references"
-      aria-label="Check image references"
+      className={NOTE_ITEM_ACTION_BUTTON_CLASS_NAME}
+      title={status?.title ?? 'Check image references'}
+      aria-label={status?.title ?? 'Check image references'}
       data-testid="note-asset-audit-check-button"
-      disabled={disabled}
+      disabled={disabled || isChecking}
       onClick={onCheck}
     >
-      <MagnifyingGlass width={15} height={15} />
+      {isChecking ? (
+        <CircleNotch width={15} height={15} className="animate-spin" />
+      ) : (
+        <ListChecks width={15} height={15} style={{ color }} />
+      )}
     </button>
   )
 }
 
-function NoteAssetAuditStatusButton({
+function NoteAssetAuditProblemButton({
   status,
   onOpenAssetFolder,
 }: {
   status?: NoteAssetAuditStatus
   onOpenAssetFolder?: (path: string, rootPath?: string) => void
 }) {
-  if (!status) return null
-
-  const color = status?.state === 'unused' || status?.state === 'error'
-    ? 'var(--accent-orange)'
-    : status?.state === 'ok'
-      ? 'var(--accent-green)'
-      : 'var(--muted-foreground)'
-  const Icon = status?.state === 'checking'
-    ? CircleNotch
-    : status?.state === 'ok'
-      ? CheckCircle
-      : status?.state === 'unused' || status?.state === 'error'
-        ? WarningCircle
-        : MagnifyingGlass
+  if (status?.state !== 'unused' && status?.state !== 'error') return null
 
   const button = (
     <button
       type="button"
-      className={cn(NOTE_AUDIT_BUTTON_CLASS_NAME, 'right-8')}
+      className={NOTE_ITEM_ACTION_BUTTON_CLASS_NAME}
       title={status.title}
       aria-label={status.title}
       data-testid="note-asset-audit-status-button"
@@ -230,18 +183,12 @@ function NoteAssetAuditStatusButton({
         event.stopPropagation()
       }}
     >
-      <Icon
+      <WarningCircle
         width={15}
         height={15}
-        weight={status?.state === 'unused' || status?.state === 'error' ? 'fill' : 'regular'}
-        className={status?.state === 'checking' ? 'animate-spin' : undefined}
-        style={{ color }}
+        weight="fill"
+        style={{ color: 'var(--accent-orange)' }}
       />
-      {status?.state === 'unused' && status.count ? (
-        <span className="ml-0.5 text-[9px] font-semibold leading-none" style={{ color }}>
-          {status.count}
-        </span>
-      ) : null}
     </button>
   )
 
@@ -294,6 +241,42 @@ function NoteAssetAuditStatusButton({
   )
 }
 
+function NoteItemActionGroup({
+  TypeIcon,
+  typeColor,
+  filePreviewKind,
+  assetAuditStatus,
+  onCheckAssets,
+  onOpenAssetFolder,
+}: {
+  TypeIcon: ComponentType<SVGAttributes<SVGSVGElement>>
+  typeColor: string
+  filePreviewKind?: FilePreviewKind
+  assetAuditStatus?: NoteAssetAuditStatus
+  onCheckAssets?: (event: ReactMouseEvent) => void
+  onOpenAssetFolder?: (path: string, rootPath?: string) => void
+}) {
+  return (
+    <span className="ml-2 flex shrink-0 items-center gap-1.5">
+      <NoteAssetAuditProblemButton status={assetAuditStatus} onOpenAssetFolder={onOpenAssetFolder} />
+      <NoteAssetAuditCheckButton
+        disabled={assetAuditStatus?.state === 'checking'}
+        status={assetAuditStatus}
+        onCheck={onCheckAssets}
+      />
+      <span className="flex h-5 w-5 shrink-0 items-center justify-center">
+        <TypeIcon
+          width={14}
+          height={14}
+          style={{ color: typeColor }}
+          data-testid="type-icon"
+          data-file-preview-kind={filePreviewKind}
+        />
+      </span>
+    </span>
+  )
+}
+
 function NoteSnippet({ snippet }: { snippet?: string | null }) {
   if (!snippet) return null
 
@@ -342,7 +325,7 @@ function InteractiveNoteDetails({
   allEntries,
   typeEntryMap,
   onClickNote,
-  hasAuditButton = false,
+  actions,
 }: {
   entry: VaultEntry
   noteStatus: NoteStatus
@@ -351,7 +334,7 @@ function InteractiveNoteDetails({
   allEntries: VaultEntry[]
   typeEntryMap: Record<string, VaultEntry>
   onClickNote: NoteItemProps['onClickNote']
-  hasAuditButton?: boolean
+  actions?: ReactNode
 }) {
   return (
     <>
@@ -360,7 +343,7 @@ function InteractiveNoteDetails({
         isBinary={false}
         isSelected={isSelected}
         noteStatus={noteStatus}
-        hasAuditButton={hasAuditButton}
+        actions={actions}
       />
       <NoteSnippet snippet={entry.snippet} />
       <NotePropertySection
@@ -418,27 +401,23 @@ function StandardNoteContent({
   const TypeIcon = resolveNoteTypeIcon(entry, te?.icon)
   const previewKind = filePreviewKind(entry) ?? undefined
   const hasAuditButton = !isBinary && !isUnavailableBinary && !!onCheckAssets
+  const actions = (
+    <NoteItemActionGroup
+      TypeIcon={TypeIcon}
+      typeColor={typeColor}
+      filePreviewKind={previewKind}
+      assetAuditStatus={assetAuditStatus}
+      onCheckAssets={hasAuditButton ? (event) => {
+        event.preventDefault()
+        event.stopPropagation()
+        onCheckAssets?.(entry)
+      } : undefined}
+      onOpenAssetFolder={onOpenAssetFolder}
+    />
+  )
 
   return (
     <>
-      <NoteTypeIndicator TypeIcon={TypeIcon} typeColor={typeColor} filePreviewKind={previewKind} />
-      {isBinary ? <NoteAssetAuditMarker status={assetAuditStatus} /> : null}
-      {hasAuditButton ? (
-        <NoteAssetAuditCheckButton
-          disabled={assetAuditStatus?.state === 'checking'}
-          onCheck={(event) => {
-            event.preventDefault()
-            event.stopPropagation()
-            onCheckAssets?.(entry)
-          }}
-        />
-      ) : null}
-      {hasAuditButton ? (
-        <NoteAssetAuditStatusButton
-          status={assetAuditStatus}
-          onOpenAssetFolder={onOpenAssetFolder}
-        />
-      ) : null}
       <div className="space-y-2" data-testid="note-content-stack">
         {isBinary ? (
           <NoteTitleRow
@@ -446,6 +425,7 @@ function StandardNoteContent({
             isBinary={isUnavailableBinary}
             isSelected={isSelected}
             noteStatus={noteStatus}
+            actions={actions}
           />
         ) : (
           <InteractiveNoteDetails
@@ -456,7 +436,7 @@ function StandardNoteContent({
             allEntries={allEntries}
             typeEntryMap={typeEntryMap}
             onClickNote={onClickNote}
-            hasAuditButton={hasAuditButton}
+            actions={actions}
           />
         )}
       </div>
@@ -469,23 +449,23 @@ function NoteTitleRow({
   isBinary,
   isSelected,
   noteStatus,
-  hasAuditButton = false,
+  actions,
 }: {
   entry: VaultEntry
   isBinary: boolean
   isSelected: boolean
   noteStatus: NoteStatus
-  hasAuditButton?: boolean
+  actions?: ReactNode
 }) {
   return (
-    <div
-      className={cn('truncate text-[13px]', hasAuditButton ? 'pr-20' : 'pr-5', isBinary ? 'text-muted-foreground' : 'text-foreground', isSelected && !isBinary ? 'font-semibold' : 'font-medium')}
-      data-testid="note-title-row"
-    >
-      {hasStatusDot(noteStatus) && !isBinary && <StatusDot noteStatus={noteStatus} />}
-      <NoteTitleIcon icon={entry.icon} size={15} className="mr-1" testId="note-title-icon" />
-      {entry.title}
-      {!isBinary && <StateBadge archived={entry.archived} />}
+    <div className="flex items-center gap-2" data-testid="note-title-row">
+      <div className={cn('min-w-0 flex-1 truncate text-[13px]', isBinary ? 'text-muted-foreground' : 'text-foreground', isSelected && !isBinary ? 'font-semibold' : 'font-medium')}>
+        {hasStatusDot(noteStatus) && !isBinary && <StatusDot noteStatus={noteStatus} />}
+        <NoteTitleIcon icon={entry.icon} size={15} className="mr-1" testId="note-title-icon" />
+        {entry.title}
+        {!isBinary && <StateBadge archived={entry.archived} />}
+      </div>
+      {actions}
     </div>
   )
 }

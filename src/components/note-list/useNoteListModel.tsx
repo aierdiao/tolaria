@@ -464,6 +464,7 @@ interface UseRenderItemParams {
   resolvedGetNoteStatus: (path: string) => NoteStatus
   getChangeStatus: (path: string) => ModifiedFile['status'] | undefined
   handleClickNote: (entry: VaultEntry, event: React.MouseEvent) => void
+  onOpenAssetFolder?: (path: string, rootPath?: string) => void
   changesContextMenu?: ((entry: VaultEntry, event: React.MouseEvent) => void) | undefined
   noteListContextMenu?: ((entry: VaultEntry, event: React.MouseEvent) => void) | undefined
   multiSelect: MultiSelectState
@@ -482,6 +483,7 @@ function useRenderItem({
   resolvedGetNoteStatus,
   getChangeStatus,
   handleClickNote,
+  onOpenAssetFolder,
   changesContextMenu,
   noteListContextMenu,
   multiSelect,
@@ -506,6 +508,7 @@ function useRenderItem({
         displayPropsOverride={displayPropsOverride}
         assetAuditStatus={assetAuditStatuses?.[entry.path]}
         onCheckAssets={onCheckAssets}
+        onOpenAssetFolder={onOpenAssetFolder}
         onClickNote={handleClickNote}
         onContextMenu={contextMenuHandler}
       />
@@ -523,6 +526,7 @@ function useRenderItem({
         displayPropsOverride={displayPropsOverride}
         assetAuditStatus={assetAuditStatuses?.[entry.path]}
         onCheckAssets={onCheckAssets}
+        onOpenAssetFolder={onOpenAssetFolder}
         onClickNote={handleClickNote}
         onPrefetch={prefetchNoteContent}
         onContextMenu={contextMenuHandler}
@@ -540,6 +544,7 @@ function useRenderItem({
     selectedNotePath,
     assetAuditStatuses,
     onCheckAssets,
+    onOpenAssetFolder,
     typeEntryMap,
   ])
 }
@@ -591,6 +596,8 @@ export interface NoteListProps {
   locale?: AppLocale
   assetAuditStatuses?: Record<string, NoteAssetAuditStatus>
   onCheckAssets?: (entry: VaultEntry) => void
+  onSelectFolder?: (path: string, rootPath?: string) => void
+  vaultRootPath?: string
 }
 
 function buildNoteListLayoutModel(params: {
@@ -725,6 +732,7 @@ export function useNoteListModel({
   locale = 'en',
   assetAuditStatuses,
   onCheckAssets,
+  onSelectFolder,
 }: NoteListProps) {
   const selectedNotePath = selectedNote?.path ?? null
   const { modifiedPathSet, modifiedSuffixes, resolvedGetNoteStatus } = useModifiedFilesState(modifiedFiles, getNoteStatus)
@@ -792,6 +800,7 @@ export function useNoteListModel({
     resolvedGetNoteStatus,
     getChangeStatus: interaction.getChangeStatus,
     handleClickNote: interaction.handleClickNote,
+    onOpenAssetFolder: onSelectFolder,
     changesContextMenu: interaction.changesContextMenu.handleNoteContextMenu,
     noteListContextMenu: interaction.noteListContextMenu.handleNoteContextMenu,
     multiSelect: interaction.multiSelect,

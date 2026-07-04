@@ -221,6 +221,26 @@ describe('filterEntries', () => {
 
     expect(result.map((entry) => entry.title)).toEqual(['Spec', 'Logo', 'Data'])
   })
+
+  it('hides paired assets from the parent folder while keeping them visible inside the assets folder', () => {
+    const entries = [
+      makeEntry({ path: '/vault/国际站阿刁/test111.md', filename: 'test111.md', title: 'test111', fileKind: 'markdown' }),
+      makeEntry({ path: '/vault/国际站阿刁/test111.assets/first.png', filename: 'first.png', title: 'first.png', fileKind: 'binary' }),
+      makeEntry({ path: '/vault/国际站阿刁/test111.assets/second.png', filename: 'second.png', title: 'second.png', fileKind: 'binary' }),
+    ]
+
+    expect(filterEntries(entries, {
+      kind: 'folder',
+      path: '国际站阿刁',
+      rootPath: '/vault',
+    }).map((entry) => entry.title)).toEqual(['test111'])
+
+    expect(filterEntries(entries, {
+      kind: 'folder',
+      path: '国际站阿刁/test111.assets',
+      rootPath: '/vault',
+    }).map((entry) => entry.title)).toEqual(['first.png', 'second.png'])
+  })
 })
 
 describe('countByFilter', () => {

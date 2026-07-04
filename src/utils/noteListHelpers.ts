@@ -446,6 +446,7 @@ export function buildRelationshipGroups(
 const isActive = (e: VaultEntry) => !e.archived
 const isMarkdown = (e: VaultEntry) => e.fileKind === 'markdown' || !e.fileKind
 const ATTACHMENTS_FOLDER = 'attachments'
+const PAIRED_ASSETS_SUFFIX = '.assets'
 
 function applySubFilter(entries: VaultEntry[], subFilter: NoteListFilter): VaultEntry[] {
   if (subFilter === 'archived') return entries.filter((e) => e.archived)
@@ -504,6 +505,32 @@ function isEntryInSelectedFolder(entryPath: string, folderRelPath: string, rootP
   return relativeEntryPath ? isInFolder(relativeEntryPath, folderRelPath) : false
 }
 
+function isPairedAssetsSegment(segment: string): boolean {
+  return segment.toLowerCase().endsWith(PAIRED_ASSETS_SUFFIX)
+}
+
+function isSelectedPairedAssetsFolder(folderRelPath: string): boolean {
+  const folderPath = normalizeFolderPath(folderRelPath)
+  if (!folderPath) return false
+  const segments = folderPath.split('/')
+  return isPairedAssetsSegment(segments[segments.length - 1] ?? '')
+}
+
+function isNestedInsidePairedAssetsFolder(relativeEntryPath: string, folderRelPath: string): boolean {
+  const normalizedEntryPath = normalizeFolderPath(relativeEntryPath)
+  const normalizedFolderPath = normalizeFolderPath(folderRelPath)
+  const entrySegments = normalizedEntryPath.split('/')
+  const folderSegments = normalizedFolderPath ? normalizedFolderPath.split('/') : []
+  const tailSegments = entrySegments.slice(folderSegments.length, -1)
+  return tailSegments.some(isPairedAssetsSegment)
+}
+
+function isHiddenParentFolderAsset(entry: VaultEntry, selection: Extract<SidebarSelection, { kind: 'folder' }>): boolean {
+  if (isMarkdown(entry) || isSelectedPairedAssetsFolder(selection.path)) return false
+  const relativeEntryPath = pathRelativeToRoot(entry.path, selection.rootPath)
+  return relativeEntryPath ? isNestedInsidePairedAssetsFolder(relativeEntryPath, selection.path) : false
+}
+
 function filterRootEntries(entries: VaultEntry[], rootPath: string | undefined, subFilter?: NoteListFilter): VaultEntry[] {
   const rootEntries = entries.filter((entry) => isDirectRootEntry(entry.path, rootPath))
   return subFilter ? applySubFilter(rootEntries, subFilter) : rootEntries.filter(isActive)
@@ -512,7 +539,10 @@ function filterRootEntries(entries: VaultEntry[], rootPath: string | undefined, 
 function filterFolderEntries(entries: VaultEntry[], selection: Extract<SidebarSelection, { kind: 'folder' }>, subFilter?: NoteListFilter): VaultEntry[] {
   if (!selection.path) return filterRootEntries(entries, selection.rootPath, subFilter)
   // Folder view shows ALL files (text + binary), not just markdown
-  const folderEntries = entries.filter((entry) => isEntryInSelectedFolder(entry.path, selection.path, selection.rootPath))
+  const folderEntries = entries.filter((entry) => (
+    isEntryInSelectedFolder(entry.path, selection.path, selection.rootPath)
+      && !isHiddenParentFolderAsset(entry, selection)
+  ))
   return subFilter ? applySubFilter(folderEntries, subFilter) : folderEntries.filter(isActive)
 }
 
