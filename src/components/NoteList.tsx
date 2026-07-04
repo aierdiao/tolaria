@@ -19,11 +19,6 @@ function NoteListInner({ onBulkOrganize, multiSelectionCommandRef, ...props }: N
     error?: string
   } | null>(null)
   const [isCheckingAssets, setIsCheckingAssets] = useState(false)
-  const selectedNotePath = props.selectedNote?.path ?? null
-
-  useEffect(() => {
-    setAssetAudit(null)
-  }, [selectedNotePath])
 
   const handleCheckAssets = useCallback(async () => {
     if (!props.selectedNote || isCheckingAssets) return
@@ -54,12 +49,12 @@ function NoteListInner({ onBulkOrganize, multiSelectionCommandRef, ...props }: N
   }, [isCheckingAssets, props.entries, props.selectedNote])
 
   const assetReferenceStatuses = useMemo(() => {
-    if (!assetAudit || assetAudit.notePath !== selectedNotePath) return undefined
+    if (!assetAudit) return undefined
     return Object.fromEntries(assetAudit.result.unusedAssetPaths.map((path) => [path, 'unused' as const]))
-  }, [assetAudit, selectedNotePath])
+  }, [assetAudit])
 
   const assetAuditMessage = useMemo(() => {
-    if (!assetAudit || assetAudit.notePath !== selectedNotePath) return null
+    if (!assetAudit) return null
     const locale = props.locale ?? 'en'
     if (assetAudit.error) {
       return translate(locale, 'noteList.assetAudit.failed', { error: assetAudit.error })
@@ -69,7 +64,7 @@ function NoteListInner({ onBulkOrganize, multiSelectionCommandRef, ...props }: N
     if (checked === 0) return translate(locale, 'noteList.assetAudit.noImages')
     if (unused === 0) return translate(locale, 'noteList.assetAudit.allReferenced', { count: checked })
     return translate(locale, 'noteList.assetAudit.unusedFound', { unused, count: checked })
-  }, [assetAudit, props.locale, selectedNotePath])
+  }, [assetAudit, props.locale])
 
   const model = useNoteListModel({
     ...props,
