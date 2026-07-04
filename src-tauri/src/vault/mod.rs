@@ -247,12 +247,6 @@ fn is_hidden_dir(name: &str) -> bool {
     name.starts_with('.') || HIDDEN_DIRS.contains(&name)
 }
 
-/// Note-attachment asset folders (`assets/` next to a note is intentionally
-/// visible; `<note name>.assets/` pairs are pure attachment storage).
-fn is_note_assets_dir(name: &str) -> bool {
-    name.strip_suffix(".assets").is_some_and(|stem| !stem.is_empty())
-}
-
 fn is_empty_dir(path: &Path) -> bool {
     fs::read_dir(path)
         .map(|mut entries| entries.next().is_none())
@@ -265,8 +259,7 @@ fn is_folder_tree_hidden_dir(
     vault_root: &Path,
     attachment_location: crate::settings::AttachmentLocation,
 ) -> bool {
-    if is_hidden_dir(name) || FOLDER_TREE_EXCLUDED_DIRS.contains(&name) || is_note_assets_dir(name)
-    {
+    if is_hidden_dir(name) || FOLDER_TREE_EXCLUDED_DIRS.contains(&name) {
         return true;
     }
 

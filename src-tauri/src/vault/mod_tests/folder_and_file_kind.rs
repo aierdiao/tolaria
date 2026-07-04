@@ -60,7 +60,7 @@ fn test_scan_vault_folders_keeps_default_vault_folders_visible() {
 }
 
 #[test]
-fn test_scan_vault_folders_hides_per_note_assets_dirs() {
+fn test_scan_vault_folders_shows_per_note_assets_dirs() {
     let dir = TempDir::new().unwrap();
     std::fs::create_dir_all(dir.path().join("posts/真是漫长的一年啊.assets")).unwrap();
     std::fs::create_dir_all(dir.path().join("posts/test.assets")).unwrap();
@@ -75,8 +75,8 @@ fn test_scan_vault_folders_hides_per_note_assets_dirs() {
         .map(|folder| folder.name.as_str())
         .collect();
 
-    // Shared assets/ stays visible; <note>.assets pairs are hidden from the tree.
-    assert_eq!(child_names, vec!["assets"]);
+    // Shared assets/ and <note>.assets pairs stay visible so article attachments are reachable.
+    assert_eq!(child_names, vec!["assets", "test.assets", "真是漫长的一年啊.assets"]);
     assert!(!folders.iter().any(|folder| folder.name == ".assets"));
 }
 
