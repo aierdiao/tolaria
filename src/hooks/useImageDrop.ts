@@ -25,13 +25,11 @@ export type UploadImageFileResult = string | { props: { name: string; url: strin
 type CopyImageToVaultRequest = {
   sourcePath: string
   vaultPath: string
-  notePath: string | undefined
 }
 type DroppedImagesRequest = {
   imagePaths: string[]
   onImageImportError: ImageImportErrorHandler | undefined
   vaultPath: string | undefined
-  notePath: string | undefined
   onImageUrl: ImageUrlHandler | undefined
 }
 type NativeDropEventRequest = {
@@ -40,7 +38,6 @@ type NativeDropEventRequest = {
   onImageUrl: ImageUrlHandler | undefined
   setIsDragOver: (isDragOver: boolean) => void
   vaultPath: string | undefined
-  notePath: string | undefined
 }
 
 export class UnsupportedImageFormatError extends Error implements ImageImportError {
@@ -169,8 +166,8 @@ function readBrowserImageFile(file: File): Promise<string> {
   })
 }
 
-/** Upload an image file — saves to the vault's attachment location in Tauri, returns data URL in browser */
-export async function uploadImageFile(file: File, vaultPath?: string, notePath?: string): Promise<UploadImageFileResult> {
+/** Upload an image file — saves to vault/attachments in Tauri, returns data URL in browser */
+export async function uploadImageFile(file: File, vaultPath?: string): Promise<UploadImageFileResult> {
   if (isUnsupportedHeicFile(file)) throw new UnsupportedImageFormatError(file.name)
 
   try {
@@ -184,7 +181,6 @@ export async function uploadImageFile(file: File, vaultPath?: string, notePath?:
         vaultPath,
         filename: file.name,
         data: base64,
-        notePath: notePath ?? null,
       })
       return uploadedImageAssetUrl(file, savedPath)
     }
@@ -194,17 +190,12 @@ export async function uploadImageFile(file: File, vaultPath?: string, notePath?:
   }
 }
 
-/** Copy a dropped file (by OS path) into the vault's attachment location and return its asset URL. */
+/** Copy a dropped file (by OS path) into vault/attachments and return its asset URL. */
 async function copyImageToVault({
   sourcePath,
   vaultPath,
-  notePath,
 }: CopyImageToVaultRequest): Promise<string> {
-  const savedPath = await invoke<string>('copy_image_to_vault', {
-    vaultPath,
-    sourcePath,
-    notePath: notePath ?? null,
-  })
+  const savedPath = await invoke<string>('copy_image_to_vault', { vaultPath, sourcePath })
   return attachmentAssetUrlFromPath({ path: savedPath })
 }
 
@@ -226,7 +217,6 @@ function insertDroppedImages({
   imagePaths,
   onImageImportError,
   vaultPath,
-  notePath,
   onImageUrl,
 }: DroppedImagesRequest): void {
   if (imagePaths.length === 0) return
@@ -234,7 +224,7 @@ function insertDroppedImages({
   if (!vaultPath || !onImageUrl) return
 
   for (const sourcePath of imagePaths.filter(isImagePath)) {
-    void copyImageToVault({ sourcePath, vaultPath, notePath }).then(onImageUrl, logDroppedImageCopyFailure)
+    void copyImageToVault({ sourcePath, vaultPath }).then(onImageUrl, logDroppedImageCopyFailure)
   }
 }
 
@@ -244,7 +234,6 @@ function handleNativeDropEvent({
   onImageUrl,
   setIsDragOver,
   vaultPath,
-  notePath,
 }: NativeDropEventRequest): void {
   if (!isNativeDropPayload(event.payload)) {
     setIsDragOver(false)
@@ -257,7 +246,6 @@ function handleNativeDropEvent({
       imagePaths: payload.paths,
       onImageImportError,
       vaultPath,
-      notePath,
       onImageUrl,
     })
     return
@@ -289,11 +277,9 @@ interface UseImageDropOptions {
   /** Called with an asset URL for each image dropped via Tauri native drag-drop. */
   onImageUrl?: (url: string) => void
   vaultPath?: string
-  /** Path of the note the images are dropped into; used for the note-assets attachment location. */
-  notePath?: string
 }
 
-export function useImageDrop({ containerRef, onImageImportError, onImageUrl, vaultPath, notePath }: UseImageDropOptions) {
+export function useImageDrop({ containerRef, onImageImportError, onImageUrl, vaultPath }: UseImageDropOptions) {
   const [isDragOver, setIsDragOver] = useState(false)
   const onImageImportErrorRef = useRef(onImageImportError)
   useEffect(() => { onImageImportErrorRef.current = onImageImportError }, [onImageImportError])
@@ -301,8 +287,6 @@ export function useImageDrop({ containerRef, onImageImportError, onImageUrl, vau
   useEffect(() => { onImageUrlRef.current = onImageUrl }, [onImageUrl])
   const vaultPathRef = useRef(vaultPath)
   useEffect(() => { vaultPathRef.current = vaultPath }, [vaultPath])
-  const notePathRef = useRef(notePath)
-  useEffect(() => { notePathRef.current = notePath }, [notePath])
 
   // HTML5 DnD visual feedback; BlockNote handles browser-mode uploads.
   useEffect(() => {
@@ -353,7 +337,6 @@ export function useImageDrop({ containerRef, onImageImportError, onImageUrl, vau
             onImageUrl: onImageUrlRef.current,
             setIsDragOver,
             vaultPath: vaultPathRef.current,
-            notePath: notePathRef.current,
           })
         })
         if (mounted) unlisteners = nextUnlisteners

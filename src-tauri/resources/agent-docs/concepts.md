@@ -49,9 +49,19 @@ Tolaria offers a rich editor for daily writing and a raw Markdown mode for exact
 
 ## Rich Editing
 
-The rich editor supports blocks, slash commands, wikilinks, tables, code blocks, images, Mermaid diagrams, LaTeX-style math, and markdown-backed whiteboards.
+The rich editor supports blocks, slash commands, wikilinks, tables, code blocks, images, Mermaid diagrams, LaTeX-style math, sandboxed HTML blocks, and markdown-backed whiteboards.
 
 Use it when you want to write and reorganize quickly without thinking about Markdown syntax.
+
+## HTML Blocks
+
+HTML blocks render fenced `html` code as sandboxed previews. They are useful for dashboards, report fragments, custom layouts, and small interactive local views.
+
+HTML source is edited in raw mode. The rich editor shows the preview, copy source action, raw-editor action, height reset, and resize handle.
+
+HTML blocks can read vault values with `{{...}}` expressions, including current-note properties, external note properties, sheet cells, raw body lines, formatting helpers, and structured `json(...)` data for sandboxed scripts.
+
+See [Use HTML Blocks](/guides/use-html-blocks) for the workflow and [Vault Expressions](/reference/vault-expressions) for the syntax.
 
 ## Raw Mode
 
@@ -255,6 +265,24 @@ The Properties panel is the safest place to edit structured properties. Toggle i
 
 Date fields use Tolaria's picker, relationship fields can use wikilinks, and raw Markdown mode is available when you need direct control over YAML.
 
+## Referencing Properties
+
+HTML blocks can reference properties from the current note or another note:
+
+```html
+<p>{{status}}</p>
+<p>{{formatDate(date, "long")}}</p>
+<p>{{[[project-alpha]].status}}</p>
+```
+
+Sheet formulas can also read scalar properties with the same note target form:
+
+```txt
+=[[project-alpha]].status
+```
+
+Use [Vault Expressions](/reference/vault-expressions) for HTML expression syntax and [Spreadsheet Formulas](/reference/spreadsheet-functions) for formula behavior.
+
 ---
 
 # Relationships
@@ -405,6 +433,14 @@ Sheet formulas can also read scalar frontmatter properties from a note:
 
 This keeps sheet models connected to ordinary Tolaria metadata without requiring a saved view or query. Unresolved, ambiguous, or non-scalar property references show spreadsheet errors.
 
+Formulas can also read a raw Markdown body line from another note:
+
+```txt
+=[[launch-brief]].2
+```
+
+Line references are useful when a normal text note is still the source of record. `[[note]].A1` keeps grid or cell semantics; `[[note]].1` returns the whole first body line and preserves commas as text.
+
 ## Storage
 
 A minimal sheet note looks like this:
@@ -471,6 +507,7 @@ Use types for semantic groups such as Projects, People, Topics, Procedures, Even
 ## Type Documents
 
 Type documents are Markdown notes with `type: Type` in frontmatter. They describe how a type should appear and what new notes of that type should start with.
+Use Phosphor icon names in kebab-case for `_icon`, such as `folder` or `briefcase`.
 
 ```yaml
 ---

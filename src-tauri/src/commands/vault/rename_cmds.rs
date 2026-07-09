@@ -66,8 +66,6 @@ pub struct RenameNoteFilenameCommandArgs {
     vault_path: String,
     old_path: String,
     new_filename_stem: String,
-    #[serde(default)]
-    allow_unique: bool,
 }
 
 #[derive(Debug, Deserialize)]
@@ -105,7 +103,6 @@ enum NoteRenameCommandArgs {
     },
     Filename {
         new_filename_stem: String,
-        allow_unique: bool,
     },
 }
 
@@ -121,15 +118,11 @@ impl NoteRenameCommandArgs {
                 new_title: &new_title,
                 old_title_hint: old_title.as_deref(),
             }),
-            Self::Filename {
-                new_filename_stem,
-                allow_unique,
-            } => {
+            Self::Filename { new_filename_stem } => {
                 vault::rename_note_filename(vault::RenameNoteFilenameRequest {
                     vault_path: note.vault_path,
                     old_path: note.note_path,
                     new_filename_stem: &new_filename_stem,
-                    allow_unique,
                 })
             }
         }
@@ -179,7 +172,6 @@ fn rename_public_note(args: PublicNoteRenameCommandArgs) -> Result<RenameResult,
             args.old_path,
             NoteRenameCommandArgs::Filename {
                 new_filename_stem: args.new_filename_stem,
-                allow_unique: args.allow_unique,
             },
         ),
     };
@@ -200,10 +192,6 @@ fn run_folder_move(args: MoveNoteToFolderCommandArgs) -> Result<RenameResult, St
     let request = RequestedNotePath::new(&args.vault_path, &args.old_path);
     with_note_path_in_vault(request, |note| {
         let trimmed_folder_path = args.folder_path.trim();
-        if trimmed_folder_path.is_empty() {
-            return Err("Folder path cannot be empty".to_string());
-        }
-
         let folder_absolute_path = Path::new(note.vault_path).join(trimmed_folder_path);
         with_validated_path(
             folder_absolute_path.to_string_lossy().as_ref(),
@@ -351,7 +339,6 @@ mod tests {
             vault_path: vault.clone(),
             old_path,
             new_filename_stem: "custom-name".to_string(),
-            allow_unique: false,
         })
         .unwrap();
         assert!(renamed.new_path.ends_with("custom-name.md"));
@@ -364,10 +351,7 @@ mod tests {
         })
         .unwrap();
 
-        assert!(moved
-            .new_path
-            .replace('\\', "/")
-            .ends_with("Projects/custom-name.md"));
+        assert!(moved.new_path.ends_with("Projects/custom-name.md"));
         assert!(fs::read_to_string(moved.new_path)
             .unwrap()
             .contains("Draft Title"));
@@ -448,17 +432,20 @@ mod tests {
     }
 
     #[test]
-    fn move_note_to_folder_rejects_empty_folder() {
+    fn move_note_to_folder_accepts_empty_folder_as_vault_root() {
         let dir = TempDir::new().unwrap();
         let vault = vault_path(&dir);
-        let note = write_note(&dir, "note.md", "# Note\n");
+        let note = write_note(&dir, "projects/note.md", "# Note\n");
 
-        let error = move_note_to_folder(MoveNoteToFolderCommandArgs {
+        let result = move_note_to_folder(MoveNoteToFolderCommandArgs {
             vault_path: vault,
             old_path: note,
             folder_path: "  ".to_string(),
         })
-        .unwrap_err();
-        assert!(error.contains("Folder path cannot be empty"));
+        .unwrap();
+
+        assert!(result.new_path.ends_with("note.md"));
+        assert!(dir.path().join("note.md").exists());
+        assert!(!dir.path().join("projects/note.md").exists());
     }
 }

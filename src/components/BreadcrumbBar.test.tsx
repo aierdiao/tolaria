@@ -117,10 +117,12 @@ async function expectTooltip(trigger: HTMLElement, ...parts: string[]) {
 }
 
 async function openOverflowMenu() {
-  fireEvent.pointerDown(screen.getByRole('button', { name: 'More note actions' }), {
-    button: 0,
-    ctrlKey: false,
-  })
+  const trigger = screen.getByRole('button', { name: 'More note actions' })
+  fireEvent.pointerDown(trigger, { button: 0, ctrlKey: false, pointerType: 'mouse' })
+  fireEvent.mouseDown(trigger, { button: 0, ctrlKey: false })
+  fireEvent.pointerUp(trigger, { button: 0, ctrlKey: false, pointerType: 'mouse' })
+  fireEvent.mouseUp(trigger, { button: 0, ctrlKey: false })
+  fireEvent.click(trigger, { button: 0, ctrlKey: false })
   return screen.findByRole('menu')
 }
 
@@ -505,7 +507,7 @@ describe('BreadcrumbBar — filename controls', () => {
 
     fireEvent.click(screen.getByTestId('breadcrumb-sync-button'))
 
-    expect(onRenameFilename).toHaveBeenCalledWith(entry.path, 'fresh-title', { allowUnique: true })
+    expect(onRenameFilename).toHaveBeenCalledWith(entry.path, 'fresh-title')
   })
 
   it('clicking the sync button renames the file to the title slug', () => {
@@ -516,7 +518,7 @@ describe('BreadcrumbBar — filename controls', () => {
 
     fireEvent.click(screen.getByTestId('breadcrumb-sync-button'))
 
-    expect(onRenameFilename).toHaveBeenCalledWith(entry.path, 'fresh-title', { allowUnique: true })
+    expect(onRenameFilename).toHaveBeenCalledWith(entry.path, 'fresh-title')
   })
 
   it('lets keyboard users press Enter on the filename to start editing', () => {

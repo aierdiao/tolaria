@@ -369,7 +369,7 @@ mod tests {
     fn assert_home_binary_candidates_include(
         home: &Path,
         candidates: &[PathBuf],
-        expected_relative_paths: Vec<PathBuf>,
+        expected_relative_paths: &[&str],
     ) {
         let expected = expected_relative_paths
             .iter()
@@ -394,9 +394,7 @@ mod tests {
     fn first_existing_path_skips_empty_and_missing_lines() {
         let dir = tempfile::tempdir().unwrap();
         let missing = dir.path().join("missing-node");
-        let node = dir
-            .path()
-            .join(if cfg!(windows) { "node.exe" } else { "node" });
+        let node = dir.path().join("node");
         std::fs::write(&node, "#!/bin/sh\n").unwrap();
 
         let stdout = format!("\n{}\n{}\n", missing.display(), node.display());
@@ -437,27 +435,26 @@ mod tests {
 
     #[test]
     fn home_binary_candidates_include_shell_managed_installs() {
-        let home = tempfile::tempdir().unwrap();
-        let home = home.path().to_path_buf();
+        let home = PathBuf::from("/Users/alex");
         let cases = [
             (
                 node_binary_candidates_for_home(&home),
-                vec![
-                    PathBuf::from(".local/share/mise/shims").join(node_binary_name()),
-                    PathBuf::from(".asdf/shims").join(node_binary_name()),
-                    PathBuf::from(".volta/bin").join(node_binary_name()),
-                    PathBuf::from(".linuxbrew/bin").join(node_binary_name()),
-                ],
+                &[
+                    ".local/share/mise/shims/node",
+                    ".asdf/shims/node",
+                    ".volta/bin/node",
+                    ".linuxbrew/bin/node",
+                ][..],
             ),
             (
                 bun_binary_candidates_for_home(&home),
-                vec![
-                    PathBuf::from(".bun/bin").join(bun_binary_name()),
-                    PathBuf::from(".local/share/mise/shims").join(bun_binary_name()),
-                    PathBuf::from(".mise/shims").join(bun_binary_name()),
-                    PathBuf::from(".asdf/shims").join(bun_binary_name()),
-                    PathBuf::from(".proto/bin").join(bun_binary_name()),
-                ],
+                &[
+                    ".bun/bin/bun",
+                    ".local/share/mise/shims/bun",
+                    ".mise/shims/bun",
+                    ".asdf/shims/bun",
+                    ".proto/bin/bun",
+                ][..],
             ),
         ];
 

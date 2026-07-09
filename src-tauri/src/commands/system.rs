@@ -474,10 +474,8 @@ mod tests {
     use super::*;
     #[cfg(desktop)]
     use std::cell::RefCell;
-    #[cfg(all(desktop, unix))]
+    #[cfg(desktop)]
     use std::os::unix::process::ExitStatusExt;
-    #[cfg(all(desktop, windows))]
-    use std::os::windows::process::ExitStatusExt;
     #[cfg(desktop)]
     use std::process::{ExitStatus, Output};
     #[cfg(desktop)]
@@ -600,14 +598,8 @@ mod tests {
         }
     }
 
-    #[cfg(unix)]
     fn exit_status(code: i32) -> ExitStatus {
         ExitStatus::from_raw(code << 8)
-    }
-
-    #[cfg(windows)]
-    fn exit_status(code: i32) -> ExitStatus {
-        ExitStatus::from_raw(code as u32)
     }
 
     fn output(code: i32, stdout: Vec<u8>) -> Output {

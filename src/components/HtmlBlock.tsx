@@ -5,7 +5,10 @@ import {
   Copy,
 } from '@phosphor-icons/react'
 import {
+  useCallback,
+  useEffect,
   useMemo,
+  useRef,
   useState,
 } from 'react'
 import type { KeyboardEvent, PointerEvent as ReactPointerEvent, SyntheticEvent } from 'react'
@@ -16,16 +19,21 @@ import { writeClipboardText } from '../utils/clipboardText'
 import {
   clampHtmlBlockHeight,
   HTML_BLOCK_DEFAULT_HEIGHT,
+  HTML_BLOCK_SCRIPTS_SANDBOXED,
   HTML_BLOCK_TYPE,
   normalizeHtmlBlockHeight,
+  normalizeHtmlBlockScripts,
+  type HtmlBlockScripts,
 } from '../utils/htmlBlockMarkdown'
 import { htmlBlockPreview } from '../utils/htmlBlockSandbox'
 import { dispatchRichEditorExternalChange } from './editorExternalChangeEvents'
 import { Button } from './ui/button'
+import { useResolvedVaultExpressionTemplate } from './VaultExpressionContext'
 
 export interface HtmlBlockProps {
   height: string
   html: string
+  scripts: HtmlBlockScripts
 }
 
 export interface HtmlBlockEditor {
@@ -43,7 +51,7 @@ interface HtmlBlockUpdate {
 interface HtmlBlockViewProps {
   block: {
     id: string
-    props: HtmlBlockProps
+    props: Omit<HtmlBlockProps, 'scripts'> & { scripts: unknown }
   }
   editor: HtmlBlockEditor
 }
@@ -71,6 +79,7 @@ function htmlBlockProps(value: unknown): HtmlBlockProps | null {
   return {
     height: normalizeHtmlBlockHeight(value.height),
     html: value.html,
+    scripts: normalizeHtmlBlockScripts(value.scripts),
   }
 }
 
@@ -150,14 +159,43 @@ function heightFromKeyboard(currentHeight: string, key: string): string | null {
   return null
 }
 
+function restoreHtmlPreviewFocus(editor: HtmlBlockEditor, frame: HTMLIFrameElement): void {
+  frame.blur()
+  editor.focus?.()
+}
+
+function htmlBlockSandboxAttribute(scripts: HtmlBlockScripts): string {
+  return scripts === HTML_BLOCK_SCRIPTS_SANDBOXED
+    ? 'allow-scripts allow-popups allow-popups-to-escape-sandbox'
+    : 'allow-popups allow-popups-to-escape-sandbox'
+}
+
 export function HtmlBlock({ block, editor }: HtmlBlockViewProps) {
+  const frameRef = useRef<HTMLIFrameElement | null>(null)
   const currentHtml = block.props.html
+  const currentScripts = normalizeHtmlBlockScripts(block.props.scripts)
+  const resolvedHtml = useResolvedVaultExpressionTemplate(currentHtml)
   const currentHeight = normalizeHtmlBlockHeight(block.props.height)
-  const preview = useMemo(() => htmlBlockPreview(currentHtml), [currentHtml])
+  const preview = useMemo(() => (
+    htmlBlockPreview(resolvedHtml.html, { scripts: currentScripts })
+  ), [currentScripts, resolvedHtml.html])
   const { sanitizedHtml, srcDoc } = preview
   const [resizingHeight, setResizingHeight] = useState<string | null>(null)
   const displayHeight = resizingHeight ?? currentHeight
   const blockedMarkup = currentHtml.trim().length > 0 && sanitizedHtml.trim().length === 0
+  const releasePreviewFocus = useCallback((frame = frameRef.current) => {
+    if (!frame) return
+    restoreHtmlPreviewFocus(editor, frame)
+  }, [editor])
+
+  useEffect(() => {
+    const releaseFocusedFrame = () => {
+      if (document.activeElement === frameRef.current) releasePreviewFocus()
+    }
+
+    window.addEventListener('blur', releaseFocusedFrame)
+    return () => window.removeEventListener('blur', releaseFocusedFrame)
+  }, [releasePreviewFocus])
 
   const updateHeight = (height: string, source: HeightChangeSource) => {
     const updated = updateHtmlBlockPropsSafely(editor, block.id, props => ({
@@ -216,6 +254,15 @@ export function HtmlBlock({ block, editor }: HtmlBlockViewProps) {
     event.preventDefault()
     event.stopPropagation()
     updateHeight(nextHeight, 'keyboard')
+  }
+
+  const handlePreviewFocus = (event: SyntheticEvent<HTMLIFrameElement>) => {
+    event.stopPropagation()
+    releasePreviewFocus(event.currentTarget)
+  }
+
+  const handlePreviewLoad = (event: SyntheticEvent<HTMLIFrameElement>) => {
+    if (document.activeElement === event.currentTarget) releasePreviewFocus(event.currentTarget)
   }
 
   return (
@@ -282,9 +329,13 @@ export function HtmlBlock({ block, editor }: HtmlBlockViewProps) {
       ) : (
         <iframe
           className="html-block__frame"
+          onFocus={handlePreviewFocus}
+          onLoad={handlePreviewLoad}
           referrerPolicy="no-referrer"
-          sandbox="allow-popups allow-popups-to-escape-sandbox"
+          ref={frameRef}
+          sandbox={htmlBlockSandboxAttribute(currentScripts)}
           srcDoc={srcDoc}
+          tabIndex={-1}
           title={t('editor.htmlBlock.previewTitle')}
         />
       )}

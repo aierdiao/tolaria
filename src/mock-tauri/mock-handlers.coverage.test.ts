@@ -164,6 +164,7 @@ describe('mockHandlers coverage', () => {
       git_provider: null,
       git_wsl_distro: null,
       autogit_enabled: true,
+      autogit_use_ai_commit_messages: false,
       autogit_idle_threshold_seconds: 90,
       autogit_inactive_threshold_seconds: 30,
       auto_advance_inbox_after_organize: true,
@@ -185,7 +186,6 @@ describe('mockHandlers coverage', () => {
       ai_model_providers: null,
       ai_workspace_conversations: null,
       hide_gitignored_files: null,
-      attachment_location: null,
       all_notes_show_pdfs: null,
       all_notes_show_images: null,
       all_notes_show_unsupported: null,
@@ -221,41 +221,5 @@ describe('mockHandlers coverage', () => {
       vault_path: '/vault',
       source_path: '/tmp/screenshot.jpg',
     })).toBe('/vault/attachments/12345-screenshot.jpg')
-  })
-
-  it('builds note assets paths when the attachment location setting is note-assets', async () => {
-    const { mockHandlers } = await loadHandlers()
-    vi.spyOn(Date, 'now').mockReturnValue(12345)
-
-    const settings = mockHandlers.get_settings()
-    mockHandlers.save_settings({ settings: { ...settings, attachment_location: 'note-assets' } })
-
-    expect(mockHandlers.save_image({
-      vault_path: '/vault',
-      filename: 'diagram.png',
-      data: 'base64',
-      note_path: '/vault/posts/note.md',
-    })).toBe('/vault/posts/assets/12345-diagram.png')
-
-    expect(mockHandlers.save_image({
-      vault_path: '/vault',
-      filename: 'diagram.png',
-      data: 'base64',
-    })).toBe('/vault/attachments/12345-diagram.png')
-  })
-
-  it('builds per-note assets paths when the attachment location setting is per-note-assets', async () => {
-    const { mockHandlers } = await loadHandlers()
-    vi.spyOn(Date, 'now').mockReturnValue(12345)
-
-    const settings = mockHandlers.get_settings()
-    mockHandlers.save_settings({ settings: { ...settings, attachment_location: 'per-note-assets' } })
-
-    expect(mockHandlers.save_image({
-      vault_path: '/vault',
-      filename: 'diagram.png',
-      data: 'base64',
-      note_path: '/vault/posts/真是漫长的一年啊.md',
-    })).toBe('/vault/posts/真是漫长的一年啊.assets/12345-diagram.png')
   })
 })

@@ -254,90 +254,15 @@ pub fn sync_note_title(path: PathBuf, vault_path: Option<PathBuf>) -> Result<boo
     )
 }
 
-/// Compute the assets directory for a validated note path, or `None` for the
-/// default vault `attachments/` location.
-fn assets_dir_for_note(
-    location: crate::settings::AttachmentLocation,
-    validated_note_path: &Path,
-) -> Option<PathBuf> {
-    use crate::settings::AttachmentLocation;
-
-    let note_dir = validated_note_path.parent()?;
-    match location {
-        AttachmentLocation::VaultAttachments => None,
-        AttachmentLocation::NoteAssets => Some(note_dir.join("assets")),
-        AttachmentLocation::PerNoteAssets => {
-            let stem = validated_note_path.file_stem()?.to_string_lossy();
-            Some(note_dir.join(format!("{}.assets", stem)))
-        }
-    }
-}
-
-/// Resolve the directory new attachments should be saved into, or `None` for
-/// the default vault `attachments/` folder.
-///
-/// Only consulted when the attachment location setting targets the note. The
-/// note path is treated as a hint: it must validate as a writable path inside
-/// the vault, otherwise we fall back to the default vault `attachments/`
-/// folder (returning `None`) so the paste never fails. Writable validation lets
-/// brand-new untitled notes save into their paired assets folder before the
-/// markdown file has been flushed to disk.
-fn attachment_override_dir(
-    location: crate::settings::AttachmentLocation,
-    requested_root: &str,
-    note_path: Option<&Path>,
-) -> Option<PathBuf> {
-    if location == crate::settings::AttachmentLocation::VaultAttachments {
-        return None;
-    }
-    let Some(note_path) = note_path else {
-        log::debug!(
-            "Attachment location targets the note but no note path was provided; saving to vault attachments"
-        );
-        return None;
-    };
-
-    let assets_dir = with_note_path(
-        note_path,
-        Some(Path::new(requested_root)),
-        ValidatedPathMode::Writable,
-        |validated_path| Ok(assets_dir_for_note(location, validated_path)),
-    );
-    match assets_dir {
-        Ok(Some(dir)) => Some(dir),
-        Ok(None) => {
-            log::debug!(
-                "Note path {} has no usable parent directory or file stem; saving to vault attachments",
-                note_path.display()
-            );
-            None
-        }
-        Err(error) => {
-            log::debug!(
-                "Note path {} failed vault validation ({}); saving to vault attachments",
-                note_path.display(),
-                error
-            );
-            None
-        }
-    }
-}
-
 #[tauri::command]
 pub fn save_image(
     app_handle: tauri::AppHandle,
     vault_path: PathBuf,
     filename: String,
     data: String,
-    note_path: Option<PathBuf>,
 ) -> Result<String, String> {
     with_image_asset_scope(&app_handle, vault_path.as_path(), |requested_root| {
-        let assets_dir = attachment_override_dir(
-            crate::settings::attachment_location(),
-            requested_root,
-            note_path.as_deref(),
-        );
-        vault::save_image(requested_root, &filename, &data, assets_dir.as_deref())
+        vault::save_image(requested_root, &filename, &data)
     })
 }
 
@@ -346,19 +271,9 @@ pub fn copy_image_to_vault(
     app_handle: tauri::AppHandle,
     vault_path: PathBuf,
     source_path: PathBuf,
-    note_path: Option<PathBuf>,
 ) -> Result<String, String> {
     with_image_asset_scope(&app_handle, vault_path.as_path(), |requested_root| {
-        let assets_dir = attachment_override_dir(
-            crate::settings::attachment_location(),
-            requested_root,
-            note_path.as_deref(),
-        );
-        vault::copy_image_to_vault(
-            requested_root,
-            source_path.to_string_lossy().as_ref(),
-            assets_dir.as_deref(),
-        )
+        vault::copy_image_to_vault(requested_root, source_path.to_string_lossy().as_ref())
     })
 }
 
@@ -392,95 +307,6 @@ mod tests {
 
     fn note_path(dir: &TempDir, name: &str) -> PathBuf {
         dir.path().join(name)
-    }
-
-    #[test]
-    fn attachment_override_dir_returns_none_for_default_location() {
-        let dir = TempDir::new().unwrap();
-        let note = note_path(&dir, "note.md");
-        fs::write(&note, "# Note\n").unwrap();
-
-        let result = attachment_override_dir(
-            crate::settings::AttachmentLocation::VaultAttachments,
-            dir.path().to_str().unwrap(),
-            Some(note.as_path()),
-        );
-        assert!(result.is_none());
-    }
-
-    #[test]
-    fn attachment_override_dir_returns_none_without_note_path() {
-        let dir = TempDir::new().unwrap();
-
-        let result = attachment_override_dir(
-            crate::settings::AttachmentLocation::NoteAssets,
-            dir.path().to_str().unwrap(),
-            None,
-        );
-        assert!(result.is_none());
-    }
-
-    #[test]
-    fn attachment_override_dir_returns_shared_assets_dir_for_valid_note() {
-        let dir = TempDir::new().unwrap();
-        let nested = dir.path().join("posts").join("japan");
-        fs::create_dir_all(&nested).unwrap();
-        let note = nested.join("真是漫长的一年啊.md");
-        fs::write(&note, "# Note\n").unwrap();
-
-        let result = attachment_override_dir(
-            crate::settings::AttachmentLocation::NoteAssets,
-            dir.path().to_str().unwrap(),
-            Some(note.as_path()),
-        );
-        assert_eq!(result, Some(nested.join("assets")));
-    }
-
-    #[test]
-    fn attachment_override_dir_returns_per_note_assets_dir_for_valid_note() {
-        let dir = TempDir::new().unwrap();
-        let nested = dir.path().join("sakuhinn");
-        fs::create_dir_all(&nested).unwrap();
-        let note = nested.join("真是漫长的一年啊.md");
-        fs::write(&note, "# Note\n").unwrap();
-
-        let result = attachment_override_dir(
-            crate::settings::AttachmentLocation::PerNoteAssets,
-            dir.path().to_str().unwrap(),
-            Some(note.as_path()),
-        );
-        assert_eq!(result, Some(nested.join("真是漫长的一年啊.assets")));
-    }
-
-    #[test]
-    fn attachment_override_dir_uses_per_note_assets_for_missing_but_writable_note_file() {
-        let dir = TempDir::new().unwrap();
-        let unsaved_note = note_path(&dir, "untitled-note-1783095975.md");
-
-        let result = attachment_override_dir(
-            crate::settings::AttachmentLocation::PerNoteAssets,
-            dir.path().to_str().unwrap(),
-            Some(unsaved_note.as_path()),
-        );
-        assert_eq!(
-            result,
-            Some(dir.path().join("untitled-note-1783095975.assets"))
-        );
-    }
-
-    #[test]
-    fn attachment_override_dir_falls_back_for_note_outside_vault() {
-        let vault_dir = TempDir::new().unwrap();
-        let outside_dir = TempDir::new().unwrap();
-        let outside_note = outside_dir.path().join("outside.md");
-        fs::write(&outside_note, "# Outside\n").unwrap();
-
-        let result = attachment_override_dir(
-            crate::settings::AttachmentLocation::NoteAssets,
-            vault_dir.path().to_str().unwrap(),
-            Some(outside_note.as_path()),
-        );
-        assert!(result.is_none());
     }
 
     #[tokio::test]

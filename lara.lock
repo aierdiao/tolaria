@@ -50,13 +50,21 @@ files:
     feedback.sponsor.description: 6517e0c5d4e4801814a6034dd54862b6
     feedback.sponsor.cta: a2c71ec076796ab6af0ba0ea882303fc
     feedback.sponsor.linkLabel: 7fbe24a8f025219f4d165aeb75352125
-    feedback.newsletter.title: ffb7e666a70151215b4c55c6268d7d72
-    feedback.newsletter.description: 939ab3adc8c7ad0bca8b27a10462055d
+    feedback.newsletter.title: 9f3adefa83caf3ac5212df636ef33c5c
+    feedback.newsletter.description: d5337f32085eac92daad035c25d8cee3
     feedback.newsletter.cta: a2c71ec076796ab6af0ba0ea882303fc
     feedback.newsletter.linkLabel: 7fbe24a8f025219f4d165aeb75352125
     feedback.sponsors.title: e881053494ad211d02cdde59c3ab59d9
     feedback.sponsors.description: e748f640be55858af848a87e7ce59920
+    feedback.sponsors.developmentSentencePrefix: 7a1a5f3e79fdc91edf2f5ead9d66abb4
+    feedback.sponsors.developmentLinkText: aae3f4f9b055dee6c4832ee2cb76f03f
+    feedback.sponsors.developmentLinkLabel: aae3f4f9b055dee6c4832ee2cb76f03f
+    feedback.sponsors.developmentSentenceSuffix: 5058f1af8388633f609cadb75a75dc9d
     feedback.sponsors.logoLinkLabel: e5744ab47880f7d488bbb06af085aa07
+    feedback.sponsors.codacyTooltip: 557f730ff4609fb41605f679fb37c08c
+    feedback.sponsors.codeSceneTooltip: 66c9e585df9549189f9018ef0368002a
+    feedback.sponsors.circleCiTooltip: be57bb3a98ed92257bc9541ccadecfee
+    feedback.sponsors.unblockedTooltip: cc19ef4c5aa2a0f8877f86af32da28e9
     feedback.featureRequests.title: 73ea5953d68b2c20a82bb94240f6fe17
     feedback.featureRequests.description: 9583575bdef16e12927b0a5acfa84307
     feedback.featureRequests.cta: c19ef0158349da249920b0d9f67d7d48
@@ -67,17 +75,17 @@ files:
     feedback.discussions.linkLabel: 4f85e3343c5e21d2b11812b2baa8ed83
     feedback.contributeCode.title: 8f93fd72b63620711cc118403b85133e
     feedback.contributeCode.description: 53230626356951578842a8cd7233d1f1
-    feedback.contributeCode.cta: c73dd5e7d432cd18c109b333e0b55299
+    feedback.contributeCode.cta: 900156c5b6af50ce83d772fb8675c3d0
     feedback.contributeCode.linkLabel: bfe9dd9816bb39f82fc003de794a075d
-    feedback.contributingGuide.cta: 6cc1fbcbbc69a70a70a2020c979d8e22
+    feedback.contributingGuide.cta: 5a12c49e05128afb1cd4982f27828864
     feedback.contributingGuide.linkLabel: b1310938ecab4c502a8b3af2ca1ce188
     feedback.reportBug.title: 3406147c3ce729ce17ed76d45c2896f9
     feedback.reportBug.description: 6da172412f774e022b0f32ba17305491
-    feedback.reportBug.cta: 1f5aa905b40956ff5ea8b4cc5ea29315
+    feedback.reportBug.cta: 98fb862aa7857ae3b6c4fc0881fc2b7a
     feedback.reportBug.linkLabel: ffaa2eaa0f015cf037d2b5fe8af6b813
     feedback.linkFallback.title: c5396ec50cec23a09977180747737264
     feedback.linkFallback.description: 91d1e18130765119606f095ac473d9cd
-    feedback.copyDiagnostics: dedf5388697bba1fd53173b04823761a
+    feedback.copyDiagnostics: 4f495a7560b714b55b21b1290c0dd14c
     feedback.diagnosticsCopied: 9c7f3f37df9c000fc67c1a6ee35f40e5
     feedback.diagnosticsCopiedSentence: 6f8ebe492dbb95827ccf7536965dc672
     feedback.clipboardUnavailable: 8e25a424420687ed8e0dc2b1be8c7406
@@ -282,6 +290,8 @@ files:
     settings.autogit.description.gitDisabled: 55a1dd2d7f797062cde1374930221649
     settings.autogit.enable: 9b205a4ae0e3ad4e6708155880ce9c75
     settings.autogit.enableDescription: a7424a8f90c0b7f290a8144d12374554
+    settings.autogit.aiCommitMessages: 41ac82bb19cb2f88a32837c01e293f9a
+    settings.autogit.aiCommitMessagesDescription: ffe33e37d2fe7705106401d7fda6decf
     settings.autogit.idleThreshold: 28016cc6fccd951a904ee3020cd733b6
     settings.autogit.idleThresholdDescription: 521140491e8c9d5a1d7b7739bc333358
     settings.autogit.inactiveThreshold: d28cb60d1e70e020ae8d1294e32dd474
@@ -302,10 +312,6 @@ files:
     settings.noteWidth.defaultDescription: 2b5fb6d7dfa2b1da1e47bcac30f58e8d
     settings.noteWidth.normal: 960b44c579bc2f6818d2daaf9e4c16f0
     settings.noteWidth.wide: e7c770a61dbdf81ca922ae0260e327c1
-    settings.attachmentLocation.label: 00e51e7df6eac26e17dc4a5c4219fb22
-    settings.attachmentLocation.description: 520b9ab712b75082f261dfd77dd8d81e
-    settings.attachmentLocation.attachments: 7b0b4876ecd124097d1a451c4694c762
-    settings.attachmentLocation.noteAssets: 67ecbce93bf168adcf97a9dd671700eb
     settings.sidebarTypePluralization.label: 1e5bd615b1abbf39129ef241f5cf2249
     settings.sidebarTypePluralization.description: 8d7bb0649fd7e637552429ea91298de8
     settings.vaultContent.hideGitignored: 2c07ee6c8bfe746d356f44275d42f90e
@@ -563,7 +569,8 @@ files:
     sidebar.action.createFolder: 5dc1e97c14fbe72d8b566ce29c39f010
     sidebar.action.renameFolder: db76034f8218cda07dadb746a5643019
     sidebar.action.deleteFolder: 2a2f15300f6f7c81d69860ac1796b517
-    sidebar.action.createNodeInFolderMenu: 857a479229a4ab0bc62bbfb621d3180a
+    sidebar.action.createNoteInFolderMenu: b1dbc8fe9fa4e735ef9d8baacff46377
+    sidebar.action.createFolderInFolderMenu: 21a068a0d74b87c91f795d7fb3e52ad6
     sidebar.action.revealFolderMenu: 76f4ed52da9937ae432dcf5a108fabb4
     sidebar.action.copyFolderPathMenu: 1779ec6018a385912c1a5499a1bbf2b2
     sidebar.action.renameFolderMenu: deb1d8fa030292e7eda2c244b313aca2
@@ -771,6 +778,7 @@ files:
     editor.sideMenu.collapseSection: 3d3b02981ab3390bf66247c92a2d8dd9
     editor.sideMenu.expandItem: 16291fbe2d88fc603b23f97ed2bc22a3
     editor.sideMenu.collapseItem: 91750c64ed8141fdb63ffb1e878a11ad
+    editor.sideMenu.turnIntoMenu: 43895a54b24688d7aba0f928e8114609
     editor.sideMenu.turnInto: c2d2b328447c4974e839564b054c72f8
     editor.formatting.highlight: 0b90582f4589d84be89f5b847d4d1ed1
     editor.formatting.highlightTooltip: c27173fea9ec1718030c5fa8440b2c78

@@ -1,17 +1,20 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { APP_COMMAND_EVENT_NAME, APP_COMMAND_IDS } from '../hooks/appCommandDispatcher'
-import { HTML_BLOCK_DEFAULT_HEIGHT, HTML_BLOCK_TYPE } from '../utils/htmlBlockMarkdown'
+import { HTML_BLOCK_DEFAULT_HEIGHT, HTML_BLOCK_TYPE, type HtmlBlockScripts } from '../utils/htmlBlockMarkdown'
 import { HtmlBlock, type HtmlBlockEditor, type HtmlBlockProps } from './HtmlBlock'
+import { VaultExpressionProvider } from './VaultExpressionContext'
 
 vi.mock('../utils/clipboardText', () => ({
   writeClipboardText: vi.fn().mockResolvedValue(undefined),
 }))
 
-function renderHtmlBlock(initialProps: HtmlBlockProps) {
+type HtmlBlockTestProps = Omit<HtmlBlockProps, 'scripts'> & { scripts?: HtmlBlockScripts }
+
+function renderHtmlBlock(initialProps: HtmlBlockTestProps, currentContent = '') {
   const liveBlock = {
     id: 'html-block',
-    props: { ...initialProps },
+    props: { scripts: 'blocked' as const, ...initialProps },
     type: HTML_BLOCK_TYPE,
   }
   const editor: HtmlBlockEditor = {
@@ -25,7 +28,17 @@ function renderHtmlBlock(initialProps: HtmlBlockProps) {
     }),
   }
 
-  render(<HtmlBlock block={liveBlock} editor={editor} />)
+  render(
+    <VaultExpressionProvider
+      currentContent={currentContent}
+      entries={[]}
+      locale="en-US"
+      sourceEntry={null}
+      vaultPath="/vault"
+    >
+      <HtmlBlock block={liveBlock} editor={editor} />
+    </VaultExpressionProvider>,
+  )
   return { editor, liveBlock }
 }
 
@@ -51,6 +64,57 @@ describe('HtmlBlock', () => {
     expect(frame.srcdoc).not.toContain('<script')
     expect(frame.srcdoc).not.toContain('onclick')
     expect(frame.srcdoc).toContain('<button>Click</button>')
+  })
+
+  it('runs scripts only when the HTML fence opts into sandboxed scripts', () => {
+    renderHtmlBlock({
+      height: HTML_BLOCK_DEFAULT_HEIGHT,
+      html: '<div id="app"></div><script>document.getElementById("app").textContent = "Ready"</script>',
+      scripts: 'sandboxed',
+    })
+
+    const frame = screen.getByTitle('Sandboxed HTML block preview') as HTMLIFrameElement
+
+    expect(frame.getAttribute('sandbox')).toBe('allow-scripts allow-popups allow-popups-to-escape-sandbox')
+    expect(frame.getAttribute('sandbox')).not.toContain('allow-same-origin')
+    expect(frame.srcdoc).toContain("script-src 'unsafe-inline'")
+    expect(frame.srcdoc).toContain('<script>document.getElementById("app").textContent = "Ready"</script>')
+  })
+
+  it('resolves current-note property expressions before sandboxing the preview', () => {
+    renderHtmlBlock({
+      height: HTML_BLOCK_DEFAULT_HEIGHT,
+      html: '<p>{{upper(status)}}</p><p>{{summary}}</p>',
+    }, [
+      '---',
+      'status: active',
+      'summary: <strong>unsafe</strong>',
+      '---',
+      '# Note',
+    ].join('\n'))
+
+    const frame = screen.getByTitle('Sandboxed HTML block preview') as HTMLIFrameElement
+
+    expect(frame.srcdoc).toContain('<p>ACTIVE</p>')
+    expect(frame.srcdoc).toContain('&lt;strong&gt;unsafe&lt;/strong&gt;')
+    expect(frame.srcdoc).not.toContain('<strong>unsafe</strong>')
+  })
+
+  it('keeps the iframe preview out of keyboard focus ownership', () => {
+    const { editor } = renderHtmlBlock({
+      height: HTML_BLOCK_DEFAULT_HEIGHT,
+      html: '<button>Focusable preview content</button>',
+    })
+
+    const frame = screen.getByTitle('Sandboxed HTML block preview') as HTMLIFrameElement
+
+    expect(frame.tabIndex).toBe(-1)
+
+    frame.focus()
+    fireEvent.focus(frame)
+
+    expect(editor.focus).toHaveBeenCalled()
+    expect(document.activeElement).not.toBe(frame)
   })
 
   it('exposes the preview container and controls with non-static roles', () => {
@@ -97,7 +161,7 @@ describe('HtmlBlock', () => {
     fireEvent.keyDown(screen.getByRole('button', { name: 'Resize height' }), { key: 'ArrowDown' })
 
     expect(editor.updateBlock).toHaveBeenCalledWith('html-block', {
-      props: { height: '344', html: '<p>Resize me</p>' },
+      props: { height: '344', html: '<p>Resize me</p>', scripts: 'blocked' },
       type: HTML_BLOCK_TYPE,
     })
     expect(liveBlock.props.height).toBe('344')

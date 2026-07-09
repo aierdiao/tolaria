@@ -75,7 +75,7 @@ import {
 } from '../utils/dateDisplay'
 import { Button } from './ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs'
-import type { AttachmentLocation, NoteWidthMode } from '../types'
+import type { NoteWidthMode } from '../types'
 import type { VaultOption } from './status-bar/types'
 import { SETTINGS_SECTION_IDS } from './settingsSectionIds'
 import {
@@ -108,6 +108,7 @@ interface SettingsDraft {
   gitProvider: GitProviderId
   gitWslDistro: string | null
   autoGitEnabled: boolean
+  autoGitAiCommitMessagesEnabled: boolean
   autoGitIdleThresholdSeconds: number
   autoGitInactiveThresholdSeconds: number
   autoAdvanceInboxAfterOrganize: boolean
@@ -121,7 +122,6 @@ interface SettingsDraft {
   uiLanguage: UiLanguagePreference
   dateDisplayFormat: DateDisplayFormat
   defaultNoteWidth: NoteWidthMode
-  attachmentLocation: AttachmentLocation
   sidebarTypePluralizationEnabled: boolean
   initialH1AutoRename: boolean
   hideGitignoredFiles: boolean
@@ -145,6 +145,8 @@ interface SettingsBodyProps {
   isGitVault: boolean
   autoGitEnabled: boolean
   setAutoGitEnabled: (value: boolean) => void
+  autoGitAiCommitMessagesEnabled: boolean
+  setAutoGitAiCommitMessagesEnabled: (value: boolean) => void
   autoGitIdleThresholdSeconds: number
   setAutoGitIdleThresholdSeconds: (value: number) => void
   autoGitInactiveThresholdSeconds: number
@@ -173,8 +175,6 @@ interface SettingsBodyProps {
   setDateDisplayFormat: (value: DateDisplayFormat) => void
   defaultNoteWidth: NoteWidthMode
   setDefaultNoteWidth: (value: NoteWidthMode) => void
-  attachmentLocation: AttachmentLocation
-  setAttachmentLocation: (value: AttachmentLocation) => void
   sidebarTypePluralizationEnabled: boolean
   setSidebarTypePluralizationEnabled: (value: boolean) => void
   locale: AppLocale
@@ -217,6 +217,7 @@ function createSettingsDraft(
     gitProvider: normalizeSettingsGitProvider(settings.git_provider),
     gitWslDistro: settings.git_wsl_distro?.trim() || null,
     autoGitEnabled: settings.autogit_enabled ?? false,
+    autoGitAiCommitMessagesEnabled: settings.autogit_use_ai_commit_messages ?? false,
     autoGitIdleThresholdSeconds: sanitizePositiveInteger(
       settings.autogit_idle_threshold_seconds,
       DEFAULT_AUTOGIT_IDLE_THRESHOLD_SECONDS,
@@ -236,7 +237,6 @@ function createSettingsDraft(
     uiLanguage: settings.ui_language ?? SYSTEM_UI_LANGUAGE,
     dateDisplayFormat: normalizeDateDisplayFormat(settings.date_display_format) ?? DEFAULT_DATE_DISPLAY_FORMAT,
     defaultNoteWidth: normalizeNoteWidthMode(settings.note_width_mode) ?? DEFAULT_NOTE_WIDTH_MODE,
-    attachmentLocation: settings.attachment_location ?? 'attachments',
     sidebarTypePluralizationEnabled: settings.sidebar_type_pluralization_enabled ?? true,
     initialH1AutoRename: settings.initial_h1_auto_rename_enabled ?? true,
     hideGitignoredFiles: shouldHideGitignoredFiles(settings),
@@ -274,6 +274,7 @@ function buildSettingsFromDraft(settings: Settings, draft: SettingsDraft): Setti
     git_provider: draft.gitProvider === 'native' ? null : draft.gitProvider,
     git_wsl_distro: draft.gitProvider === 'wsl' ? draft.gitWslDistro : null,
     autogit_enabled: draft.autoGitEnabled,
+    autogit_use_ai_commit_messages: draft.autoGitAiCommitMessagesEnabled,
     autogit_idle_threshold_seconds: draft.autoGitIdleThresholdSeconds,
     autogit_inactive_threshold_seconds: draft.autoGitInactiveThresholdSeconds,
     auto_advance_inbox_after_organize: draft.autoAdvanceInboxAfterOrganize,
@@ -287,7 +288,6 @@ function buildSettingsFromDraft(settings: Settings, draft: SettingsDraft): Setti
     ui_language: serializeUiLanguagePreference(draft.uiLanguage),
     date_display_format: draft.dateDisplayFormat,
     note_width_mode: draft.defaultNoteWidth,
-    attachment_location: draft.attachmentLocation,
     sidebar_type_pluralization_enabled: draft.sidebarTypePluralizationEnabled,
     initial_h1_auto_rename_enabled: draft.initialH1AutoRename,
     ai_features_enabled: draft.aiFeaturesEnabled,
@@ -577,6 +577,8 @@ function SettingsBodyFromDraft({
       isGitVault={isGitVault}
       autoGitEnabled={draft.autoGitEnabled}
       setAutoGitEnabled={(value) => updateDraft('autoGitEnabled', value)}
+      autoGitAiCommitMessagesEnabled={draft.autoGitAiCommitMessagesEnabled}
+      setAutoGitAiCommitMessagesEnabled={(value) => updateDraft('autoGitAiCommitMessagesEnabled', value)}
       autoGitIdleThresholdSeconds={draft.autoGitIdleThresholdSeconds}
       setAutoGitIdleThresholdSeconds={(value) => updateDraft('autoGitIdleThresholdSeconds', value)}
       autoGitInactiveThresholdSeconds={draft.autoGitInactiveThresholdSeconds}
@@ -605,8 +607,6 @@ function SettingsBodyFromDraft({
       setDateDisplayFormat={(value) => updateDraft('dateDisplayFormat', value)}
       defaultNoteWidth={draft.defaultNoteWidth}
       setDefaultNoteWidth={(value) => updateDraft('defaultNoteWidth', value)}
-      attachmentLocation={draft.attachmentLocation}
-      setAttachmentLocation={(value) => updateDraft('attachmentLocation', value)}
       sidebarTypePluralizationEnabled={draft.sidebarTypePluralizationEnabled}
       setSidebarTypePluralizationEnabled={(value) => updateDraft('sidebarTypePluralizationEnabled', value)}
       initialH1AutoRename={draft.initialH1AutoRename}
@@ -658,6 +658,8 @@ function SettingsSyncAndAppearanceSections({
   isGitVault,
   autoGitEnabled,
   setAutoGitEnabled,
+  autoGitAiCommitMessagesEnabled,
+  setAutoGitAiCommitMessagesEnabled,
   autoGitIdleThresholdSeconds,
   setAutoGitIdleThresholdSeconds,
   autoGitInactiveThresholdSeconds,
@@ -715,6 +717,8 @@ function SettingsSyncAndAppearanceSections({
           isGitVault={isGitVault}
           autoGitEnabled={autoGitEnabled}
           setAutoGitEnabled={setAutoGitEnabled}
+          autoGitAiCommitMessagesEnabled={autoGitAiCommitMessagesEnabled}
+          setAutoGitAiCommitMessagesEnabled={setAutoGitAiCommitMessagesEnabled}
           autoGitIdleThresholdSeconds={autoGitIdleThresholdSeconds}
           setAutoGitIdleThresholdSeconds={setAutoGitIdleThresholdSeconds}
           autoGitInactiveThresholdSeconds={autoGitInactiveThresholdSeconds}
@@ -749,8 +753,6 @@ function SettingsContentSections({
   setDateDisplayFormat,
   defaultNoteWidth,
   setDefaultNoteWidth,
-  attachmentLocation,
-  setAttachmentLocation,
   sidebarTypePluralizationEnabled,
   setSidebarTypePluralizationEnabled,
   initialH1AutoRename,
@@ -768,8 +770,6 @@ function SettingsContentSections({
         setDateDisplayFormat={setDateDisplayFormat}
         defaultNoteWidth={defaultNoteWidth}
         setDefaultNoteWidth={setDefaultNoteWidth}
-        attachmentLocation={attachmentLocation}
-        setAttachmentLocation={setAttachmentLocation}
         sidebarTypePluralizationEnabled={sidebarTypePluralizationEnabled}
         setSidebarTypePluralizationEnabled={setSidebarTypePluralizationEnabled}
         initialH1AutoRename={initialH1AutoRename}

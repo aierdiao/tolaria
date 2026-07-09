@@ -182,7 +182,7 @@ function getNoteContentCommandPayload(path: string, vaultPath?: string): { path:
   return noteWindowParams ? { path, vaultPath: noteWindowParams.vaultPath } : { path }
 }
 
-export function runGetNoteContentCommand(path: string, vaultPath?: string): Promise<string> {
+function runGetNoteContentCommand(path: string, vaultPath?: string): Promise<string> {
   const commandPayload = getNoteContentCommandPayload(path, vaultPath)
   return isTauri()
     ? invoke<string>('get_note_content', commandPayload)

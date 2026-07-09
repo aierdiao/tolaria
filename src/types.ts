@@ -123,6 +123,7 @@ export interface Settings {
   git_provider?: GitProviderId | null
   git_wsl_distro?: string | null
   autogit_enabled?: boolean | null
+  autogit_use_ai_commit_messages?: boolean | null
   autogit_idle_threshold_seconds?: number | null
   autogit_inactive_threshold_seconds?: number | null
   auto_advance_inbox_after_organize?: boolean | null
@@ -144,7 +145,6 @@ export interface Settings {
   ai_model_providers?: AiModelProvider[] | null
   ai_workspace_conversations?: AiWorkspaceConversationSetting[] | null
   hide_gitignored_files?: boolean | null
-  attachment_location?: AttachmentLocation | null
   all_notes_show_pdfs?: boolean | null
   all_notes_show_images?: boolean | null
   all_notes_show_unsupported?: boolean | null
@@ -237,8 +237,6 @@ export interface AllNotesConfig {
 export type NoteLayout = 'centered' | 'left'
 
 export type NoteWidthMode = 'normal' | 'wide'
-
-export type AttachmentLocation = 'attachments' | 'note-assets' | 'per-note-assets'
 export type NoteDisplayMode = 'text' | 'sheet'
 export type GitSetupPreference = 'prompt' | 'never'
 

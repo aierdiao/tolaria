@@ -73,7 +73,10 @@ interface SerializeContext {
 }
 
 const DIRECT_MARKDOWN_METHOD = 'blocksToMarkdownDirect'
-const ESCAPE_TEXT_RE = /([\\`*_{}<>()#!])/g
+const ESCAPE_INLINE_TEXT_RE = /([\\`*_])/g
+const IMAGE_MARKER_BANG_RE = /!(?=\[)/g
+const LEADING_ATX_HEADING_RE = /^([ \t]{0,3})(#{1,6})(?=\s|$)/gm
+const LEADING_BLOCKQUOTE_RE = /^([ \t]{0,3})>/gm
 const ESCAPE_TABLE_CELL_RE = /[|\n\r]/g
 const TEXT_CONTENT_BLOCK_TYPES = new Set([
   'bulletListItem',
@@ -108,7 +111,11 @@ function tableContent(content: unknown): TableContentLike | null {
 }
 
 function escapeText(text: string): string {
-  return text.replace(ESCAPE_TEXT_RE, '\\$1')
+  return text
+    .replace(ESCAPE_INLINE_TEXT_RE, '\\$1')
+    .replace(IMAGE_MARKER_BANG_RE, '\\!')
+    .replace(LEADING_ATX_HEADING_RE, '$1\\$2')
+    .replace(LEADING_BLOCKQUOTE_RE, '$1\\>')
 }
 
 function escapeLinkTarget(target: string): string {
@@ -166,6 +173,16 @@ export function serializeInlineContent(content: InlineItem[] | undefined): strin
   return content?.map(serializeInlineItem).join('') ?? ''
 }
 
+function literalInlineText(item: InlineItem): string {
+  if (typeof item.text === 'string') return item.text
+  if (Array.isArray(item.content)) return literalTextContent(item.content)
+  return ''
+}
+
+function literalTextContent(content: InlineItem[] | undefined): string {
+  return content?.map(literalInlineText).join('') ?? ''
+}
+
 function blockPrefix(block: BlockLike, depth: number, context: SerializeContext): MarkdownLinePrefix | null {
   const indent = '  '.repeat(depth)
   if (block.type === 'numberedListItem') {
@@ -200,7 +217,7 @@ function prependLinePrefix(markdown: string, prefix: MarkdownLinePrefix): string
 
 function codeBlockMarkdown(block: BlockLike): string {
   const language = typeof block.props?.language === 'string' ? block.props.language : ''
-  const code = serializeInlineContent(contentArray(block.content)).replace(/\n$/u, '')
+  const code = literalTextContent(contentArray(block.content)).replace(/\n$/u, '')
   const fence = code.includes('```') ? '~~~' : '```'
   return `${fence}${language === 'text' ? '' : language}\n${code}\n${fence}`
 }

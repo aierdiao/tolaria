@@ -33,7 +33,6 @@ interface FilenameRenameRequest {
   path: string
   newFilenameStem: string
   vaultPath: string
-  allowUnique?: boolean
 }
 
 interface FolderMoveRequest {
@@ -183,20 +182,12 @@ export async function performFilenameRename({
   path,
   newFilenameStem,
   vaultPath,
-  allowUnique = false,
 }: FilenameRenameRequest): Promise<RenameResult> {
-  return invokeNoteCommand({
-    command: FILENAME_RENAME_COMMAND.command,
+  return performSingleValueNoteCommand({
+    descriptor: FILENAME_RENAME_COMMAND,
     path,
+    value: newFilenameStem,
     vaultPath,
-    tauriExtra: {
-      [FILENAME_RENAME_COMMAND.tauriKey]: newFilenameStem,
-      allowUnique,
-    },
-    mockExtra: {
-      [FILENAME_RENAME_COMMAND.mockKey]: newFilenameStem,
-      allow_unique: allowUnique,
-    },
   })
 }
 
@@ -389,8 +380,10 @@ function renameErrorMessage(err: unknown): string {
     : err instanceof Error
       ? err.message.trim()
       : ''
-  if (!message) return 'Failed to rename note'
-  return `Failed to rename note: ${message}`
+  if (message === 'A note with that name already exists' || message === 'Invalid filename') {
+    return message
+  }
+  return 'Failed to rename note'
 }
 
 function moveNoteErrorMessage(err: unknown): string {
@@ -579,17 +572,12 @@ export function useNoteRename(config: NoteRenameConfig, tabDeps: RenameTabDeps) 
     })
   }, [entries, tabsRef, applyRenameResult, setToastMessage])
 
-  const handleRenameFilename = useCallback(async (path: string, newFilenameStem: string, vaultPath: string, onEntryRenamed: (oldPath: string, newEntry: Partial<VaultEntry> & { path: string }, newContent: string) => void, options?: { allowUnique?: boolean }) => {
+  const handleRenameFilename = useCallback(async (path: string, newFilenameStem: string, vaultPath: string, onEntryRenamed: (oldPath: string, newEntry: Partial<VaultEntry> & { path: string }, newContent: string) => void) => {
     const entry = findRenameEntry(entries, tabsRef.current, path)
     const renameVaultPath = resolveRenameVaultPath(entry, vaultPath)
     await runRenameAction({
       path,
-      perform: () => performFilenameRename({
-        path,
-        newFilenameStem,
-        vaultPath: renameVaultPath,
-        allowUnique: options?.allowUnique,
-      }),
+      perform: () => performFilenameRename({ path, newFilenameStem, vaultPath: renameVaultPath }),
       applyRenameResult,
       buildEntry: (currentEntry, newPath) => buildFilenameRenamedEntry(currentEntry ?? ({} as VaultEntry), newPath),
       onEntryRenamed,

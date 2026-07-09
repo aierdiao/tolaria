@@ -539,9 +539,7 @@ mod tests {
         fs::write(dir.path().join("note.md"), "# Discard me\n").unwrap();
         git_discard_file(vault.clone(), "note.md".to_string()).unwrap();
         assert_eq!(
-            fs::read_to_string(dir.path().join("note.md"))
-                .unwrap()
-                .replace("\r\n", "\n"),
+            fs::read_to_string(dir.path().join("note.md")).unwrap(),
             "# Updated\n"
         );
 

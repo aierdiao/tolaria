@@ -482,36 +482,6 @@ describe('useAppSave', () => {
     )
   })
 
-  it('rewrites paired .assets references in preserved tab content after an untitled auto-rename', async () => {
-    const staleContent = [
-      '# Fresh Title',
-      '',
-      '![image.png](./untitled-note-123.assets/1783150842625-image.png)',
-      '',
-      '![image.png](./untitled-note-123.assets/1783150845153-image.png)',
-    ].join('\n')
-    const { result, oldPath, newPath, getTabs } = setupUntitledRenameHarness({
-      initialContent: staleContent,
-    })
-
-    act(() => {
-      result.current.handleContentChange(oldPath, staleContent)
-    })
-
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(AUTO_SAVE_DEBOUNCE_MS + 2_500)
-      await vi.advanceTimersByTimeAsync(0)
-    })
-
-    const expectedContent = staleContent.replaceAll('untitled-note-123.assets', 'fresh-title.assets')
-    expect(deps.replaceEntry).toHaveBeenCalledWith(
-      oldPath,
-      expect.objectContaining({ path: newPath }),
-      expectedContent,
-    )
-    expect(getTabs()[0].content).toBe(expectedContent)
-  })
-
   it('refreshes a pending untitled auto-rename when the H1 title changes before the timer fires', async () => {
     const partialTitleContent = '# Obsi\n'
     const revisedTitleContent = '# Obsidian\n\nBody starts after the title is complete'
@@ -792,7 +762,6 @@ describe('useAppSave', () => {
       'manual-name',
       '/team',
       expect.any(Function),
-      undefined,
     )
   })
 

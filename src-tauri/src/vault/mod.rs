@@ -9,7 +9,6 @@ mod getting_started;
 mod ignored;
 mod image;
 mod migration;
-mod note_assets;
 mod parsing;
 pub(crate) mod path_identity;
 mod rename;
@@ -241,32 +240,13 @@ pub fn reload_entry(path: &Path) -> Result<VaultEntry, String> {
 const HIDDEN_DIRS: &[&str] = &[".git", ".laputa", ".DS_Store"];
 /// Keep type definitions in their dedicated sidebar section instead of the generic folder tree.
 const FOLDER_TREE_EXCLUDED_DIRS: &[&str] = &["type"];
-const ATTACHMENTS_DIR: &str = "attachments";
 
 fn is_hidden_dir(name: &str) -> bool {
     name.starts_with('.') || HIDDEN_DIRS.contains(&name)
 }
 
-fn is_empty_dir(path: &Path) -> bool {
-    fs::read_dir(path)
-        .map(|mut entries| entries.next().is_none())
-        .unwrap_or(false)
-}
-
-fn is_folder_tree_hidden_dir(
-    name: &str,
-    path: &Path,
-    vault_root: &Path,
-    attachment_location: crate::settings::AttachmentLocation,
-) -> bool {
-    if is_hidden_dir(name) || FOLDER_TREE_EXCLUDED_DIRS.contains(&name) {
-        return true;
-    }
-
-    attachment_location == crate::settings::AttachmentLocation::PerNoteAssets
-        && name == ATTACHMENTS_DIR
-        && path.parent().is_some_and(|parent| parent == vault_root)
-        && is_empty_dir(path)
+fn is_folder_tree_hidden_dir(name: &str) -> bool {
+    is_hidden_dir(name) || FOLDER_TREE_EXCLUDED_DIRS.contains(&name)
 }
 
 pub(crate) fn is_md_file(path: &Path) -> bool {
@@ -479,18 +459,11 @@ pub fn scan_vault(
 }
 
 /// Build a tree of user-created folders in the vault.
-fn scan_vault_folders_with_attachment_location(
-    vault_path: &Path,
-    attachment_location: crate::settings::AttachmentLocation,
-) -> Result<Vec<FolderNode>, String> {
+pub fn scan_vault_folders(vault_path: &Path) -> Result<Vec<FolderNode>, String> {
     if !vault_path.is_dir() {
         return Err(format!("Not a directory: {}", vault_path.display()));
     }
-    fn build_tree(
-        dir: &Path,
-        vault_root: &Path,
-        attachment_location: crate::settings::AttachmentLocation,
-    ) -> Vec<FolderNode> {
+    fn build_tree(dir: &Path, vault_root: &Path) -> Vec<FolderNode> {
         let mut nodes: Vec<FolderNode> = Vec::new();
         let entries = match fs::read_dir(dir) {
             Ok(d) => d,
@@ -502,14 +475,14 @@ fn scan_vault_folders_with_attachment_location(
                 continue;
             }
             let name = entry.file_name().to_string_lossy().to_string();
-            if is_folder_tree_hidden_dir(&name, &path, vault_root, attachment_location) {
+            if is_folder_tree_hidden_dir(&name) {
                 continue;
             }
             let rel_path = path_identity::vault_relative_path_string(vault_root, &path)
                 .unwrap_or_else(|_| {
                     path_identity::normalize_path_for_identity(&path.to_string_lossy())
                 });
-            let children = build_tree(&path, vault_root, attachment_location);
+            let children = build_tree(&path, vault_root);
             nodes.push(FolderNode {
                 name,
                 path: rel_path,
@@ -519,11 +492,7 @@ fn scan_vault_folders_with_attachment_location(
         nodes.sort_by_key(|node| node.name.to_lowercase());
         nodes
     }
-    Ok(build_tree(vault_path, vault_path, attachment_location))
-}
-
-pub fn scan_vault_folders(vault_path: &Path) -> Result<Vec<FolderNode>, String> {
-    scan_vault_folders_with_attachment_location(vault_path, crate::settings::attachment_location())
+    Ok(build_tree(vault_path, vault_path))
 }
 
 #[cfg(test)]

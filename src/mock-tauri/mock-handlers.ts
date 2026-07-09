@@ -126,6 +126,7 @@ let mockSettings: Settings = {
   git_provider: null,
   git_wsl_distro: null,
   autogit_enabled: false,
+  autogit_use_ai_commit_messages: false,
   autogit_idle_threshold_seconds: 90,
   autogit_inactive_threshold_seconds: 30,
   auto_advance_inbox_after_organize: false,
@@ -147,23 +148,10 @@ let mockSettings: Settings = {
   ai_model_providers: null,
   ai_workspace_conversations: null,
   hide_gitignored_files: null,
-  attachment_location: null,
   all_notes_show_pdfs: null,
   all_notes_show_images: null,
   all_notes_show_unsupported: null,
   multi_workspace_enabled: null,
-}
-
-/** Mirror of the Rust attachment location logic for browser mode. */
-function mockAttachmentDir(vault: string, notePath?: string | null): string {
-  const location = mockSettings.attachment_location
-  if (notePath && (location === 'note-assets' || location === 'per-note-assets')) {
-    const noteDir = notePath.split('/').slice(0, -1).join('/') || vault
-    if (location === 'note-assets') return `${noteDir}/assets`
-    const stem = (notePath.split('/').pop() ?? '').replace(/\.md$/i, '')
-    if (stem) return `${noteDir}/${stem}.assets`
-  }
-  return `${vault}/attachments`
 }
 
 const DEFAULT_MOCK_VAULT_PATH = '/Users/mock/demo-vault-v2'
@@ -331,7 +319,6 @@ function handleRenameNoteFilename(args: {
   vault_path: string
   old_path: string
   new_filename_stem: string
-  allow_unique?: boolean
 }) {
   const oldEntry = MOCK_ENTRIES.find(e => e.path === args.old_path)
   const oldContent = readMockContent({ path: args.old_path })
@@ -348,14 +335,9 @@ function handleRenameNoteFilename(args: {
   }
 
   const parentDir = args.old_path.replace(/\/[^/]+$/, '')
-  let newPath = `${parentDir}/${newFilename}`
+  const newPath = `${parentDir}/${newFilename}`
   if (newPath !== args.old_path && Object.hasOwn(MOCK_CONTENT, newPath)) {
-    if (!args.allow_unique) {
-      throw new Error('A note with that name already exists')
-    }
-    for (let attempt = 2; Object.hasOwn(MOCK_CONTENT, newPath); attempt += 1) {
-      newPath = `${parentDir}/${normalizedStem}-${attempt}.md`
-    }
+    throw new Error('A note with that name already exists')
   }
 
   deleteMockContent({ path: args.old_path })
@@ -598,14 +580,14 @@ export const mockHandlers: Record<string, (args: any) => any> = {
     syncWindowContent()
     return null
   },
-  save_image: (args: { vault_path?: string; filename: string; data: string; note_path?: string | null }) => {
+  save_image: (args: { vault_path?: string; filename: string; data: string }) => {
     const vault = args.vault_path ?? '/Users/luca/Laputa'
-    return `${mockAttachmentDir(vault, args.note_path)}/${Date.now()}-${args.filename}`
+    return `${vault}/attachments/${Date.now()}-${args.filename}`
   },
-  copy_image_to_vault: (args: { vault_path?: string; source_path: string; note_path?: string | null }) => {
+  copy_image_to_vault: (args: { vault_path?: string; source_path: string }) => {
     const vault = args.vault_path ?? '/Users/luca/Laputa'
     const filename = args.source_path.split('/').pop() ?? 'image.png'
-    return `${mockAttachmentDir(vault, args.note_path)}/${Date.now()}-${filename}`
+    return `${vault}/attachments/${Date.now()}-${filename}`
   },
   get_settings: () => ({ ...mockSettings }),
   save_settings: (args: { settings: Settings }) => {
@@ -617,6 +599,7 @@ export const mockHandlers: Record<string, (args: any) => any> = {
       git_provider: s.git_provider ?? null,
       git_wsl_distro: s.git_wsl_distro ?? null,
       autogit_enabled: s.autogit_enabled ?? false,
+      autogit_use_ai_commit_messages: s.autogit_use_ai_commit_messages ?? false,
       autogit_idle_threshold_seconds: s.autogit_idle_threshold_seconds ?? 90,
       autogit_inactive_threshold_seconds: s.autogit_inactive_threshold_seconds ?? 30,
       auto_advance_inbox_after_organize: s.auto_advance_inbox_after_organize ?? false,
@@ -638,7 +621,6 @@ export const mockHandlers: Record<string, (args: any) => any> = {
       ai_model_providers: s.ai_model_providers ?? null,
       ai_workspace_conversations: s.ai_workspace_conversations ?? null,
       hide_gitignored_files: s.hide_gitignored_files ?? null,
-      attachment_location: s.attachment_location ?? null,
       all_notes_show_pdfs: s.all_notes_show_pdfs ?? null,
       all_notes_show_images: s.all_notes_show_images ?? null,
       all_notes_show_unsupported: s.all_notes_show_unsupported ?? null,

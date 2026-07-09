@@ -14,7 +14,7 @@ import { countByFilter, countAllByFilter, countAllNotesByFilter } from '../../ut
 import type { AllNotesFileVisibility } from '../../utils/allNotesFileVisibility'
 import type { GitRepositoryOption } from '../../utils/gitRepositories'
 import type { ImmediateCreateOptions } from '../../hooks/useNoteCreation'
-import { NoteItem, type NoteAssetAuditStatus } from '../NoteItem'
+import { NoteItem } from '../NoteItem'
 import { prefetchNoteContent } from '../../hooks/useTabManagement'
 import type { MultiSelectState } from '../../hooks/useMultiSelect'
 import { isDeletedNoteEntry, resolveHeaderTitle, type DeletedNoteEntry } from './noteListUtils'
@@ -464,13 +464,10 @@ interface UseRenderItemParams {
   resolvedGetNoteStatus: (path: string) => NoteStatus
   getChangeStatus: (path: string) => ModifiedFile['status'] | undefined
   handleClickNote: (entry: VaultEntry, event: React.MouseEvent) => void
-  onOpenAssetFolder?: (path: string, rootPath?: string) => void
   changesContextMenu?: ((entry: VaultEntry, event: React.MouseEvent) => void) | undefined
   noteListContextMenu?: ((entry: VaultEntry, event: React.MouseEvent) => void) | undefined
   multiSelect: MultiSelectState
   noteListKeyboard: { highlightedPath: string | null }
-  assetAuditStatuses?: Record<string, NoteAssetAuditStatus>
-  onCheckAssets?: (entry: VaultEntry) => void
 }
 
 function useRenderItem({
@@ -483,13 +480,10 @@ function useRenderItem({
   resolvedGetNoteStatus,
   getChangeStatus,
   handleClickNote,
-  onOpenAssetFolder,
   changesContextMenu,
   noteListContextMenu,
   multiSelect,
   noteListKeyboard,
-  assetAuditStatuses,
-  onCheckAssets,
 }: UseRenderItemParams) {
   const contextMenuHandler = isChangesView && onDiscardFile ? changesContextMenu : noteListContextMenu
 
@@ -506,9 +500,6 @@ function useRenderItem({
         typeEntryMap={typeEntryMap}
         allEntries={entries}
         displayPropsOverride={displayPropsOverride}
-        assetAuditStatus={assetAuditStatuses?.[entry.path]}
-        onCheckAssets={onCheckAssets}
-        onOpenAssetFolder={onOpenAssetFolder}
         onClickNote={handleClickNote}
         onContextMenu={contextMenuHandler}
       />
@@ -524,9 +515,6 @@ function useRenderItem({
         typeEntryMap={typeEntryMap}
         allEntries={entries}
         displayPropsOverride={displayPropsOverride}
-        assetAuditStatus={assetAuditStatuses?.[entry.path]}
-        onCheckAssets={onCheckAssets}
-        onOpenAssetFolder={onOpenAssetFolder}
         onClickNote={handleClickNote}
         onPrefetch={prefetchNoteContent}
         onContextMenu={contextMenuHandler}
@@ -542,9 +530,6 @@ function useRenderItem({
     noteListKeyboard.highlightedPath,
     resolvedGetNoteStatus,
     selectedNotePath,
-    assetAuditStatuses,
-    onCheckAssets,
-    onOpenAssetFolder,
     typeEntryMap,
   ])
 }
@@ -594,10 +579,6 @@ export interface NoteListProps {
   visibleNotesRef?: React.MutableRefObject<VaultEntry[]>
   allNotesFileVisibility?: AllNotesFileVisibility
   locale?: AppLocale
-  assetAuditStatuses?: Record<string, NoteAssetAuditStatus>
-  onCheckAssets?: (entry: VaultEntry) => void
-  onSelectFolder?: (path: string, rootPath?: string) => void
-  vaultRootPath?: string
 }
 
 function buildNoteListLayoutModel(params: {
@@ -730,9 +711,6 @@ export function useNoteListModel({
   visibleNotesRef,
   allNotesFileVisibility,
   locale = 'en',
-  assetAuditStatuses,
-  onCheckAssets,
-  onSelectFolder,
 }: NoteListProps) {
   const selectedNotePath = selectedNote?.path ?? null
   const { modifiedPathSet, modifiedSuffixes, resolvedGetNoteStatus } = useModifiedFilesState(modifiedFiles, getNoteStatus)
@@ -800,13 +778,10 @@ export function useNoteListModel({
     resolvedGetNoteStatus,
     getChangeStatus: interaction.getChangeStatus,
     handleClickNote: interaction.handleClickNote,
-    onOpenAssetFolder: onSelectFolder,
     changesContextMenu: interaction.changesContextMenu.handleNoteContextMenu,
     noteListContextMenu: interaction.noteListContextMenu.handleNoteContextMenu,
     multiSelect: interaction.multiSelect,
     noteListKeyboard: interaction.noteListKeyboard,
-    assetAuditStatuses,
-    onCheckAssets,
   })
   const handleSearchKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
     if (event.key !== 'Escape') return

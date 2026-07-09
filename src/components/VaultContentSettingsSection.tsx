@@ -1,6 +1,6 @@
 import { Article } from '@phosphor-icons/react'
 import type { TranslationKey, TranslationValues } from '../lib/i18n'
-import type { AttachmentLocation, NoteWidthMode } from '../types'
+import type { NoteWidthMode } from '../types'
 import type { AllNotesFileVisibility } from '../utils/allNotesFileVisibility'
 import { DATE_DISPLAY_FORMATS, type DateDisplayFormat } from '../utils/dateDisplay'
 import {
@@ -19,8 +19,6 @@ interface VaultContentSettingsSectionProps {
   setDateDisplayFormat: (value: DateDisplayFormat) => void
   defaultNoteWidth: NoteWidthMode
   setDefaultNoteWidth: (value: NoteWidthMode) => void
-  attachmentLocation: AttachmentLocation
-  setAttachmentLocation: (value: AttachmentLocation) => void
   sidebarTypePluralizationEnabled: boolean
   setSidebarTypePluralizationEnabled: (value: boolean) => void
   initialH1AutoRename: boolean
@@ -36,12 +34,6 @@ const NOTE_WIDTH_LABEL_KEYS: Record<NoteWidthMode, TranslationKey> = {
   normal: 'settings.noteWidth.normal',
   wide: 'settings.noteWidth.wide',
 }
-const ATTACHMENT_LOCATION_OPTIONS: readonly AttachmentLocation[] = ['attachments', 'note-assets', 'per-note-assets']
-const ATTACHMENT_LOCATION_LABEL_KEYS: Record<AttachmentLocation, TranslationKey> = {
-  'attachments': 'settings.attachmentLocation.attachments',
-  'note-assets': 'settings.attachmentLocation.noteAssets',
-  'per-note-assets': 'settings.attachmentLocation.perNoteAssets',
-}
 const DATE_DISPLAY_LABEL_KEYS: Record<DateDisplayFormat, TranslationKey> = {
   us: 'settings.dateDisplay.us',
   european: 'settings.dateDisplay.european',
@@ -53,13 +45,6 @@ function buildNoteWidthOptions(t: Translate): Array<{ value: NoteWidthMode; labe
   return NOTE_WIDTH_OPTIONS.map((value) => ({
     value,
     label: t(Reflect.get(NOTE_WIDTH_LABEL_KEYS, value) as Parameters<Translate>[0]),
-  }))
-}
-
-function buildAttachmentLocationOptions(t: Translate): Array<{ value: AttachmentLocation; label: string }> {
-  return ATTACHMENT_LOCATION_OPTIONS.map((value) => ({
-    value,
-    label: t(Reflect.get(ATTACHMENT_LOCATION_LABEL_KEYS, value) as Parameters<Translate>[0]),
   }))
 }
 
@@ -76,8 +61,6 @@ export function VaultContentSettingsSection({
   setDateDisplayFormat,
   defaultNoteWidth,
   setDefaultNoteWidth,
-  attachmentLocation,
-  setAttachmentLocation,
   sidebarTypePluralizationEnabled,
   setSidebarTypePluralizationEnabled,
   initialH1AutoRename,
@@ -122,19 +105,6 @@ export function VaultContentSettingsSection({
             onValueChange={(value) => setDefaultNoteWidth(value as NoteWidthMode)}
             options={buildNoteWidthOptions(t)}
             testId="settings-default-note-width"
-          />
-        </SettingsRow>
-
-        <SettingsRow
-          label={t('settings.attachmentLocation.label')}
-          description={t('settings.attachmentLocation.description')}
-        >
-          <SelectControl
-            ariaLabel={t('settings.attachmentLocation.label')}
-            value={attachmentLocation}
-            onValueChange={(value) => setAttachmentLocation(value as AttachmentLocation)}
-            options={buildAttachmentLocationOptions(t)}
-            testId="settings-attachment-location"
           />
         </SettingsRow>
 

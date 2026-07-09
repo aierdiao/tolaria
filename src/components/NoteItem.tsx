@@ -1,10 +1,10 @@
-import type { ComponentType, CSSProperties, MouseEvent as ReactMouseEvent, MouseEventHandler, ReactNode, SVGAttributes } from 'react'
+import type { ComponentType, CSSProperties, DragEventHandler, MouseEvent as ReactMouseEvent, MouseEventHandler, ReactNode, SVGAttributes } from 'react'
 import type { VaultEntry, NoteStatus } from '../types'
 import { cn } from '@/lib/utils'
 import {
-  Wrench, Flask, Target, ArrowsClockwise, CircleNotch,
+  Wrench, Flask, Target, ArrowsClockwise,
   Users, CalendarBlank, Tag, FileText, StackSimple,
-  File, FileDashed, FilePdf, FolderOpen, ImageSquare, ListChecks, SpeakerHigh, Video, WarningCircle,
+  File, FileDashed, FilePdf, ImageSquare, SpeakerHigh, Video,
 } from '@phosphor-icons/react'
 import { getTypeColor, getTypeLightColor } from '../utils/typeColors'
 import { resolveIcon } from '../utils/iconRegistry'
@@ -17,7 +17,7 @@ import { ChangeNoteContent } from './note-item/ChangeNoteContent'
 import { workspaceForEntry } from '../utils/workspaces'
 import { WorkspaceInitialsBadge } from './WorkspaceInitialsBadge'
 import { useDateDisplayFormat } from '../hooks/useAppPreferences'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { writeNoteDragData } from '../utils/noteDragDrop'
 
 const TYPE_ICON_MAP: Record<string, ComponentType<SVGAttributes<SVGSVGElement>>> = {
   Project: Wrench,
@@ -90,9 +90,11 @@ type NoteItemRowState = 'binary' | 'multiSelected' | 'selected' | 'highlighted' 
 
 type NoteItemSurfaceProps = {
   className: string
+  draggable: boolean
   style: CSSProperties
   onClick: MouseEventHandler<HTMLDivElement>
   onContextMenu?: MouseEventHandler<HTMLDivElement>
+  onDragStart?: DragEventHandler<HTMLDivElement>
   onMouseEnter?: () => void
   title?: string
   testId?: string
@@ -120,160 +122,24 @@ function noteItemClassName(state: NoteItemVisualState) {
   return cn(NOTE_ITEM_BASE_CLASS_NAME, NOTE_ITEM_ROW_CLASS_NAMES[resolveNoteItemRowState(state)])
 }
 
-export type NoteAssetAuditStatus = {
-  state: 'checking' | 'ok' | 'unused' | 'error'
-  title: string
-  count?: number
-  assetDirPath?: string
-  assetDirRootPath?: string
-  unusedAssets?: Array<{ path: string; filename: string }>
-}
-
-const NOTE_ITEM_ACTION_BUTTON_CLASS_NAME = 'flex h-5 w-5 shrink-0 items-center justify-center rounded border-0 bg-transparent p-0 text-muted-foreground hover:text-foreground disabled:cursor-default disabled:opacity-60'
-
-function NoteAssetAuditCheckButton({
-  disabled,
-  status,
-  onCheck,
-}: {
-  disabled?: boolean
-  status?: NoteAssetAuditStatus
-  onCheck?: (event: ReactMouseEvent) => void
-}) {
-  if (!onCheck) return null
-  const isChecking = status?.state === 'checking'
-  const color = status?.state === 'ok' && !isChecking ? 'var(--accent-green)' : undefined
-
-  return (
-    <button
-      type="button"
-      className={NOTE_ITEM_ACTION_BUTTON_CLASS_NAME}
-      title={status?.title ?? 'Check image references'}
-      aria-label={status?.title ?? 'Check image references'}
-      data-testid="note-asset-audit-check-button"
-      disabled={disabled || isChecking}
-      onClick={onCheck}
-    >
-      {isChecking ? (
-        <CircleNotch width={15} height={15} className="animate-spin" />
-      ) : (
-        <ListChecks width={15} height={15} style={{ color }} />
-      )}
-    </button>
-  )
-}
-
-function NoteAssetAuditProblemButton({
-  status,
-  onOpenAssetFolder,
-}: {
-  status?: NoteAssetAuditStatus
-  onOpenAssetFolder?: (path: string, rootPath?: string) => void
-}) {
-  if (status?.state !== 'unused' && status?.state !== 'error') return null
-
-  const button = (
-    <button
-      type="button"
-      className={NOTE_ITEM_ACTION_BUTTON_CLASS_NAME}
-      title={status.title}
-      aria-label={status.title}
-      data-testid="note-asset-audit-status-button"
-      onClick={(event) => {
-        event.stopPropagation()
-      }}
-    >
-      <WarningCircle
-        width={15}
-        height={15}
-        weight="fill"
-        style={{ color: 'var(--accent-orange)' }}
-      />
-    </button>
-  )
-
-  if (status?.state !== 'unused' || !status.unusedAssets?.length) return button
-
-  return (
-    <Popover>
-      <PopoverTrigger asChild>
-        {button}
-      </PopoverTrigger>
-      <PopoverContent
-        align="end"
-        side="left"
-        sideOffset={8}
-        className="w-72 overflow-hidden p-0"
-        onClick={(event) => event.stopPropagation()}
-      >
-        <div className="border-b border-[var(--border)] px-3 py-2 text-[12px] font-medium text-foreground">
-          未引用图片 {status.count ?? status.unusedAssets.length}
-        </div>
-        {status.assetDirPath ? (
-          <button
-            type="button"
-            className="flex w-full items-center gap-2 border-b border-[var(--border)] px-3 py-2 text-left text-[12px] font-medium text-foreground hover:bg-muted"
-            title={status.assetDirPath}
-            onPointerDown={(event) => {
-              event.preventDefault()
-              event.stopPropagation()
-              onOpenAssetFolder?.(status.assetDirPath!, status.assetDirRootPath)
-            }}
-          >
-            <FolderOpen width={14} height={14} className="shrink-0 text-muted-foreground" />
-            <span className="min-w-0 flex-1 truncate">打开附件文件夹</span>
-          </button>
-        ) : null}
-        <div className="max-h-64 overflow-auto py-1">
-          {status.unusedAssets.map((asset) => (
-            <div
-              key={asset.path}
-              className="flex w-full items-center gap-2 px-3 py-2 text-left text-[12px] text-foreground"
-              title={asset.path}
-            >
-              <ImageSquare width={14} height={14} className="shrink-0 text-muted-foreground" />
-              <span className="min-w-0 flex-1 truncate">{asset.filename}</span>
-            </div>
-          ))}
-        </div>
-      </PopoverContent>
-    </Popover>
-  )
-}
-
-function NoteItemActionGroup({
+function NoteTypeIndicator({
   TypeIcon,
   typeColor,
   filePreviewKind,
-  assetAuditStatus,
-  onCheckAssets,
-  onOpenAssetFolder,
 }: {
   TypeIcon: ComponentType<SVGAttributes<SVGSVGElement>>
   typeColor: string
   filePreviewKind?: FilePreviewKind
-  assetAuditStatus?: NoteAssetAuditStatus
-  onCheckAssets?: (event: ReactMouseEvent) => void
-  onOpenAssetFolder?: (path: string, rootPath?: string) => void
 }) {
   return (
-    <span className="ml-2 flex shrink-0 items-center gap-1.5">
-      <NoteAssetAuditProblemButton status={assetAuditStatus} onOpenAssetFolder={onOpenAssetFolder} />
-      <NoteAssetAuditCheckButton
-        disabled={assetAuditStatus?.state === 'checking'}
-        status={assetAuditStatus}
-        onCheck={onCheckAssets}
-      />
-      <span className="flex h-5 w-5 shrink-0 items-center justify-center">
-        <TypeIcon
-          width={14}
-          height={14}
-          style={{ color: typeColor }}
-          data-testid="type-icon"
-          data-file-preview-kind={filePreviewKind}
-        />
-      </span>
-    </span>
+    <TypeIcon
+      width={14}
+      height={14}
+      className="absolute right-3 top-2.5"
+      style={{ color: typeColor }}
+      data-testid="type-icon"
+      data-file-preview-kind={filePreviewKind}
+    />
   )
 }
 
@@ -325,7 +191,6 @@ function InteractiveNoteDetails({
   allEntries,
   typeEntryMap,
   onClickNote,
-  actions,
 }: {
   entry: VaultEntry
   noteStatus: NoteStatus
@@ -334,7 +199,6 @@ function InteractiveNoteDetails({
   allEntries: VaultEntry[]
   typeEntryMap: Record<string, VaultEntry>
   onClickNote: NoteItemProps['onClickNote']
-  actions?: ReactNode
 }) {
   return (
     <>
@@ -343,7 +207,6 @@ function InteractiveNoteDetails({
         isBinary={false}
         isSelected={isSelected}
         noteStatus={noteStatus}
-        actions={actions}
       />
       <NoteSnippet snippet={entry.snippet} />
       <NotePropertySection
@@ -379,9 +242,6 @@ function StandardNoteContent({
   allEntries,
   typeEntryMap,
   onClickNote,
-  assetAuditStatus,
-  onCheckAssets,
-  onOpenAssetFolder,
 }: {
   entry: VaultEntry
   isBinary: boolean
@@ -393,31 +253,14 @@ function StandardNoteContent({
   allEntries: VaultEntry[]
   typeEntryMap: Record<string, VaultEntry>
   onClickNote: NoteItemProps['onClickNote']
-  assetAuditStatus?: NoteAssetAuditStatus
-  onCheckAssets?: NoteItemProps['onCheckAssets']
-  onOpenAssetFolder?: NoteItemProps['onOpenAssetFolder']
 }) {
   const te = typeEntryMap[entry.isA ?? '']
   const TypeIcon = resolveNoteTypeIcon(entry, te?.icon)
   const previewKind = filePreviewKind(entry) ?? undefined
-  const hasAuditButton = !isBinary && !isUnavailableBinary && !!onCheckAssets
-  const actions = (
-    <NoteItemActionGroup
-      TypeIcon={TypeIcon}
-      typeColor={typeColor}
-      filePreviewKind={previewKind}
-      assetAuditStatus={assetAuditStatus}
-      onCheckAssets={hasAuditButton ? (event) => {
-        event.preventDefault()
-        event.stopPropagation()
-        onCheckAssets?.(entry)
-      } : undefined}
-      onOpenAssetFolder={onOpenAssetFolder}
-    />
-  )
 
   return (
     <>
+      <NoteTypeIndicator TypeIcon={TypeIcon} typeColor={typeColor} filePreviewKind={previewKind} />
       <div className="space-y-2" data-testid="note-content-stack">
         {isBinary ? (
           <NoteTitleRow
@@ -425,7 +268,6 @@ function StandardNoteContent({
             isBinary={isUnavailableBinary}
             isSelected={isSelected}
             noteStatus={noteStatus}
-            actions={actions}
           />
         ) : (
           <InteractiveNoteDetails
@@ -436,7 +278,6 @@ function StandardNoteContent({
             allEntries={allEntries}
             typeEntryMap={typeEntryMap}
             onClickNote={onClickNote}
-            actions={actions}
           />
         )}
       </div>
@@ -449,23 +290,21 @@ function NoteTitleRow({
   isBinary,
   isSelected,
   noteStatus,
-  actions,
 }: {
   entry: VaultEntry
   isBinary: boolean
   isSelected: boolean
   noteStatus: NoteStatus
-  actions?: ReactNode
 }) {
   return (
-    <div className="flex items-center gap-2" data-testid="note-title-row">
-      <div className={cn('min-w-0 flex-1 truncate text-[13px]', isBinary ? 'text-muted-foreground' : 'text-foreground', isSelected && !isBinary ? 'font-semibold' : 'font-medium')}>
-        {hasStatusDot(noteStatus) && !isBinary && <StatusDot noteStatus={noteStatus} />}
-        <NoteTitleIcon icon={entry.icon} size={15} className="mr-1" testId="note-title-icon" />
-        {entry.title}
-        {!isBinary && <StateBadge archived={entry.archived} />}
-      </div>
-      {actions}
+    <div
+      className={cn('truncate pr-5 text-[13px]', isBinary ? 'text-muted-foreground' : 'text-foreground', isSelected && !isBinary ? 'font-semibold' : 'font-medium')}
+      data-testid="note-title-row"
+    >
+      {hasStatusDot(noteStatus) && !isBinary && <StatusDot noteStatus={noteStatus} />}
+      <NoteTitleIcon icon={entry.icon} size={15} className="mr-1" testId="note-title-icon" />
+      {entry.title}
+      {!isBinary && <StateBadge archived={entry.archived} />}
     </div>
   )
 }
@@ -523,9 +362,6 @@ type NoteItemProps = {
   typeEntryMap: Record<string, VaultEntry>
   allEntries?: VaultEntry[]
   displayPropsOverride?: string[] | null
-  assetAuditStatus?: NoteAssetAuditStatus
-  onCheckAssets?: (entry: VaultEntry) => void
-  onOpenAssetFolder?: (path: string, rootPath?: string) => void
   onClickNote: (entry: VaultEntry, e: ReactMouseEvent) => void
   onPrefetch?: (entry: VaultEntry) => void
   onContextMenu?: (entry: VaultEntry, e: ReactMouseEvent) => void
@@ -602,6 +438,7 @@ function resolveNoteItemSurfaceProps({
   onContextMenu,
   typeColor,
   typeLightColor,
+  changeStatus,
 }: NoteItemVisualState & {
   entry: VaultEntry
   previewKind: FilePreviewKind | null
@@ -610,12 +447,19 @@ function resolveNoteItemSurfaceProps({
   onContextMenu?: NoteItemProps['onContextMenu']
   typeColor: string
   typeLightColor: string
+  changeStatus?: NoteItemProps['changeStatus']
 }): NoteItemSurfaceProps {
+  const draggable = !isUnavailableBinary
+    && (entry.fileKind === undefined || entry.fileKind === 'markdown')
+    && changeStatus !== 'deleted'
+
   return {
     className: noteItemClassName({ isUnavailableBinary, isSelected, isMultiSelected, isHighlighted }),
+    draggable,
     style: resolveNoteItemSurfaceStyle({ isUnavailableBinary, isSelected, isMultiSelected, typeColor, typeLightColor }),
     onClick: createNoteItemClickHandler(entry, isUnavailableBinary, onClickNote),
     onContextMenu: onContextMenu ? (event) => onContextMenu(entry, event) : undefined,
+    onDragStart: draggable ? (event) => writeNoteDragData(event.dataTransfer, entry.path) : undefined,
     onMouseEnter: entry.fileKind !== 'binary' && onPrefetch ? () => onPrefetch(entry) : undefined,
     testId: resolveNoteItemTestId({ isMultiSelected, previewKind, isUnavailableBinary }),
     title: resolveNoteItemTitle({ previewKind, isUnavailableBinary }),
@@ -644,9 +488,11 @@ function NoteItemRow({
       role="option"
       aria-selected={isSelected || isMultiSelected}
       className={surfaceProps.className}
+      draggable={surfaceProps.draggable}
       style={surfaceProps.style}
       onClick={surfaceProps.onClick}
       onContextMenu={surfaceProps.onContextMenu}
+      onDragStart={surfaceProps.onDragStart}
       onMouseEnter={surfaceProps.onMouseEnter}
       data-testid={surfaceProps.testId}
       data-highlighted={isHighlighted || undefined}
@@ -671,9 +517,6 @@ function NoteItemContent({
   allEntries,
   typeEntryMap,
   onClickNote,
-  assetAuditStatus,
-  onCheckAssets,
-  onOpenAssetFolder,
 }: {
   entry: VaultEntry
   isBinary: boolean
@@ -686,9 +529,6 @@ function NoteItemContent({
   allEntries: VaultEntry[]
   typeEntryMap: Record<string, VaultEntry>
   onClickNote: NoteItemProps['onClickNote']
-  assetAuditStatus?: NoteAssetAuditStatus
-  onCheckAssets?: NoteItemProps['onCheckAssets']
-  onOpenAssetFolder?: NoteItemProps['onOpenAssetFolder']
 }) {
   if (changeStatus) {
     return (
@@ -713,14 +553,11 @@ function NoteItemContent({
       allEntries={allEntries}
       typeEntryMap={typeEntryMap}
       onClickNote={onClickNote}
-      assetAuditStatus={assetAuditStatus}
-      onCheckAssets={onCheckAssets}
-      onOpenAssetFolder={onOpenAssetFolder}
     />
   )
 }
 
-export function NoteItem({ entry, isSelected, isMultiSelected = false, isHighlighted = false, noteStatus = 'clean', changeStatus, typeEntryMap, allEntries, displayPropsOverride, assetAuditStatus, onCheckAssets, onOpenAssetFolder, onClickNote, onPrefetch, onContextMenu }: NoteItemProps) {
+export function NoteItem({ entry, isSelected, isMultiSelected = false, isHighlighted = false, noteStatus = 'clean', changeStatus, typeEntryMap, allEntries, displayPropsOverride, onClickNote, onPrefetch, onContextMenu }: NoteItemProps) {
   const isBinary = entry.fileKind === 'binary'
   const previewKind = filePreviewKind(entry)
   const isPreviewableFile = previewKind !== null
@@ -741,6 +578,7 @@ export function NoteItem({ entry, isSelected, isMultiSelected = false, isHighlig
     onContextMenu,
     typeColor,
     typeLightColor,
+    changeStatus,
   })
 
   return (
@@ -764,9 +602,6 @@ export function NoteItem({ entry, isSelected, isMultiSelected = false, isHighlig
         allEntries={allEntries ?? [entry]}
         typeEntryMap={typeEntryMap}
         onClickNote={onClickNote}
-        assetAuditStatus={assetAuditStatus}
-        onCheckAssets={onCheckAssets}
-        onOpenAssetFolder={onOpenAssetFolder}
       />
     </NoteItemRow>
   )

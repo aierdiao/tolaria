@@ -131,7 +131,6 @@ function buildPostRequest(cmd: string, args: Record<string, unknown>): VaultApiR
   if (cmd === 'rename_note_filename') {
     return buildRequiredPostRequest('rename-filename', payload.old_path, {
       new_filename_stem: payload.new_filename_stem,
-      allow_unique: payload.allow_unique,
       old_path: payload.old_path,
       vault_path: payload.vault_path,
     })

@@ -117,7 +117,7 @@ pub fn test_git_provider(
 }
 
 fn native_git_probe() -> GitProviderProbe {
-    let output = crate::hidden_command("git").arg("--version").output();
+    let output = Command::new("git").arg("--version").output();
     match output {
         Ok(output) if output.status.success() => available_probe(
             NATIVE_GIT_IDENTITY,
@@ -266,7 +266,7 @@ fn wsl_supported_on_this_platform() -> bool {
 
 #[cfg(target_os = "windows")]
 fn wsl_distribution_names() -> Result<Vec<String>, String> {
-    let output = crate::hidden_command("wsl.exe")
+    let output = Command::new("wsl.exe")
         .args(["--list", "--quiet"])
         .output()
         .map_err(|err| format!("WSL is unavailable: {err}"))?;
@@ -285,7 +285,7 @@ fn wsl_distribution_names() -> Result<Vec<String>, String> {
 
 #[cfg(target_os = "windows")]
 fn wsl_git_version_command(distro: Option<&str>, translated_vault_path: Option<&str>) -> Command {
-    let mut command = crate::hidden_command("wsl.exe");
+    let mut command = Command::new("wsl.exe");
     if let Some(distro) = distro.map(str::trim).filter(|distro| !distro.is_empty()) {
         command.args(["--distribution", distro]);
     }
@@ -298,7 +298,7 @@ fn wsl_git_version_command(distro: Option<&str>, translated_vault_path: Option<&
 
 #[cfg(not(target_os = "windows"))]
 fn wsl_git_version_command(_distro: Option<&str>, _translated_vault_path: Option<&str>) -> Command {
-    crate::hidden_command("wsl.exe")
+    Command::new("wsl.exe")
 }
 
 #[cfg(any(target_os = "windows", test))]

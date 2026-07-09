@@ -43,6 +43,8 @@ import { createRichEditorMarkdownInputTransformExtension } from './richEditorInp
 import { createRichEditorTextDirectionExtension } from './richEditorTextDirection'
 import { createRichEditorTransformErrorRecoveryExtension } from './richEditorTransformErrorRecoveryExtension'
 import { createRichEditorBlockSelectionExtension } from './richEditorBlockSelectionExtension'
+import { createTodoBlockShortcutExtension } from './todoBlockShortcutExtension'
+import { createRichEditorCodeBlockTabExtension } from './richEditorCodeBlockTabExtension'
 import { useFilenameAutolinkGuard } from './useFilenameAutolinkGuard'
 import { useEditorPdfExport } from './useEditorPdfExport'
 import type { NotePdfExportSource } from '../utils/notePdfExport'
@@ -123,7 +125,7 @@ interface EditorProps {
   onContentChange?: (path: string, content: string) => void
   onSave?: () => void
   /** Called when the user explicitly renames the filename from the breadcrumb. */
-  onRenameFilename?: (path: string, newFilenameStem: string, options?: { allowUnique?: boolean }) => void
+  onRenameFilename?: (path: string, newFilenameStem: string) => void
   noteWidth?: NoteWidthMode
   onToggleNoteWidth?: () => void
   canGoBack?: boolean
@@ -277,17 +279,20 @@ function useEditorSetup({
     domAttributes: RICH_EDITOR_BIDI_DOM_ATTRIBUTES,
     uploadFile: async (file: File) => {
       try {
-        return await uploadImageFile(file, vaultPathRef.current, activeTabPathRef.current ?? undefined)
+        return await uploadImageFile(file, vaultPathRef.current)
       } catch (error) {
         return handleEditorImageUploadFailure(file, error, onImageImportErrorRef.current)
       }
     },
     pasteHandler: handleRichEditorPaste,
+    tabBehavior: 'prefer-indent',
     _tiptapOptions: { injectNonce: RUNTIME_STYLE_NONCE },
     extensions: [
       createRichEditorTransformErrorRecoveryExtension(),
       createImeCompositionKeyGuardExtension(),
+      createRichEditorCodeBlockTabExtension(),
       createMarkdownHighlightShortcutExtension(),
+      createTodoBlockShortcutExtension(),
       createRichEditorMarkdownInputTransformExtension(),
       createRichEditorTextDirectionExtension(),
       createRichEditorBlockSelectionExtension(),
@@ -548,7 +553,7 @@ function EditorLayout({
   findRequest?: RawEditorFindRequest | null
   rawLatestContentRef: React.MutableRefObject<string | null>
   sheetFlushRef: React.MutableRefObject<((path: string) => void) | null>
-  onRenameFilename?: (path: string, newFilenameStem: string, options?: { allowUnique?: boolean }) => void
+  onRenameFilename?: (path: string, newFilenameStem: string) => void
   noteWidth?: NoteWidthMode
   onToggleNoteWidth?: () => void
   isConflicted?: boolean

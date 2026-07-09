@@ -607,12 +607,6 @@ mod tests {
             .unwrap();
 
         git_command()
-            .args(["config", "core.autocrlf", "false"])
-            .current_dir(path)
-            .output()
-            .unwrap();
-
-        git_command()
             .args(["config", "user.email", "test@test.com"])
             .current_dir(path)
             .output()
@@ -645,7 +639,6 @@ mod tests {
             .output()
             .unwrap();
         for cmd in &[
-            &["config", "core.autocrlf", "false"][..],
             &["config", "user.email", "a@test.com"][..],
             &["config", "user.name", "User A"][..],
         ] {
@@ -663,7 +656,6 @@ mod tests {
             .output()
             .unwrap();
         for cmd in &[
-            &["config", "core.autocrlf", "false"][..],
             &["config", "user.email", "b@test.com"][..],
             &["config", "user.name", "User B"][..],
         ] {
@@ -875,10 +867,10 @@ mod tests {
     fn assert_git_launch_config(case: GitLaunchConfigCase<'_>) {
         let shell = case.shell.map(|(git_path, path)| ShellGitConfig {
             git_path: Some(PathBuf::from(git_path)),
-            path: Some(platform_path_list_string(path)),
+            path: Some(OsString::from(path)),
         });
         let config = git_launch_config_from_sources(
-            case.parent_path.map(platform_path_list_string),
+            case.parent_path.map(OsString::from),
             case.configured_git_path.map(PathBuf::from),
             shell,
             case.standard_candidates
@@ -888,18 +880,7 @@ mod tests {
         );
 
         assert_eq!(config.program, OsString::from(case.expected_program));
-        assert_eq!(
-            config.path,
-            case.expected_path.map(platform_path_list_string)
-        );
-    }
-
-    fn platform_path_list_string(path_list: &str) -> OsString {
-        if cfg!(windows) {
-            OsString::from(path_list.replace(':', ";"))
-        } else {
-            OsString::from(path_list)
-        }
+        assert_eq!(config.path, case.expected_path.map(OsString::from));
     }
 
     #[test]

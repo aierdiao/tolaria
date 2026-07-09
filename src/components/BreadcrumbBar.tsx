@@ -82,7 +82,7 @@ interface BreadcrumbBarProps {
   onArchive?: () => void
   onUnarchive?: () => void
   onEnterNeighborhood?: (entry: VaultEntry) => void
-  onRenameFilename?: (path: string, newFilenameStem: string, options?: { allowUnique?: boolean }) => void
+  onRenameFilename?: (path: string, newFilenameStem: string) => void
   noteWidth?: NoteWidthMode
   onToggleNoteWidth?: () => void
   /** Ref for direct DOM manipulation — avoids re-render on scroll. */
@@ -780,7 +780,7 @@ function SyncFilenameButton({
   entryPath: string
   syncStem: string | null
   locale?: AppLocale
-  onRenameFilename?: (path: string, newFilenameStem: string, options?: { allowUnique?: boolean }) => void
+  onRenameFilename?: (path: string, newFilenameStem: string) => void
 }) {
   const tooltipLabel = translate(locale, 'editor.filename.renameToTitle')
   const tooltipControl = useBreadcrumbTooltipControl(tooltipLabel)
@@ -798,7 +798,7 @@ function SyncFilenameButton({
         variant="ghost"
         size="icon-xs"
         className="text-muted-foreground hover:text-foreground"
-        onClick={() => onRenameFilename(entryPath, syncStem, { allowUnique: true })}
+        onClick={() => onRenameFilename(entryPath, syncStem)}
         data-testid="breadcrumb-sync-button"
         aria-label={tooltipLabel}
         onPointerEnter={tooltipControl.onPointerEnter}
@@ -827,7 +827,7 @@ function FilenameDisplay({
   filenameStem: string
   syncStem: string | null
   locale?: AppLocale
-  onRenameFilename?: (path: string, newFilenameStem: string, options?: { allowUnique?: boolean }) => void
+  onRenameFilename?: (path: string, newFilenameStem: string) => void
   onStartEditing: () => void
 }) {
   const displayTitle = deriveBreadcrumbDisplayTitle(entry, filenameStem, content)

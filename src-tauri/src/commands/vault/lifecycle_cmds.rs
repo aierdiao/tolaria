@@ -48,28 +48,12 @@ fn ensure_directory_is_missing_or_empty(vault_dir: &Path) -> Result<(), String> 
     Ok(())
 }
 
-/// `std::fs::canonicalize` returns Windows verbatim paths (`\\?\C:\...`).
-/// Persisting that form poisons every frontend `join(root, "x/y")`: verbatim
-/// paths treat `/` as a literal character, so the mixed result fails
-/// `canonicalize()` during note-path validation (e.g. rename commands).
-fn strip_windows_verbatim_prefix(path_text: String) -> String {
-    if let Some(rest) = path_text.strip_prefix(r"\\?\UNC\") {
-        return format!(r"\\{}", rest);
-    }
-    if let Some(rest) = path_text.strip_prefix(r"\\?\") {
-        return rest.to_string();
-    }
-    path_text
-}
-
 fn canonical_vault_path_string(vault_dir: &Path) -> String {
-    strip_windows_verbatim_prefix(
-        vault_dir
-            .canonicalize()
-            .unwrap_or_else(|_| vault_dir.to_path_buf())
-            .to_string_lossy()
-            .to_string(),
-    )
+    vault_dir
+        .canonicalize()
+        .unwrap_or_else(|_| vault_dir.to_path_buf())
+        .to_string_lossy()
+        .to_string()
 }
 
 #[tauri::command]
@@ -149,14 +133,10 @@ mod tests {
         let missing = dir.path().join("missing");
         fs::create_dir(&existing).unwrap();
 
-        let canonical = existing.canonicalize().unwrap().to_string_lossy().to_string();
-        let expected = canonical
-            .strip_prefix(r"\\?\")
-            .map(str::to_string)
-            .unwrap_or(canonical);
-        let result = canonical_vault_path_string(&existing);
-        assert_eq!(result, expected);
-        assert!(!result.starts_with(r"\\?\"));
+        assert_eq!(
+            canonical_vault_path_string(&existing),
+            existing.canonicalize().unwrap().to_string_lossy()
+        );
         assert_eq!(
             canonical_vault_path_string(&missing),
             missing.to_string_lossy()

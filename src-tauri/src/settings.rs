@@ -16,7 +16,6 @@ const SUPPORTED_DEFAULT_AI_AGENTS: &[&str] = &[
 ];
 pub const DEFAULT_HIDE_GITIGNORED_FILES: bool = true;
 const SUPPORTED_NOTE_WIDTH_MODES: &[&str] = &["normal", "wide"];
-const SUPPORTED_ATTACHMENT_LOCATIONS: &[&str] = &["attachments", "note-assets", "per-note-assets"];
 const SUPPORTED_DATE_DISPLAY_FORMATS: &[&str] = &["us", "european", "friendly", "iso"];
 const SUPPORTED_UI_LANGUAGE_ALIASES: &[(&str, &str)] = &[
     ("en", "en"),
@@ -97,6 +96,7 @@ pub struct Settings {
     pub git_provider: Option<String>,
     pub git_wsl_distro: Option<String>,
     pub autogit_enabled: Option<bool>,
+    pub autogit_use_ai_commit_messages: Option<bool>,
     pub autogit_idle_threshold_seconds: Option<u32>,
     pub autogit_inactive_threshold_seconds: Option<u32>,
     pub auto_advance_inbox_after_organize: Option<bool>,
@@ -118,45 +118,10 @@ pub struct Settings {
     pub ai_model_providers: Option<Vec<AiModelProvider>>,
     pub ai_workspace_conversations: Option<Vec<AiWorkspaceConversationSetting>>,
     pub hide_gitignored_files: Option<bool>,
-    pub attachment_location: Option<String>,
     pub all_notes_show_pdfs: Option<bool>,
     pub all_notes_show_images: Option<bool>,
     pub all_notes_show_unsupported: Option<bool>,
     pub multi_workspace_enabled: Option<bool>,
-}
-
-/// Where newly pasted or dropped images are saved.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum AttachmentLocation {
-    /// Vault-root `attachments/` folder (default, legacy behavior).
-    VaultAttachments,
-    /// Shared `assets/` folder next to the note the image is inserted into.
-    NoteAssets,
-    /// Per-note `<note name>.assets/` folder next to the note.
-    PerNoteAssets,
-}
-
-pub fn normalize_attachment_location(value: Option<&str>) -> Option<String> {
-    match value.map(|candidate| candidate.trim().to_ascii_lowercase()) {
-        Some(location) if SUPPORTED_ATTACHMENT_LOCATIONS.contains(&location.as_str()) => {
-            Some(location)
-        }
-        _ => None,
-    }
-}
-
-pub fn attachment_location_from_settings(settings: &Settings) -> AttachmentLocation {
-    match settings.attachment_location.as_deref() {
-        Some("note-assets") => AttachmentLocation::NoteAssets,
-        Some("per-note-assets") => AttachmentLocation::PerNoteAssets,
-        _ => AttachmentLocation::VaultAttachments,
-    }
-}
-
-pub fn attachment_location() -> AttachmentLocation {
-    get_settings()
-        .map(|settings| attachment_location_from_settings(&settings))
-        .unwrap_or(AttachmentLocation::VaultAttachments)
 }
 
 fn normalize_optional_string(value: Option<String>) -> Option<String> {
@@ -256,6 +221,7 @@ fn normalize_settings(settings: Settings) -> Settings {
         git_provider: normalize_git_provider(settings.git_provider.as_deref()),
         git_wsl_distro: normalize_optional_string(settings.git_wsl_distro),
         autogit_enabled: settings.autogit_enabled,
+        autogit_use_ai_commit_messages: settings.autogit_use_ai_commit_messages,
         autogit_idle_threshold_seconds: normalize_optional_positive_u32(
             settings.autogit_idle_threshold_seconds,
         ),
@@ -283,7 +249,6 @@ fn normalize_settings(settings: Settings) -> Settings {
             settings.ai_workspace_conversations,
         ),
         hide_gitignored_files: settings.hide_gitignored_files,
-        attachment_location: normalize_attachment_location(settings.attachment_location.as_deref()),
         all_notes_show_pdfs: settings.all_notes_show_pdfs,
         all_notes_show_images: settings.all_notes_show_images,
         all_notes_show_unsupported: settings.all_notes_show_unsupported,
@@ -485,6 +450,7 @@ mod tests {
             git_provider: Some("wsl".to_string()),
             git_wsl_distro: Some("Ubuntu".to_string()),
             autogit_enabled: Some(true),
+            autogit_use_ai_commit_messages: Some(true),
             autogit_idle_threshold_seconds: Some(90),
             autogit_inactive_threshold_seconds: Some(30),
             auto_advance_inbox_after_organize: Some(true),
@@ -506,7 +472,6 @@ mod tests {
             ai_model_providers: None,
             ai_workspace_conversations: None,
             hide_gitignored_files: Some(false),
-            attachment_location: Some("note-assets".to_string()),
             multi_workspace_enabled: Some(true),
             all_notes_show_pdfs: Some(true),
             all_notes_show_images: Some(true),
@@ -531,6 +496,7 @@ mod tests {
             auto_pull_interval_minutes: Some(10),
             git_enabled: Some(false),
             autogit_enabled: Some(true),
+            autogit_use_ai_commit_messages: Some(true),
             autogit_idle_threshold_seconds: Some(90),
             autogit_inactive_threshold_seconds: Some(30),
             auto_advance_inbox_after_organize: Some(true),
@@ -554,6 +520,7 @@ mod tests {
         assert_eq!(loaded.auto_pull_interval_minutes, Some(10));
         assert_eq!(loaded.git_enabled, Some(false));
         assert_eq!(loaded.autogit_enabled, Some(true));
+        assert_eq!(loaded.autogit_use_ai_commit_messages, Some(true));
         assert_eq!(loaded.autogit_idle_threshold_seconds, Some(90));
         assert_eq!(loaded.autogit_inactive_threshold_seconds, Some(30));
         assert_eq!(loaded.auto_advance_inbox_after_organize, Some(true));
@@ -660,53 +627,6 @@ mod tests {
             ..Default::default()
         });
         assert!(loaded.release_channel.is_none());
-    }
-
-    #[test]
-    fn test_attachment_location_note_assets_is_preserved() {
-        let loaded = save_and_reload(Settings {
-            attachment_location: Some(" Note-Assets ".to_string()),
-            ..Default::default()
-        });
-        assert_eq!(loaded.attachment_location.as_deref(), Some("note-assets"));
-        assert_eq!(
-            attachment_location_from_settings(&loaded),
-            AttachmentLocation::NoteAssets
-        );
-    }
-
-    #[test]
-    fn test_invalid_attachment_location_is_filtered() {
-        let loaded = save_and_reload(Settings {
-            attachment_location: Some("desktop".to_string()),
-            ..Default::default()
-        });
-        assert!(loaded.attachment_location.is_none());
-        assert_eq!(
-            attachment_location_from_settings(&loaded),
-            AttachmentLocation::VaultAttachments
-        );
-    }
-
-    #[test]
-    fn test_attachment_location_per_note_assets_is_preserved() {
-        let loaded = save_and_reload(Settings {
-            attachment_location: Some("per-note-assets".to_string()),
-            ..Default::default()
-        });
-        assert_eq!(loaded.attachment_location.as_deref(), Some("per-note-assets"));
-        assert_eq!(
-            attachment_location_from_settings(&loaded),
-            AttachmentLocation::PerNoteAssets
-        );
-    }
-
-    #[test]
-    fn test_missing_attachment_location_defaults_to_vault_attachments() {
-        assert_eq!(
-            attachment_location_from_settings(&Settings::default()),
-            AttachmentLocation::VaultAttachments
-        );
     }
 
     #[test]

@@ -357,9 +357,7 @@ mod tests {
     fn first_existing_path_skips_empty_and_missing_lines() {
         let dir = tempfile::tempdir().unwrap();
         let missing = dir.path().join("missing-pi");
-        let pi = dir
-            .path()
-            .join(if cfg!(windows) { "pi.cmd" } else { "pi" });
+        let pi = dir.path().join("pi");
         std::fs::write(&pi, "#!/bin/sh\n").unwrap();
 
         let stdout = format!("\n{}\n{}\n", missing.display(), pi.display());

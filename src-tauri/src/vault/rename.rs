@@ -36,7 +36,6 @@ pub struct RenameNoteFilenameRequest<'a> {
     pub vault_path: &'a str,
     pub old_path: &'a str,
     pub new_filename_stem: &'a str,
-    pub allow_unique: bool,
 }
 
 #[derive(Clone, Copy)]
@@ -389,7 +388,6 @@ pub fn rename_note(request: RenameNoteRequest<'_>) -> Result<RenameResult, Strin
             &expected_filename,
             parent_dir,
         )?;
-    super::note_assets::migrate_note_assets(old_file, committed.new_file());
     let old_path_stem = to_path_stem(old_file, vault);
     let old_targets = collect_legacy_wikilink_targets(&loaded.title, &old_path_stem);
     Ok(finalize_rename(vault, &old_targets, committed.new_file()))
@@ -426,17 +424,12 @@ pub fn rename_note_filename(
     let parent_dir = old_file
         .parent()
         .ok_or("Cannot determine parent directory")?;
+    let new_file = parent_dir.join(&new_filename);
     let workspace = RenameWorkspace::new(vault)?;
-    let operation = workspace.operation(request.old_path, old_file);
-    let staged = workspace.stage_note_content(&content)?;
-    let committed = if request.allow_unique {
-        operation.rename_with_candidates(staged, &new_filename, parent_dir)?
-    } else {
-        let new_file = parent_dir.join(&new_filename);
-        operation.rename_exact(staged, &new_file)?
-    };
+    let committed = workspace
+        .operation(request.old_path, old_file)
+        .rename_exact(workspace.stage_note_content(&content)?, &new_file)?;
 
-    super::note_assets::migrate_note_assets(old_file, committed.new_file());
     let old_path_stem = to_path_stem(old_file, vault);
     let old_targets = collect_legacy_wikilink_targets(&old_title, &old_path_stem);
     Ok(finalize_rename(vault, &old_targets, committed.new_file()))
@@ -483,7 +476,6 @@ pub fn move_note_to_folder(request: MoveNoteToFolderRequest<'_>) -> Result<Renam
         .operation(request.old_path, old_file)
         .rename_exact(workspace.stage_note_content(&content)?, &new_file)?;
 
-    super::note_assets::migrate_note_assets(old_file, committed.new_file());
     let old_path_stem = to_path_stem(old_file, vault);
     let old_targets = collect_legacy_wikilink_targets(&old_title, &old_path_stem);
     Ok(finalize_rename(vault, &old_targets, committed.new_file()))
@@ -746,7 +738,6 @@ mod tests {
             vault_path: vault.to_str().unwrap(),
             old_path: current_path.to_str().unwrap(),
             new_filename_stem: new_filename_stem.as_ref(),
-            allow_unique: false,
         });
 
         assert_eq!(result.unwrap_err(), expected_error.as_ref());
@@ -1228,7 +1219,6 @@ mod tests {
             vault_path: vault.to_str().unwrap(),
             old_path: old_path.to_str().unwrap(),
             new_filename_stem: "manual-name",
-            allow_unique: false,
         })
         .unwrap();
 
@@ -1255,104 +1245,8 @@ mod tests {
     }
 
     #[test]
-    fn test_rename_note_filename_can_append_suffix_for_title_sync() {
-        let dir = TempDir::new().unwrap();
-        let vault = dir.path();
-        create_test_file(vault, "posts/test.md", "# Existing\n");
-        create_test_file(
-            vault,
-            "posts/untitled-note-123.md",
-            "# Test\n\n![image](./untitled-note-123.assets/image.png)\n",
-        );
-        let assets = vault.join("posts/untitled-note-123.assets");
-        fs::create_dir_all(&assets).unwrap();
-        fs::write(assets.join("image.png"), b"img").unwrap();
-
-        let old_path = vault.join("posts/untitled-note-123.md");
-        let result = rename_note_filename(RenameNoteFilenameRequest {
-            vault_path: vault.to_str().unwrap(),
-            old_path: old_path.to_str().unwrap(),
-            new_filename_stem: "test",
-            allow_unique: true,
-        })
-        .expect("rename should choose a numbered filename");
-
-        assert!(result
-            .new_path
-            .replace('\\', "/")
-            .ends_with("posts/test-2.md"));
-        assert!(vault.join("posts/test.md").exists());
-        assert!(!old_path.exists());
-        assert!(!assets.exists());
-        assert!(vault.join("posts/test-2.assets/image.png").exists());
-        let content = fs::read_to_string(vault.join("posts/test-2.md")).unwrap();
-        assert!(content.contains("![image](./test-2.assets/image.png)"));
-    }
-
-    #[test]
     fn test_rename_note_filename_rejects_windows_invalid_names() {
         assert_rename_note_filename_error("quarterly:plan", None::<&str>, "Invalid filename");
-    }
-
-    #[test]
-    fn test_rename_note_filename_migrates_paired_assets_dir() {
-        let dir = TempDir::new().unwrap();
-        let vault = dir.path();
-        create_test_file(
-            vault,
-            "posts/test.md",
-            "# Test\n\n![image](./test.assets/image.png)\n",
-        );
-        let assets = vault.join("posts/test.assets");
-        fs::create_dir_all(&assets).unwrap();
-        fs::write(assets.join("image.png"), b"img").unwrap();
-
-        let result = rename_note_filename(RenameNoteFilenameRequest {
-            vault_path: vault.to_str().unwrap(),
-            old_path: vault.join("posts/test.md").to_str().unwrap(),
-            new_filename_stem: "tokyo",
-            allow_unique: false,
-        })
-        .expect("rename should succeed");
-
-        assert!(result
-            .new_path
-            .replace('\\', "/")
-            .ends_with("posts/tokyo.md"));
-        assert!(!assets.exists());
-        assert!(vault.join("posts/tokyo.assets/image.png").exists());
-        let content = fs::read_to_string(vault.join("posts/tokyo.md")).unwrap();
-        assert!(content.contains("![image](./tokyo.assets/image.png)"));
-    }
-
-    #[test]
-    fn test_move_note_to_folder_migrates_paired_assets_dir() {
-        let dir = TempDir::new().unwrap();
-        let vault = dir.path();
-        create_test_file(
-            vault,
-            "inbox/真是漫长的一年啊.md",
-            "![封面](./真是漫长的一年啊.assets/封面.png)\n",
-        );
-        let assets = vault.join("inbox/真是漫长的一年啊.assets");
-        fs::create_dir_all(&assets).unwrap();
-        fs::write(assets.join("封面.png"), b"img").unwrap();
-        fs::create_dir_all(vault.join("posts/japan")).unwrap();
-
-        move_note_to_folder(MoveNoteToFolderRequest {
-            vault_path: vault.to_str().unwrap(),
-            old_path: vault.join("inbox/真是漫长的一年啊.md").to_str().unwrap(),
-            destination_folder_path: vault.join("posts/japan").to_str().unwrap(),
-        })
-        .expect("move should succeed");
-
-        assert!(!assets.exists());
-        assert!(vault
-            .join("posts/japan/真是漫长的一年啊.assets/封面.png")
-            .exists());
-        let content =
-            fs::read_to_string(vault.join("posts/japan/真是漫长的一年啊.md")).unwrap();
-        assert!(content.contains("![封面](./真是漫长的一年啊.assets/封面.png)"));
     }
 
     #[test]
@@ -1377,10 +1271,7 @@ mod tests {
         })
         .expect("move should succeed");
 
-        assert!(result
-            .new_path
-            .replace('\\', "/")
-            .ends_with("areas/weekly-review.md"));
+        assert!(result.new_path.ends_with("areas/weekly-review.md"));
         assert!(!vault.join("projects/weekly-review.md").exists());
         assert!(vault.join("areas/weekly-review.md").exists());
         assert_eq!(
@@ -1412,10 +1303,7 @@ mod tests {
         .expect("move should succeed");
 
         assert_eq!(result.updated_files, 1);
-        assert!(result
-            .new_path
-            .replace('\\', "/")
-            .ends_with("areas/weekly-review.md"));
+        assert!(result.new_path.ends_with("areas/weekly-review.md"));
         assert_eq!(
             fs::read_to_string(vault.join("areas/linked.md")).unwrap(),
             "---\nrelated_to:\n  - \"[[areas/weekly-review]]\"\n---\nReference [[areas/weekly-review|review notes]] and [[areas/weekly-review]].\n",

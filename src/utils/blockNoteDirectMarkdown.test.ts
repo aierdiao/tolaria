@@ -90,11 +90,11 @@ describe('BlockNote direct Markdown serialization', () => {
     expect(editor.__tolariaLastDirectMarkdownMetrics?.fallbackReason).toBe('unsupported:unsupportedWidget')
   })
 
-  it('escapes literal Markdown syntax without double-escaping table pipes', () => {
+  it('keeps plain hash references and punctuation literal while escaping formatting syntax', () => {
     const blocks = [
       {
         type: 'paragraph',
-        content: [{ type: 'text', text: 'Literal *stars* `ticks` #tag!', styles: {} }],
+        content: [{ type: 'text', text: 'Literal *stars* `ticks` #tag! {ok} <T>', styles: {} }],
         children: [],
       },
       {
@@ -110,11 +110,118 @@ describe('BlockNote direct Markdown serialization', () => {
     ]
 
     expect(blocksToMarkdownDirect(blocks).markdown).toBe([
-      'Literal \\*stars\\* \\`ticks\\` \\#tag\\!',
+      'Literal \\*stars\\* \\`ticks\\` #tag! {ok} <T>',
       '',
       '| A\\|B |',
       '| --- |',
     ].join('\n'))
+  })
+
+  it('does not escape hash references inside saved heading titles', () => {
+    const blocks = [
+      {
+        type: 'heading',
+        props: { level: 1 },
+        content: [{ type: 'text', text: 'Monday #216', styles: {} }],
+        children: [],
+      },
+    ]
+
+    expect(blocksToMarkdownDirect(blocks).markdown).toBe('# Monday #216')
+  })
+
+  it('escapes paragraph prefixes that would reopen as Markdown block syntax', () => {
+    const blocks = [
+      {
+        type: 'paragraph',
+        content: [{ type: 'text', text: '# Not a heading', styles: {} }],
+        children: [],
+      },
+      {
+        type: 'paragraph',
+        content: [{ type: 'text', text: '> Not a quote', styles: {} }],
+        children: [],
+      },
+      {
+        type: 'paragraph',
+        content: [{ type: 'text', text: '![not an image]', styles: {} }],
+        children: [],
+      },
+    ]
+
+    expect(blocksToMarkdownDirect(blocks).markdown).toBe([
+      '\\# Not a heading',
+      '',
+      '\\> Not a quote',
+      '',
+      '\\![not an image]',
+    ].join('\n'))
+  })
+
+  it('keeps fenced code block content literal during direct Markdown serialization', () => {
+    const blocks = [
+      {
+        type: 'codeBlock',
+        props: { language: 'yaml' },
+        content: [{
+          type: 'text',
+          text: [
+            'services:',
+            '  server:',
+            '\tcontainer_name: forgejo',
+            '    environment:',
+            '      - USER_UID=1000',
+            '      - PATH_WITH_BACKSLASH=container\\_name',
+            '      - markdown_chars=*_{}<>()#!',
+          ].join('\n'),
+          styles: {},
+        }],
+        children: [],
+      },
+      {
+        type: 'paragraph',
+        content: [{ type: 'text', text: 'Literal *still escapes* outside code.', styles: {} }],
+        children: [],
+      },
+    ]
+
+    expect(blocksToMarkdownDirect(blocks).markdown).toBe([
+      '```yaml',
+      'services:',
+      '  server:',
+      '\tcontainer_name: forgejo',
+      '    environment:',
+      '      - USER_UID=1000',
+      '      - PATH_WITH_BACKSLASH=container\\_name',
+      '      - markdown_chars=*_{}<>()#!',
+      '```',
+      '',
+      'Literal \\*still escapes\\* outside code.',
+    ].join('\n'))
+  })
+
+  it('keeps plain prose parentheses unescaped while protecting links and code spans', () => {
+    const blocks = [
+      {
+        type: 'paragraph',
+        content: [
+          { type: 'text', text: 'Use citations (Smith, 2024) and ', styles: {} },
+          { type: 'text', text: 'inline_code(with_args)', styles: { code: true } },
+          { type: 'text', text: ' with ', styles: {} },
+          {
+            type: 'link',
+            props: { href: 'attachments/report (final).pdf' },
+            content: [{ type: 'text', text: 'report (final)', styles: {} }],
+          },
+          { type: 'text', text: '.', styles: {} },
+        ],
+        children: [],
+      },
+    ]
+
+    expect(blocksToMarkdownDirect(blocks).markdown).toBe(
+      'Use citations (Smith, 2024) and `inline_code(with_args)` with [report (final)](<attachments/report (final).pdf>).',
+    )
   })
 
   it('caches unchanged block objects across rich-editor body serialization', () => {
