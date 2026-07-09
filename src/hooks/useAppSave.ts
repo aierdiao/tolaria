@@ -3,6 +3,7 @@ import { invoke } from '@tauri-apps/api/core'
 import { useEditorSaveWithLinks } from './useEditorSaveWithLinks'
 import { flushEditorContent } from '../utils/autoSave'
 import { extractH1TitleFromContent } from '../utils/noteTitle'
+import { rewriteAssetsDirReferences } from '../utils/noteAssetsRename'
 import { isTauri } from '../mock-tauri'
 import type { VaultEntry } from '../types'
 import { createTranslator, type AppLocale } from '../lib/i18n'
@@ -207,8 +208,13 @@ async function reloadAutoRenamedNote(
   },
 ): Promise<void> {
   const newEntry = await invoke<VaultEntry>('reload_vault_entry', { path: newPath })
-  const preservedContent = tabsRef.current.find((tab) => tab.entry.path === oldPath)?.content
-    ?? await invoke<string>('get_note_content', { path: newPath })
+  const openTabContent = tabsRef.current.find((tab) => tab.entry.path === oldPath)?.content
+  // Keep unsaved editor content, but mirror the backend's paired-assets
+  // rewrite: without this, autosave writes the stale `<old>.assets/`
+  // references back to disk and undoes the migration.
+  const preservedContent = openTabContent !== undefined
+    ? rewriteAssetsDirReferences(openTabContent, oldPath, newPath)
+    : await invoke<string>('get_note_content', { path: newPath })
 
   const otherTabPaths = tabsRef.current
     .filter((tab) => tab.entry.path !== oldPath && tab.entry.path !== newPath)
@@ -728,9 +734,13 @@ function useEditorPersistence({
   const handleContentChange = useCallback((path: string, content: string) => {
     const currentPath = resolveCurrentPath(path)
     if (!canWritePathToVault(currentPath, persistenceScope)) return
-    refreshPendingUntitledRename(currentPath, content)
+    // Content may come from an editor instance still holding the pre-rename
+    // document; realign its paired-assets references before buffering, or
+    // autosave restores the stale `<old>.assets/` links the backend migrated.
+    const alignedContent = rewriteAssetsDirReferences(content, path, currentPath)
+    refreshPendingUntitledRename(currentPath, alignedContent)
     trackUnsaved?.(currentPath)
-    handleContentChangeRaw(currentPath, content)
+    handleContentChangeRaw(currentPath, alignedContent)
   }, [handleContentChangeRaw, persistenceScope, refreshPendingUntitledRename, resolveCurrentPath, trackUnsaved])
 
   const savePendingForPath = useCallback((path: string) => {

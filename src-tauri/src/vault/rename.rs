@@ -388,6 +388,7 @@ pub fn rename_note(request: RenameNoteRequest<'_>) -> Result<RenameResult, Strin
             &expected_filename,
             parent_dir,
         )?;
+    super::note_assets::migrate_note_assets(old_file, committed.new_file());
     let old_path_stem = to_path_stem(old_file, vault);
     let old_targets = collect_legacy_wikilink_targets(&loaded.title, &old_path_stem);
     Ok(finalize_rename(vault, &old_targets, committed.new_file()))
@@ -430,6 +431,7 @@ pub fn rename_note_filename(
         .operation(request.old_path, old_file)
         .rename_exact(workspace.stage_note_content(&content)?, &new_file)?;
 
+    super::note_assets::migrate_note_assets(old_file, committed.new_file());
     let old_path_stem = to_path_stem(old_file, vault);
     let old_targets = collect_legacy_wikilink_targets(&old_title, &old_path_stem);
     Ok(finalize_rename(vault, &old_targets, committed.new_file()))
@@ -476,6 +478,7 @@ pub fn move_note_to_folder(request: MoveNoteToFolderRequest<'_>) -> Result<Renam
         .operation(request.old_path, old_file)
         .rename_exact(workspace.stage_note_content(&content)?, &new_file)?;
 
+    super::note_assets::migrate_note_assets(old_file, committed.new_file());
     let old_path_stem = to_path_stem(old_file, vault);
     let old_targets = collect_legacy_wikilink_targets(&old_title, &old_path_stem);
     Ok(finalize_rename(vault, &old_targets, committed.new_file()))

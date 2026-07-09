@@ -3,6 +3,7 @@ import type { SetStateAction } from 'react'
 import { useSaveNote } from './useSaveNote'
 import { createTranslator, type AppLocale } from '../lib/i18n'
 import { canWritePathToVault } from '../utils/vaultPathContainment'
+import { rewriteAssetsDirReferences } from '../utils/noteAssetsRename'
 
 interface Tab {
   entry: { path: string }
@@ -186,7 +187,10 @@ async function persistResolvedContent({
   const targetPath = await resolvePersistPath(path, resolvePath, resolvePathBeforeSave)
   if (!canWritePathToVault(targetPath, persistenceScopeRef.current ?? '')) return null
   onBeforePersist?.(targetPath)
-  await saveNote(targetPath, content)
+  // A rename may have settled between buffering and this flush; realign
+  // paired-assets references so the stale `<old>.assets/` links buffered
+  // under the old path never reach disk.
+  await saveNote(targetPath, rewriteAssetsDirReferences(content, path, targetPath))
   return targetPath
 }
 
